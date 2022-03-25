@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+import rospy
+from panda_ros_msgs.msg import JointPose
+import numpy as np
+import time
+from scipy.spatial.transform import Rotation
+
+if __name__ == '__main__':
+    rospy.init_node('panda_joint_control_test')
+
+    pub = rospy.Publisher('/panda/joint_pose', JointPose, queue_size=1)
+    rospy.sleep(0.5)
+    start = [0.0754606,-0.337453,0.150729,-2.46194,0.0587094,2.12597,0.972193]
+    end = [0., -0.5, 0., -1.8, 0., 1.31, 0.8]
+    t = 2.
+    end_time = rospy.Time.now() + rospy.Duration(t)
+    
+    j = JointPose()
+    j.header.stamp = rospy.Time.now() + rospy.Duration(t)
+    j.joint_pose = end 
+    pub.publish(j)
+    rospy.sleep(t)
+    j = JointPose()
+    j.header.stamp = rospy.Time.now() + rospy.Duration(t)
+    j.joint_pose = start 
+    pub.publish(j)

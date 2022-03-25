@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Build Panda Controller
+cd src/PandaController
+mkdir build
+cd build
+cmake ..
+make install
+cd ../../..
+
+
+# Build other ROS packages
+catkin build panda_ros --no-notify
+catkin build panda_ros_msgs --no-notify
