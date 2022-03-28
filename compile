@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Build Panda Controller
+cd src/Panda
+source compilePanda
+
+# Build Execution
+# TBD
+
+# Build Interface
+# TBD

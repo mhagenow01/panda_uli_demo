@@ -14,7 +14,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/TwistStamped.h"
 #include "geometry_msgs/Wrench.h"
-#include <relaxed_ik/JointAngles.h>
+
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include <csignal>

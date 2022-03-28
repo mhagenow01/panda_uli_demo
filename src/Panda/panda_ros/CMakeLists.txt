@@ -26,7 +26,7 @@ find_library(
 message(STATUS ${pandaCommon})
 
 add_executable(pandaRosWrapper src/panda_ros.cpp)
-target_include_directories(pandaRosWrapper PUBLIC ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../devel/include)
+target_include_directories(pandaRosWrapper PUBLIC ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../../../devel/include)
 target_link_libraries(pandaRosWrapper ${catkin_LIBRARIES} ${pandaController} ${pandaCommon} ${franka})
 
 install(TARGETS pandaRosWrapper

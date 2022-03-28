@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Build Panda Controller
-cd src/PandaController
+cd PandaController
+rm -r build
 mkdir build
 cd build
 cmake ..

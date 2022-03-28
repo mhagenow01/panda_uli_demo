@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+  <name>env_mapping</name>
+  <version>1.0</version>
+  <description>Run RTABMAP for mapping from robot-mounted depth camera</description>
+
+  <maintainer email="mhagenow@wisc.edu">Mike Hagenow</maintainer>
+  <license>MIT</license>
+  <author >Mike Hagenow</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>tf</build_depend>
+  <run_depend>tf</run_depend>
+
+</package>
