@@ -1,0 +1,30 @@
+<!--
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the MIT License.
+-->
+
+<launch>
+
+  <arg name="color_enabled" default="true"/> 
+  
+  <!-- Start rtabmap_ros node -->
+  <include file="$(find drone_panda)/launch/rtabmap.launch">
+    <arg     if="$(arg color_enabled)" name="rgb_topic"          value="/k4a/rgb/image_rect" />
+    <arg     if="$(arg color_enabled)" name="depth_topic"        value="/k4a/depth_to_rgb/image_raw" />
+    <arg     if="$(arg color_enabled)" name="camera_info_topic"  value="/k4a/rgb/camera_info" />
+    <arg unless="$(arg color_enabled)" name="rgb_topic"          value="/k4a/ir/image_rect" />
+    <arg unless="$(arg color_enabled)" name="depth_topic"        value="/k4a/depth/image_rect" />
+    <arg unless="$(arg color_enabled)" name="camera_info_topic"  value="/k4a/ir/camera_info" />
+    <arg name="approx_sync" value="true" />
+    <arg name="frame_id"    value="camera_base" />
+    <arg      if="$(arg color_enabled)" name="args" value="--delete_db_on_start --GFTT/MinDistance 7 --Vis/CorGuessWinSize 40 --Optimizer/GravitySigma 0.3" />
+    <arg unless ="$(arg color_enabled)" name="args" value="--delete_db_on_start --Optimizer/GravitySigma 0.3" />
+    <arg name="wait_imu_to_init"   value="true"/>
+    <arg name="visual_odometry"    value="false"/>
+    <arg name="odom_topic"         value="panda/odom"/> -->
+    <arg name="rviz"               value="false"/>
+    <arg name="rtabmapviz"         value="false"/>
+    <arg name="output"             value="log"/>
+  </include>
+
+</launch>

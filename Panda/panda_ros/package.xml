@@ -1,9 +1,9 @@
-<?xml version="1.0"?>
+<?xml version="1.0.0"?>
 <package format="2">
-    <name>panda_ros_msgs</name>
+    <name>panda_ros</name>
     <version>1.0.0</version>
     <description>
-        MSG definitions for the Ros wrapper for the pandaController
+        ROS wrapper for the pandaController
     </description>
     <maintainer email="wisconsinhci@gmail.com">Mike H., Kevin W., Tim L., Luis M., Emmanuel S.</maintainer>
     <license>WTFPL</license>
@@ -11,8 +11,7 @@
     <buildtool_depend>catkin</buildtool_depend>
 
     <depend>roscpp</depend>
-    <depend>std_msgs</depend>  
-    <build_depend>message_generation</build_depend>
-    <exec_depend>message_runtime</exec_depend>
+    <depend>std_msgs</depend>
+    <depend>panda_ros_msgs</depend>
 
 </package>

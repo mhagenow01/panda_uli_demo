@@ -1,7 +1,7 @@
-<?xml version="1.0"?>
+<?xml version="1.0.0"?>
 <package>
   <name>env_mapping</name>
-  <version>1.0</version>
+  <version>1.0.0</version>
   <description>Run RTABMAP for mapping from robot-mounted depth camera</description>
 
   <maintainer email="mhagenow@wisc.edu">Mike Hagenow</maintainer>
