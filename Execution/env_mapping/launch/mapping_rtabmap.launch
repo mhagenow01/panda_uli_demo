@@ -8,7 +8,7 @@ Licensed under the MIT License.
   <arg name="color_enabled" default="true"/> 
   
   <!-- Start rtabmap_ros node -->
-  <include file="$(find drone_panda)/launch/rtabmap.launch">
+  <include file="$(find env_mapping)/launch/rtabmap.launch">
     <arg     if="$(arg color_enabled)" name="rgb_topic"          value="/k4a/rgb/image_rect" />
     <arg     if="$(arg color_enabled)" name="depth_topic"        value="/k4a/depth_to_rgb/image_raw" />
     <arg     if="$(arg color_enabled)" name="camera_info_topic"  value="/k4a/rgb/camera_info" />

@@ -23,7 +23,7 @@ class EnvMapping:
         time.sleep(0.5)
 
         # Subscribe to start/stop mapping
-        rospy.Subscriber("rvizToggle", String, self.mappingToggle)
+        rospy.Subscriber("/mappingToggle", String, self.mappingToggle)
         rospy.Subscriber("/rtabmap/cloud_map",PointCloud2,self.saveCloud)
 
     def saveCloud(self,data):
@@ -38,7 +38,7 @@ class EnvMapping:
     def startMapping(self):
         if self._p is not None:
             self._p.terminate()
-        self._p = subprocess32.Popen(["roslaunch", "drone_panda", "mapping_rtabmap.launch"])
+        self._p = subprocess32.Popen(["roslaunch", "env_mapping", "mapping_rtabmap.launch"])
        
     def stopMapping(self):
         if self._p is not None:
