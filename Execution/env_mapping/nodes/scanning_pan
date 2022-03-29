@@ -39,7 +39,7 @@ class PandaReg:
 
         strMapping = String()
         strMapping.data = "on"
-        # pub_mapping.publish(strMapping)
+        pub_mapping.publish(strMapping)
 
         strDone = String()
         strDone.data = "start"
@@ -47,11 +47,11 @@ class PandaReg:
 
         # Change the end effector
         strEE = String()
-        strEE.data = "cameraLink"
+        strEE.data = "pandaGripper"
         pub_ee.publish(strEE)
         strChain = String()
-        strChain.data = "pandaCamera"
-        # pub_chain.publish(strChain)
+        strChain.data = "pandaFlange"
+        pub_chain.publish(strChain)
         rospy.sleep(2.0)
 
         hpose = HybridPose()
@@ -68,9 +68,8 @@ class PandaReg:
         hpose.constraint_frame.w = 1.0
 
         #Interpolate to the starting position
-        starting = [0.57, -0.15, 0.45]
-        # startingR = Rotation.from_quat([-0.267, 0.6629, 0.27266, 0.64416])
-        startingR = Rotation.from_euler('XYZ', [0.0, 1.57, 0.0])
+        starting = [0.45, 0.0, 0.35]
+        startingR = Rotation.from_euler('XYZ', [0.0, 0.0, 0.0])
         q_startingR = startingR.as_quat()
 
         try:
@@ -78,7 +77,7 @@ class PandaReg:
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))
             trans = tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(4.0))
             x = trans.transform.translation.x; y = trans.transform.translation.y; z = trans.transform.translation.z
-            qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z;
+            qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z
             qw = trans.transform.rotation.w
 
         except Exception as e:
@@ -112,15 +111,15 @@ class PandaReg:
         ###################################
         
         # Left Right
-        for theta in np.arange(0, 4 * np.pi, 0.004):
+        max_theta = 8 * np.pi
+        for theta in np.arange(0, max_theta, 0.008):
             
             if not rospy.is_shutdown():
-                hpose.pose.position.x = - 0.0 * np.sin(0.5*theta) + starting[0] - 0.00*(theta/(12*np.pi))
+                hpose.pose.position.x = - 0.0 * np.sin(0.5*theta) + 0.1 * theta/(max_theta) + starting[0]
                 hpose.pose.position.y = 0.15 * np.sin(0.5*theta) + starting[1]
-                hpose.pose.position.z = starting[2]-0.08*np.sin((0.5*theta))
+                hpose.pose.position.z = 0.0 * np.sin((0.5*theta)) + starting[2]
 
-                R = Rotation.from_euler('XYZ', [-0.3*np.sin(0.5*theta), 1.57-0.00*(theta/(4*np.pi)), 0.0*np.abs(np.sin(0.5*theta))])
-                # R = Rotation.from_euler('XYZ', [0.0, 0.0, 0.0])
+                R = Rotation.from_euler('XYZ', [-0.2*np.sin(0.5*theta), -0.00*(theta/(4*np.pi)), 0.0*np.abs(np.sin(0.5*theta))])
                 q = R.as_quat()
                 hpose.pose.orientation.x = q[0]
                 hpose.pose.orientation.y = q[1]
@@ -134,34 +133,13 @@ class PandaReg:
 
         time.sleep(0.1)
 
-        for theta in np.arange(0, 4 * np.pi, 0.004):
-            
-            if not rospy.is_shutdown():
-                hpose.pose.position.x = 0.15 * np.sin(0.5*theta) + starting[0] - 0.00*(theta/(12*np.pi))
-                hpose.pose.position.y = 0.0 * np.sin(0.5*theta) + starting[1]
-                hpose.pose.position.z = starting[2]-0.08*np.sin((0.5*theta))
-
-                R = Rotation.from_euler('XYZ', [0.0, 1.57+0.3*np.sin(0.5*theta), 0.0*np.abs(np.sin(0.5*theta))])
-                # R = Rotation.from_euler('XYZ', [0.0, 0.0, 0.0])
-                q = R.as_quat()
-                hpose.pose.orientation.x = q[0]
-                hpose.pose.orientation.y = q[1]
-                hpose.pose.orientation.z = q[2]
-                hpose.pose.orientation.w = q[3]
-
-                pub.publish(hpose)
-                time.sleep(0.005)
-            else:
-                return
-        
-
         strDone = String()
         strDone.data = "end"
         pub_done.publish(strDone)
 
         time.sleep(0.5)
         strMapping.data = "off"
-        # pub_mapping.publish(strMapping)
+        pub_mapping.publish(strMapping)
         time.sleep(2.0)
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
 <launch>
-    <node pkg="panda_ros" type="pandaRosWrapper" name="panda_controller" output="screen">
+    <node pkg="panda_ros" type="pandaRosWrapper" name="panda_controller" output="screen"/>
     <include file="$(find panda_ros)/launch/joint_state_pub.launch"/>
 </launch>

@@ -16,6 +16,7 @@ from nav_msgs.msg import Odometry
 
 def main():
     rospy.init_node('panda_odom')
+    rospy.sleep(2.0)
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
     broadcaster = tf2_ros.StaticTransformBroadcaster()

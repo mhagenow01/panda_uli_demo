@@ -1,6 +1,13 @@
-<!-- Starts the node that turns on/off RTAB-Map and the node that republishes tf as odometry messages-->
 <?xml version="1.0"?>
+<!-- Starts the node that turns on/off RTAB-Map and the node that republishes tf as odometry messages-->
 <launch>
-    <node name="mappingtoggle" pkg="env_mapping" type="env_mapping" name="env_mapping" output="screen"/>
-    <node name="odomPub" pkg="env_mapping" type="map_odometry" name="map_odometry" output="screen"/>
+    <arg name="camera_model" default="kinect"/> 
+
+    <group if="$(eval camera_model == 'kinect')">
+        <include file="$(find env_mapping)/launch/kinect_mapper.launch"/>
+    </group>
+
+    <node pkg="env_mapping" type="env_mapping" name="env_mapping" output="screen"/>
+    <node pkg="env_mapping" type="map_odometry" name="map_odometry" output="screen"/>
+
 </launch>
