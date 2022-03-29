@@ -1,0 +1,4 @@
+<launch>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find affordance_corrections)/launch/pc_scene_interactivemarkers.rviz" output="screen" />
+  <node pkg="affordance_corrections" type="ros_marker_wrapper.py" name="ros_marker_wrapper" output="screen" />
+</launch>

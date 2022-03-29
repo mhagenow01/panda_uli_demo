@@ -1,0 +1,10 @@
+<launch>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find affordance_corrections)/launch/pc_scene.rviz" output="screen" />
+  <!-- <node pkg="affordance_corrections" type="ros_affordance_wrapper.py" name="ros_affordance_wrapper" output="screen">
+    <param name="input" value="teleop" />
+  </node> -->
+  <include file="$(find spacenav_node)/launch/classic.launch"/>
+  <node pkg="affordance_corrections" type="ros_affordance_wrapper.py" name="ros_affordance_wrapper" output="screen">
+    <param name="input" value="spacemouseNL" />
+  </node>
+</launch>
