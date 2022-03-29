@@ -6,7 +6,6 @@
 #include <string>
 #include <stdbool.h>
 #include <list>
-#include "NumCpp.hpp"
 //#include "urdf_helpers.cpp"
 
 #include "Eigen/Dense"

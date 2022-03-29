@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
+set (CMAKE_CXX_STANDARD 11)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -9,7 +10,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 project(cppregistration)
 
 find_package(Eigen3 REQUIRED)
-message(STATUS ${Eigen3})
 find_package(PicoTree REQUIRED)
 find_package(OpenMP)
 find_library(NLopt libnlopt.so REQUIRED)

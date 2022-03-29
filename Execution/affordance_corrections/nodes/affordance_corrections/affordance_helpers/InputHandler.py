@@ -49,7 +49,7 @@ class InputHandler:
         # Scaling factors for translation and rotation of spacemouse input (empirically determined)
         k_rot = 3.0
         k_trans = 0.005
-        articulation_rate = 0.10
+        articulation_rate = 0.05
 
         # Two differenct scalings on input: nonlinear and linear velocities
         if nonlinear:
