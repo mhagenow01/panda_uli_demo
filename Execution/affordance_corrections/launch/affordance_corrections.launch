@@ -1,0 +1,4 @@
+<launch>
+  <include file="$(find spacenav_node)/launch/classic.launch"/>
+  <node pkg="affordance_corrections" type="ros_uli_wrapper.py" name="ros_uli_wrapper" output="screen"/>
+</launch>

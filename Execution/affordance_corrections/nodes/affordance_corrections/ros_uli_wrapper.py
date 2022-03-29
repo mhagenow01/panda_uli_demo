@@ -37,30 +37,12 @@ class ROSDemoAffordances(ROSAffordances):
         affordance engine which interfaces with many ROS topics"""
     def __init__(self):
         ''' Set up additionalROS topics'''
-        rospy.Subscriber("/panda/executeAT",String,self.executeAT)
-        self.atpub = rospy.Publisher('panda/valve_at_pose', PoseStamped, queue_size=1)
         super().__init__('spacemouseNL')
 
-    def executeAT(self,data):
-        print(len(self.engine.objectsOfInterest))
-
-        if len(self.engine.objectsOfInterest)>0:
-            print("Desired angle: ", data.data)
-            curr_angle = self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].angles[0]
-            print("Current angle: ",curr_angle)
-            print("Active Pos: ",self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].pos)
-            print("Active Rot: ",ScipyR.from_matrix(self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].rot).as_quat())
-            posetemp = PoseStamped()
-            posetemp.header.frame_id = str(curr_angle)+":"+str(data.data)
-            posetemp.pose.position.x = self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].pos[0]
-            posetemp.pose.position.y = self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].pos[1]
-            posetemp.pose.position.z = self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].pos[2]
-            posetemp.pose.orientation.x = ScipyR.from_matrix(self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].rot).as_quat()[0]
-            posetemp.pose.orientation.y = ScipyR.from_matrix(self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].rot).as_quat()[1]
-            posetemp.pose.orientation.z = ScipyR.from_matrix(self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].rot).as_quat()[2]
-            posetemp.pose.orientation.w = ScipyR.from_matrix(self.engine.objectsOfInterest[self.engine.active_obj].fits[self.engine.objectsOfInterest[self.engine.active_obj].active_id].rot).as_quat()[3]
-            self.atpub.publish(posetemp)
-    
+# TODO: get pose of object
+# only one object?
+# refit when desired?
+# set the models in a different way
 
 def receivedScene(data):
     global rosaff, angle
@@ -92,47 +74,23 @@ def receivedScene(data):
     # print(xyz)
     # print(rgb)
     print("received a new scene", len(xyz))
-    
-    # save point cloud
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(xyz)
-    pcd.colors = o3d.utility.Vector3dVector(rgb)
-    o3d.io.write_point_cloud("/home/mike/Documents/CorrectionsIVA/kinect"+str(int(time.time()))+".pcd",pcd)
 
     rosaff.setSceneXYZRGB(xyz,rgb)
     time.sleep(1.0)
-    if angle is not None and len(xyz)>10:
-        rosaff.setFitting(True)
-        rosaff.applyAngle(angle/1.57)
-
-
-def setAngle(data):
-    global angle
-    angle = float(data.header.frame_id.split(":")[1])
-    rosaff.setFitting(False)
-    rosaff.applyAngle(angle/1.57)
-
 
 def main():
     global rosaff
-    rospy.init_node('affordance_wait_for_scan', anonymous=True)
-    rospy.Subscriber("/pcscene", PointCloud2, receivedScene, queue_size=1)
-    rospy.Subscriber("/panda/valve_at_pose", PoseStamped, setAngle, queue_size=1)
+    rospy.init_node('affordance_registration', anonymous=True)
+    rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
     rospack = rospkg.RosPack()
-    root_dir = rospack.get_path('affordance_corrections')+'/../../'
-    input_method = 'spacemouseNL'
+    package_dir = rospack.get_path('affordance_corrections')+'/../../'
     
     rosaff = ROSDemoAffordances()
     rosaff.toggleSVDforInitialArticulation(True)
-    rosaff.setCppFitting(True)
+    rosaff.setCppFitting(False)
     rosaff.setFitting(True)
-    # rosaff.setModels([root_dir+'src/affordance_models/urdfs/ball_valve.urdf', root_dir+'src/affordance_models/urdfs/pvc_ball_valve.urdf', root_dir+'src/affordance_models/meshes/e_stop_coarse.STL', root_dir+'src/affordance_models/meshes/handle.STL', root_dir+'src/affordance_models/meshes/stop_valve_assem.STL'])
-    rosaff.setModels([root_dir+'src/affordance_models/urdfs/ball_valve.urdf'])
+    rosaff.setModels([package_dir+'ULIConfigsrc/registration_models/layup_tool2.STL'])
     rosaff.runLoop()
-    # rosaff.setModels([root_dir+'src/affordance_models/meshes/e_stop_coarse.STL', root_dir+'src/affordance_models/meshes/handle.STL', root_dir+'src/affordance_models/meshes/stop_valve_assem.STL', root_dir+'src/affordance_models/meshes/pvc_ball_valve_assem.STL', root_dir+'src/affordance_models/meshes/ball_valve_one_inch.STL'])
-    
-    
-    # rosaff.runLoop()
     
 if __name__ == '__main__':
     main()
