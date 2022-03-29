@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<launch>
+    <!--                            -->
+    <!-- Kinect Related (no rtabmap)-->
+    <!--                            -->
+
+
+      <!-- If color_enabled is false, IR camera is used (may work better in dark areas). -->
+  <!-- When using color camera, to avoid black borders in point clouds 
+       in rtabmapviz, set ROI ratios in Preferences->3D rendering 
+       to "0.05 0.05 0.05 0.05" under Map and Odom columns. -->
+  <arg name="color_enabled" default="true"/> 
+
+  <param name="robot_description"
+    command="xacro $(find azure_kinect_ros_driver)/urdf/azure_kinect.urdf.xacro" />
+
+  <!-- <node name="kinect_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  <node name="kinect_robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" /> -->
+
+  <!-- Start the K4A sensor driver -->
+  <group ns="k4a" >
+
+    <!-- Spawn a nodelet manager -->
+    <node pkg="nodelet" type="nodelet" name="manager" args="manager" output="screen">
+      <param name="num_worker_threads" value="12" />
+    </node>
+
+    <!-- Spawn an image_proc/rectify nodelet to rectify the RGB image -->
+    <node pkg="nodelet" type="nodelet" name="rectify_rgb"
+          args="load image_proc/rectify manager --no-bond"
+          respawn="true">
+      <remap from="image_mono"  to="rgb/image_raw" />
+      <remap from="image_rect"  to="rgb/image_rect" />
+    </node>
+    
+    <!-- Spawn an image_proc/rectify nodelet to rectify the depth image -->
+    <node unless="$(arg color_enabled)" pkg="nodelet" type="nodelet" name="rectify_depth"
+          args="load image_proc/rectify manager --no-bond"
+          respawn="true">
+      <param name="interpolation"  value="0" />
+      <remap from="image_mono"  to="depth/image_raw" />
+      <remap from="image_rect"  to="depth/image_rect" />
+    </node>
+    
+    <!-- Spawn an image_proc/rectify nodelet to rectify the ir image -->
+    <node unless="$(arg color_enabled)" pkg="nodelet" type="nodelet" name="rectify_ir"
+          args="load image_proc/rectify manager --no-bond"
+          respawn="true">
+      <remap from="image_mono"  to="ir/image_raw" />
+      <remap from="image_rect"  to="ir/image_rect" />
+    </node>
+    
+    <node pkg="nodelet" type="nodelet" name="k4a_ros_bridge"
+          args="load Azure_Kinect_ROS_Driver/K4AROSBridgeNodelet manager --no-bond"
+          respawn="true">
+      <param name="depth_enabled"     value="true" />
+      <param name="depth_mode"        value="WFOV_2X2BINNED" />
+      <param name="color_enabled"     value="$(arg color_enabled)" />
+      <param name="color_resolution"  value="1536P" />
+      <param name="fps"               value="30" />
+      <param name="point_cloud"       value="false" />
+      <param name="rgb_point_cloud"   value="false" />
+      <param name="required"          value="true" />
+      <param name="imu_rate_target"   value="100" />
+      <param name="rescale_ir_to_mono8"   value="true" />
+    </node>
+
+  </group>
+  
+  <!-- compute IMU quaternion -->
+  <!-- <node pkg="imu_filter_madgwick" type="imu_filter_node" name="imu_filter_node">
+    <param name="use_mag" value="false" />
+    <param name="publish_tf" value="false" />
+    <param name="world_frame" value="enu" />
+    <remap from="/imu/data_raw" to="/k4a/imu" />
+  </node> -->
+</launch>
