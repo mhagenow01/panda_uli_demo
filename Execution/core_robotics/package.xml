@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>core_robotics</name>
+    <version>1.0.0</version>
+    <description>
+        Place to store basic algorithms (e.g., transforms, quaternion manipulation, etc.)
+    </description>
+    <maintainer email="wisconsinhci@gmail.com">Mike H.</maintainer>
+    <license>WTFPL</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <depend>roscpp</depend>
+    <depend>std_msgs</depend>
+
+</package>
