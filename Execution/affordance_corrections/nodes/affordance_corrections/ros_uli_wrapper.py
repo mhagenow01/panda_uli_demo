@@ -44,6 +44,11 @@ class ROSDemoAffordances(ROSAffordances):
 # refit when desired?
 # set the models in a different way
 
+def getObjPose(data):
+    global rosaff
+    rot, pos = rosaff.engine.getActiveObjectPose()
+    print("OBJECT POSE: ", rot, pos)
+
 def receivedScene(data):
     
     startt = time.time()
@@ -100,9 +105,10 @@ def main():
     rosaff.toggleSVDforInitialArticulation(True)
     rosaff.setCppFitting(True)
     rosaff.setFitting(True)
-    rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_corrected.STL'])
+    rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_surface_demo.STL'])
 
     rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
+    rospy.Subscriber("/getObjPose", String, getObjPose, queue_size=1)
 
     rosaff.runLoop()
     

@@ -57,26 +57,27 @@ def findPlane(pts):
 
     return wx_best, wy_best, d_best
 
-def surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0]):
+def surfaceFromSTL(surface_file,stl_file,rigid_file= '',breadboard_offset=[0,0]):
     mesh = trimesh.load(stl_file)
 
     # Turn STL into a point cloud of the desired surface using even sampling
     points, something = sample.sample_surface_even(mesh,200)
 
-    # convert properly for mm to m issue (from solidworks models)
-    points = points/1000
+    # # convert properly for mm to m issue (from solidworks models)
+    # points = points/1000
 
-    A_mocap_panda, A_breadboard_mocap, A_breadboard_panda = calculateRR(rigid_file)
-    # Apply a rotation and a translation to all of the points
-    R = A_breadboard_panda[0:3,0:3]
-    t = np.array(A_breadboard_panda[0:3,3]).reshape((3,))
+    if rigid_file != '':
+        A_mocap_panda, A_breadboard_mocap, A_breadboard_panda = calculateRR(rigid_file)
+        # Apply a rotation and a translation to all of the points
+        R = A_breadboard_panda[0:3,0:3]
+        t = np.array(A_breadboard_panda[0:3,3]).reshape((3,))
 
-    # t_addtl is the offset in the breadboard (measured in number of holes)
-    t_addtl = np.matmul(R,np.array([0.025*breadboard_offset[0], 0.025*breadboard_offset[1], 0.0]).reshape((3,1))).reshape((3,))
-    t = t+t_addtl
+        # t_addtl is the offset in the breadboard (measured in number of holes)
+        t_addtl = np.matmul(R,np.array([0.025*breadboard_offset[0], 0.025*breadboard_offset[1], 0.0]).reshape((3,1))).reshape((3,))
+        t = t+t_addtl
 
-    for ii in range(0, len(points)):
-        points[ii] = (np.matmul(R, points[ii].reshape((3, 1))) + t.reshape((3, 1))).reshape(3, )
+        for ii in range(0, len(points)):
+            points[ii] = (np.matmul(R, points[ii].reshape((3, 1))) + t.reshape((3, 1))).reshape(3, )
 
     ###########################################################################################
     ##  Algorithm for fitting the B Spline Surface to the Point Cloud                        ##
@@ -206,10 +207,11 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0]):
 
     # conform back to the surface as control points (Do I need a spring - start w/o it!)
     points_rich, something = sample.sample_surface_even(mesh, 10000)
-    points_rich = points_rich/1000 # mm to m issue
+    # points_rich = points_rich/1000 # mm to m issue
 
-    for ii in range(0, len(points_rich)):
-        points_rich[ii] = (np.matmul(R, points_rich[ii].reshape((3, 1))) + t.reshape((3, 1))).reshape(3, )
+    if rigid_file != '':
+        for ii in range(0, len(points_rich)):
+            points_rich[ii] = (np.matmul(R, points_rich[ii].reshape((3, 1))) + t.reshape((3, 1))).reshape(3, )
 
     for ii in range(0, num_ctrl_pts):
         for jj in range(0, num_ctrl_pts):
@@ -250,24 +252,26 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0]):
     ax.set_xlim3d(0.0, 0.4)
     ax.set_ylim3d(0.0, 0.4)
     ax.set_zlim3d(0.0, 0.4)
-    print("----------------")
-    print("point = {" + str(t[0]) + ", " + str(t[1]) + ", " + str(t[2]) + "}")
-    print("color2 = {0.0, 0.0, 1.0}")
-    print("pt=sim.addDrawingObject(dr,0.003,0.0,-1,30000,color2)")
-    print("point[1]=point[1]+panda_frame[1]")
-    print("point[2]=point[2]+panda_frame[2]")
-    print("point[3]=point[3]+panda_frame[3]")
-    print("sim.addDrawingObjectItem(pt,point)")
+
+    if rigid_file != '':
+        print("----------------")
+        print("point = {" + str(t[0]) + ", " + str(t[1]) + ", " + str(t[2]) + "}")
+        print("color2 = {0.0, 0.0, 1.0}")
+        print("pt=sim.addDrawingObject(dr,0.003,0.0,-1,30000,color2)")
+        print("point[1]=point[1]+panda_frame[1]")
+        print("point[2]=point[2]+panda_frame[2]")
+        print("point[3]=point[3]+panda_frame[3]")
+        print("sim.addDrawingObjectItem(pt,point)")
 
 
-    for ii in range(0,num_ctrl_pts):
-        for jj in range(0,num_ctrl_pts):
-            print("point = {"+str(ctrl_pts[ii,jj,0])+", "+str(ctrl_pts[ii,jj,1])+", "+str(ctrl_pts[ii,jj,2])+"}")
-            print("pt=sim.addDrawingObject(dr,0.001,0.0,-1,30000,color)")
-            print("point[1]=point[1]+panda_frame[1]")
-            print("point[2]=point[2]+panda_frame[2]")
-            print("point[3]=point[3]+panda_frame[3]")
-            print("sim.addDrawingObjectItem(pt,point)")
+        for ii in range(0,num_ctrl_pts):
+            for jj in range(0,num_ctrl_pts):
+                print("point = {"+str(ctrl_pts[ii,jj,0])+", "+str(ctrl_pts[ii,jj,1])+", "+str(ctrl_pts[ii,jj,2])+"}")
+                print("pt=sim.addDrawingObject(dr,0.001,0.0,-1,30000,color)")
+                print("point[1]=point[1]+panda_frame[1]")
+                print("point[2]=point[2]+panda_frame[2]")
+                print("point[3]=point[3]+panda_frame[3]")
+                print("sim.addDrawingObjectItem(pt,point)")
 
     plt.show(block=False)
     time.sleep(2)
@@ -309,9 +313,9 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0]):
 
 
 if __name__ == "__main__":
-    stl_file = '/home/mike/Desktop/cowling_4_surface.STL'
-    rigid_file = '/home/mike/Documents/LearningCorrections/data/10-18-21/rigid1_10-18-21.bag'
-    surface_file = '/home/mike/Documents/LearningCorrections/data/10-18-21/layup.csv'
+    stl_file = '/home/mike/Documents/panda_uli_workspace/src/panda_uli_demo/ULIConfig/registration_models/layup_tool2_surface_demo.STL'
+    rigid_file = ''
+    surface_file = '/home/mike/Documents/panda_uli_workspace/src/panda_uli_demo/ULIConfig/registration_models/layup_tool2_surface_demo.csv'
     surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0])
 
 

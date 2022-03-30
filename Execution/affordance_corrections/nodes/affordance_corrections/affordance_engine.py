@@ -117,6 +117,13 @@ class AffordanceEngine:
             return self.objectsOfInterest[self.active_obj].refitting
         else:
             return True # default is enabled
+        
+    def getActiveObjectPose(self):
+        if len(self.objectsOfInterest) > 0:
+            active_id = self.objectsOfInterest[obj_id].active_id
+            return self.objectsOfInterest[self.active_obj].fits[active_id].rot, self.objectsOfInterest[self.active_obj].fits[active_id].pos
+        # if nothing, return identity
+        return np.array([0, 0, 0, 1]), np.zeros((3,))
 
     def addObjOfInterest(self,pt):
         ''' Create a new object and fit the model for a given point in space'''

@@ -80,11 +80,13 @@ class DMP:
         # Data is expected to a list of equal length arrays
         num_demos = len(data)
         num_samples = len(data[0])
-        start_sum=0.0; end_sum=0.0
+        start_sum=0.0
+        end_sum=0.0
         for ii in range(0,num_demos):
-            start_sum+=data[ii][0]
-            end_sum+=data[ii][-1]
-        start = start_sum/float(num_demos); end = end_sum/float(num_demos)
+            start_sum += data[ii][0]
+            end_sum += data[ii][-1]
+        start = start_sum /float(num_demos)
+        end = end_sum / float(num_demos)
 
         # Determine the placement of kernels
         input_split = np.linspace(0, num_samples, self.num_kernels + 1)
@@ -151,7 +153,7 @@ class HybridSegment:
     b = 2*np.sqrt(50)
     surface=''
     num_samples = 0
-    state_names=[]
+    state_names=[] # list of names e.g., ['x','y','z']
     forcing_vals=[]
     rev_forcing_vals = []
     original_vals = []
@@ -161,7 +163,7 @@ class HybridSegment:
     hybrid=False
 
 
-class DMPLWR:
+class DMPLWRhardcoded:
     def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1])):
         # DMP parameters
         self.k = 50
@@ -265,7 +267,8 @@ class DMPLWR:
 
         highlightedthreedplot(x, y, z, xs, ys, zs)
 
-    def learnModel(self,segments,outfile='output.pkl'):
+    def learnModel(self,learnedSegments,outfile=''):
+        num_demos = len(learnedSegments[0].original_vals)
         start_time = time.time()
         if self.verbose:
             print("-------------------")
@@ -279,10 +282,10 @@ class DMPLWR:
        
         ####### 1. DMP + LWR #############
 
-        for ii in range(0,len(segments)-1): # TODO: why one less than end?
+        for ii in range(0,len(learnedSegments)): # note: this is (segments-1) for the real thing from some segmentation-related issue
             segmentTemp = learnedSegments[ii]
             if self.verbose:
-                print("DMP for segment ", ii, " of ",(len(segments) - 1))
+                print("DMP for segment ", ii, " of ",(len(learnedSegments) - 1))
 
             segmentTemp.start_vals = np.zeros((len(segmentTemp.state_names,)))
             segmentTemp.end_vals = np.zeros((len(segmentTemp.state_names, )))
@@ -296,6 +299,7 @@ class DMPLWR:
                     data_temp_r.append(np.flip(segmentTemp.original_vals[kk][jj, :]))
 
                 dmptemp = DMP(self.k,self.b,self.dt)
+
                 start,end,forcing = dmptemp.getForcing(data_temp)
                 _,_,reverse_forcing = dmptemp.getForcing(data_temp_r)
                 segmentTemp.start_vals[jj] = start
@@ -310,30 +314,33 @@ class DMPLWR:
                 # plt.plot(dmptemp.getPath(start, end, forcing),color='red')
                 # plt.show()
 
-        rospack = rospkg.RosPack()
-        root_dir = rospack.get_path(
-            'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-        pickle.dump(learnedSegments, open(root_dir + "yoyo.pkl", "wb"))
+        # rospack = rospkg.RosPack()
+        # root_dir = rospack.get_path(
+        #     'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
+        # pickle.dump(learnedSegments, open(root_dir + "yoyo.pkl", "wb"))
 
-        ####### 2. Corrections for provided values #############
-        for segment in learnedSegments:
-            var_ranges = []
-            for xx in range(0,len(segment.state_names)):
-                if segment.state_names[xx] in self.range_per_state.keys():
-                    var_ranges.append(self.range_per_state[segment.state_names[xx]])
-                else:
-                    var_ranges.append(1.0)
-            var_ranges = np.array(var_ranges)
-            segment.corrections = PerSamplePCA(segment.original_vals, var_ranges)
+        # ####### 2. Corrections for provided values #############
+        # for segment in learnedSegments:
+        #     var_ranges = []
+        #     for xx in range(0,len(segment.state_names)):
+        #         if segment.state_names[xx] in self.range_per_state.keys():
+        #             var_ranges.append(self.range_per_state[segment.state_names[xx]])
+        #         else:
+        #             var_ranges.append(1.0)
+        #     var_ranges = np.array(var_ranges)
+        #     segment.corrections = PerSamplePCA(segment.original_vals, var_ranges)
 
         # Save segments to file for execution
-        rospack = rospkg.RosPack()
-        root_dir = rospack.get_path('corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-        pickle.dump(learnedSegments,open(root_dir+outfile,"wb"))
+        if outfile != '':
+            rospack = rospkg.RosPack()
+            root_dir = rospack.get_path('corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
+            pickle.dump(learnedSegments,open(root_dir+outfile,"wb"))
 
         if self.verbose:
             print("Time to learn model: %s seconds" % (time.time() - start_time))
             self.plotModel(num_demos, learnedSegments)
+
+        return learnedSegments
 
 
     def linearInterpolation(self,start,end,val):
@@ -553,7 +560,7 @@ class DMPLWR:
             plt.show()
 
 
-    def executeModel(self,model_pkl_file,input_type="none"):
+    def executeModel(self,model_pkl_file,R_surface = np.eye(3),t_surface = np.zeros((3,)),input_type="none"):
         #############################
         # Load model                #
         #############################

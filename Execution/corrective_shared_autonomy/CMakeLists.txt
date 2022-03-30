@@ -5,7 +5,7 @@ SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_SKIP_RPATH False)
 SET(CMAKE_INSTALL_RPATH ..)
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg relaxed_ik panda_ros_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg panda_ros_msgs)
 catkin_package()
 catkin_python_setup()
 find_package(Eigen3 REQUIRED)

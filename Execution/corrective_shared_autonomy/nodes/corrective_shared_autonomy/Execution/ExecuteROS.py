@@ -19,7 +19,7 @@ from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 
 class ExecuteROS:
-    def __init__(self,input_tx = np.array([0, 0, 0, 1])):
+    def __init__(self,input_tx = np.array([0, 0, 0, 1]),task_R = np.array([0, 0, 0, 1], task_t = np.zeros((3,)))):
         # Set up ROS Publishers
         rospy.init_node('executeROSfromState', anonymous=True)
         self.hybrid_pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
@@ -28,6 +28,10 @@ class ExecuteROS:
         self.input = np.zeros((3,))
         self.input_button = 0.0
         self.input_tx = input_tx # if the transform should be further rotated
+
+        self.task_R = task_R
+        self.task_t = task_t
+
         rospy.Subscriber("/zdinput/input", Vector3, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
         time.sleep(0.5)
@@ -62,14 +66,25 @@ class ExecuteROS:
             try:
                 pos_ind = state_names.index("x")
                 quat_ind = state_names.index("qx")
-                hpose.pose.position.x = state_vals[pos_ind]
-                hpose.pose.position.y = state_vals[pos_ind+1]
-                hpose.pose.position.z = state_vals[pos_ind+2]
+
+                # Rotate from task frame into robot frame
+                R_temp = R.from_quat(self.task_R)
+                rotated_pos = R_temp.apply(np.array([state_vals[pos_ind], state_vals[pos_ind], state_vals[pos_ind]])) + self.task_t
+
+                hpose.pose.position.x = rotated_pos[0]
+                hpose.pose.position.y = rotated_pos[1]
+                hpose.pose.position.z = rotated_pos[2]
                 norm_q = np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]])/np.linalg.norm(np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]]))
-                hpose.pose.orientation.x = norm_q[0]
-                hpose.pose.orientation.y = norm_q[1]
-                hpose.pose.orientation.z = norm_q[2]
-                hpose.pose.orientation.w = norm_q[3]
+                
+                # Rotate rotation from task frame into robot frame
+                R_orientation = R.from_quat(norm_q)
+                rotated_orientation = (R_temp * R_orientation).as_quat()
+
+                hpose.pose.orientation.x = rotated_orientation[0]
+                hpose.pose.orientation.y = rotated_orientation[1]
+                hpose.pose.orientation.z = rotated_orientation[2]
+                hpose.pose.orientation.w = rotated_orientation[3]
+
                 self.hybrid_pub.publish(hpose)
 
             except:
@@ -96,6 +111,14 @@ class ExecuteROS:
 
             # Convert to robot and command
             r, n_hat, r_u_norm, r_v_norm = surface.calculate_surface_point(u,v)
+
+            # Convert everything from task frame into the robot frame
+            R_temp = R.from_quat(self.task_R)
+            r = R_temp.apply(r) + self.task_t
+            n_hat = R_temp.apply(n_hat)
+            r_u_norm = R_temp.apply(r_u_norm)
+            r_v_norm = R_temp.apply(r_v_norm)
+
 
             # get constraint frame
             constraint_frame_matrx = R.from_matrix(np.hstack([r_u_norm.reshape((3,1)),r_v_norm.reshape((3,1)),n_hat.reshape((3,1))]))

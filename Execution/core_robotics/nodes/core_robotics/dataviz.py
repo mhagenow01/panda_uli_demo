@@ -6,6 +6,7 @@ various types of data
 
 __author__ = "Mike Hagenow"
 
+import numpy as np
 import plotly
 import plotly.graph_objs as go
 import copy
@@ -43,13 +44,28 @@ def threedplot(x,y,z):
         }
     )
 
+    # Bounds configuring with invisible dots
+    min_val = np.min(np.array([np.min(x),np.min(y),np.min(z)]))
+    max_val = np.max(np.array([np.max(x),np.max(y),np.max(z)]))
+
+    trace3 = go.Scatter3d(
+        x=[min_val, max_val],  # <-- Put your data instead
+        y=[min_val, max_val],  # <-- Put your data instead
+        z=[min_val, max_val],  # <-- Put your data instead
+        mode='markers',
+        marker={
+            'size': 0.0,
+            'opacity': 0.0,
+            'color': 'blue'
+        }
+    )
 
     # Configure the layout.
     layout = go.Layout(
         margin={'l': 0, 'r': 0, 'b': 0, 't': 0}
     )
 
-    data = [trace,trace2]
+    data = [trace,trace2,trace3]
 
     plot_figure = go.Figure(data=data, layout=layout)
 
@@ -90,7 +106,23 @@ def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray):
         }
     )
 
-    data = [trace, trace2]
+    # Bounds configuring with invisible dots
+    min_val = np.min(np.array([np.min(x),np.min(y),np.min(z)]))
+    max_val = np.max(np.array([np.max(x),np.max(y),np.max(z)]))
+
+    trace3 = go.Scatter3d(
+        x=[min_val, max_val],  # <-- Put your data instead
+        y=[min_val, max_val],  # <-- Put your data instead
+        z=[min_val, max_val],  # <-- Put your data instead
+        mode='markers',
+        marker={
+            'size': 0.0,
+            'opacity': 0.0,
+            'color': 'blue'
+        }
+    )
+
+    data = [trace, trace2, trace3]
 
     for ii in range(0,len(xs_gray)):
         trace_temp = go.Scatter3d(
