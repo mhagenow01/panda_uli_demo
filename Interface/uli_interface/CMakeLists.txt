@@ -101,8 +101,8 @@ install(DIRECTORY
 #     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
 # )
 
-# catkin_install_python(PROGRAMS
-#     nodes/path_recorder
-#     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+catkin_install_python(PROGRAMS
+    nodes/spliner
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
