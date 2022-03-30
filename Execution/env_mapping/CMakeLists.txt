@@ -25,6 +25,7 @@ catkin_install_python(PROGRAMS
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
     
 add_executable(concatenatePC src/ConcatenatePC.cpp)
+target_include_directories(concatenatePC PUBLIC ${catkin_INCLUDE_DIRS})
 target_link_libraries(concatenatePC ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 install(TARGETS concatenatePC

@@ -21,7 +21,7 @@
   <group ns="k4a" >
 
     <!-- Spawn a nodelet manager -->
-    <node pkg="nodelet" type="nodelet" name="manager" args="manager" output="screen">
+    <node pkg="nodelet" type="nodelet" name="manager" args="manager" output="log">
       <param name="num_worker_threads" value="12" />
     </node>
 

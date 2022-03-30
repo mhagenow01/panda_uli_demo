@@ -24,10 +24,6 @@ class EnvMapping:
 
         # Subscribe to start/stop mapping
         rospy.Subscriber("/mappingToggle", String, self.mappingToggle)
-        rospy.Subscriber("/rtabmap/cloud_map",PointCloud2,self.saveCloud)
-
-    def saveCloud(self,data):
-        self.lastcloud = data
 
     def mappingToggle(self,data):
         if data.data == "on":
@@ -43,8 +39,6 @@ class EnvMapping:
     def stopMapping(self):
         if self._p is not None:
             self._p.terminate()  
-        if self.lastcloud:
-            self.pub.publish(self.lastcloud)
             
 
        

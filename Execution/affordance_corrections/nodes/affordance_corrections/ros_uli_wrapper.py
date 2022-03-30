@@ -45,16 +45,24 @@ class ROSDemoAffordances(ROSAffordances):
 # set the models in a different way
 
 def receivedScene(data):
+    
+    startt = time.time()
     global rosaff, angle
 
     ## https://answers.ros.org/question/255351/how-o-save-a-pointcloud2-data-in-python/
-    xyz = np.zeros((0,3))
-    rgb = np.zeros((0,3))
+    xyz = []
+    rgb = []
     #self.lock.acquire()
-    gen = pc2.read_points(data, skip_nans=True)
-    int_data = list(gen)
+    # gen = pc2.read_points(data, skip_nans=True)
+    gen2 = pc2.read_points(data)
+    int_data = list(gen2)
 
-    for x in int_data:
+    print("Received a new PC2: ",len(int_data))
+
+    for ii in range(0,len(int_data)):
+        x = int_data[ii]
+        if ii%10000 == 0:
+            print("  ",ii)
         test = x[3] 
         # cast float32 to int so that bitwise operations are possible
         s = struct.pack('>f' ,test)
@@ -66,14 +74,18 @@ def receivedScene(data):
         b = (pack & 0x000000FF)
         # prints r,g,b values in the 0-255 range
                     # x,y,z can be retrieved from the x[0],x[1],x[2]
-        xyz = np.append(xyz,[[x[0],x[1],x[2]]], axis = 0)
-        rgb = np.append(rgb,[[r,g,b]], axis = 0)
+        xyz.append([x[0],x[1],x[2]])
+        rgb.append([r,g,b])
+        # rgb = np.append(rgb,[[r,g,b]], axis = 0)
 
     # print("SHAPE: ",np.shape(xyz)," ",np.shape(rgb))
+    xyz = np.array(xyz)
+    rgb = np.array(rgb)
+    print("shape: ",np.shape(xyz))
     rgb = rgb.astype(float)/255.0
     # print(xyz)
     # print(rgb)
-    print("received a new scene", len(xyz))
+    print("received a new scene: ", len(xyz), " in ",time.time()-startt," seconds")
 
     rosaff.setSceneXYZRGB(xyz,rgb)
     time.sleep(1.0)
@@ -81,15 +93,17 @@ def receivedScene(data):
 def main():
     global rosaff
     rospy.init_node('affordance_registration', anonymous=True)
-    rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
     rospack = rospkg.RosPack()
     package_dir = rospack.get_path('affordance_corrections')+'/../../'
     
     rosaff = ROSDemoAffordances()
     rosaff.toggleSVDforInitialArticulation(True)
-    rosaff.setCppFitting(False)
+    rosaff.setCppFitting(True)
     rosaff.setFitting(True)
-    rosaff.setModels([package_dir+'ULIConfigsrc/registration_models/layup_tool2.STL'])
+    rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_corrected.STL'])
+
+    rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
+
     rosaff.runLoop()
     
 if __name__ == '__main__':

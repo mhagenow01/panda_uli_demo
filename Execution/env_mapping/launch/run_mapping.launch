@@ -8,6 +8,7 @@
     </group>
 
     <node pkg="env_mapping" type="env_mapping" name="env_mapping" output="screen"/>
+    <node pkg="env_mapping" type="concatenatePC" name="concatenatePC" output="screen"/>
     <node pkg="env_mapping" type="map_odometry" name="map_odometry" output="screen"/>
 
 </launch>

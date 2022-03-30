@@ -27,14 +27,17 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: Camera
   - Class: rviz/Displays
     Help Height: 70
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Camera1
+        - /Global Options1
+        - /Status1
+        - /PointCloud21
         - /PointCloud22
+        - /PointCloud23
       Splitter Ratio: 0.5
     Tree Height: 255
 Preferences:
@@ -83,9 +86,9 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.0035000001080334187
       Style: Flat Squares
-      Topic: /filtered_cloud
+      Topic: /rtabmap/cloud_map
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -102,9 +105,54 @@ Visualization Manager:
       Value: true
       Visibility:
         Grid: true
+        MarkerArray: true
         PointCloud2: true
         Value: true
       Zoom Factor: 1
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.0035000001080334187
+      Style: Flat Squares
+      Topic: /scene
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /points_clicked
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /meshes
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -126,9 +174,9 @@ Visualization Manager:
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.0035000001080334187
       Style: Flat Squares
-      Topic: /rtabmap/cloud_map
+      Topic: /filtered_cloud
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -161,25 +209,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.8488662242889404
+      Distance: 1.0948920249938965
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.1282329261302948
-        Y: -0.07423599809408188
-        Z: -0.028815679252147675
+        X: 0.7739830017089844
+        Y: -0.0951707661151886
+        Z: 0.06621820479631424
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4553978741168976
+      Pitch: 0.44979754090309143
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.1353946030139923
+      Yaw: 6.153538703918457
     Saved: ~
 Window Geometry:
   Camera:
