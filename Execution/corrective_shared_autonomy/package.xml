@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>corrective_shared_autonomy</name>
+    <version>1.0.0</version>
+    <description>
+        Contains code to preprocess demonstrations, learn task models, and execute with real-time user corrections
+    </description>
+    <maintainer email="wisconsinhci@gmail.com">Mike H.</maintainer>
+    <license>WTFPL</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <depend>roscpp</depend>
+    <depend>std_msgs</depend>
+
+</package>
