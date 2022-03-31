@@ -3,9 +3,5 @@
     <node pkg="panda_ros" type="pandaRosWrapper" name="panda_controller" output="screen"/>
     <include file="$(find panda_ros)/launch/joint_state_pub.launch"/>
     
-    <arg name="camera_model" default="kinect"/> 
-
-    <group if="$(eval camera_model == 'kinect')">
-        <include file="$(find env_mapping)/launch/kinect_mapper.launch"/>
-    </group>
+   
 </launch>
