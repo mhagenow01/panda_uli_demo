@@ -54,6 +54,20 @@ namespace PandaController {
                       0,       0,  0,       1
         ).finished();
 
+
+        // force torque sensor:  0.06534 m
+        // vibration isolator: 0.029 m
+        // tool holder: 0.067 m
+        // tool holder to bottom of pad: 0.048mm
+        // total stackup: 
+        Eigen::Matrix4d pandaOrbitalEELink = (
+            Eigen::Matrix4d() << 
+                 0.7071, -0.7071,  0,       0, 
+                -0.7071, -0.7071,  0,       0, 
+                      0,       0, -1,  0.2093, 
+                      0,       0,  0,       1
+        ).finished();
+
         // Mocap calibration
         // Just force torque now!!
         // use same rotation as gripper (doesn't matter)
@@ -168,6 +182,8 @@ namespace PandaController {
         switch (link) {
             case EELink::PandaGripper:
                 return pandaGripperEELink;
+            case EELink::PandaOrbital:
+                return pandaOrbitalEELink;
             case EELink::PandaRoller:
                 return pandaRollerEELink;
             case EELink::PandaPolisher:

@@ -13,7 +13,7 @@
 
 namespace PandaController {
     enum KinematicChain {PandaFlange,PandaCamera};
-    enum EELink {PandaGripper,PandaRoller,PandaPolisher,PandaMocap,PandaSander,PandaUltrasound,CameraLink,PandaFT,PandaCaulking};
+    enum EELink {PandaGripper,PandaOrbital,PandaRoller,PandaPolisher,PandaMocap,PandaSander,PandaUltrasound,CameraLink,PandaFT,PandaCaulking};
     struct EulerAngles {
         double roll, pitch, yaw;
     };

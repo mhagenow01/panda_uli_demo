@@ -47,7 +47,7 @@ class PandaReg:
 
         # Change the end effector
         strEE = String()
-        strEE.data = "pandaGripper"
+        strEE.data = "pandaOrbital"
         pub_ee.publish(strEE)
         strChain = String()
         strChain.data = "pandaFlange"
@@ -68,7 +68,7 @@ class PandaReg:
         hpose.constraint_frame.w = 1.0
 
         #Interpolate to the starting position
-        starting = [0.45, 0.0, 0.35]
+        starting = [0.45, 0.0, 0.31]
         startingR = Rotation.from_euler('XYZ', [0.0, 0.0, 0.0])
         q_startingR = startingR.as_quat()
 

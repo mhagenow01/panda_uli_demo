@@ -14,14 +14,14 @@ find_library(franka libfranka.so.0.8.0 REQUIRED)
 find_library(
     pandaController
     NAMES PandaController
-    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../../../devel/lib
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../../../../devel/lib
 )
 
 message(STATUS ${pandaController})
 find_library(
     pandaCommon
     NAMES common 
-    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../../../devel/lib
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/../../../../devel/lib
 )
 message(STATUS ${pandaCommon})
 

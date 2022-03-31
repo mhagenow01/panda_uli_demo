@@ -49,6 +49,9 @@ void setEELink(const std_msgs::String& msg) {
     if (msg.data == "pandaGripper") {
         eeLink = PandaController::EELink::PandaGripper;
     }
+    if (msg.data == "pandaOrbital") {
+        eeLink = PandaController::EELink::PandaOrbital;
+    }
     if (msg.data == "cameraLink") {
         eeLink = PandaController::EELink::CameraLink;
     }
