@@ -10,8 +10,9 @@ const store = (set) => ({
     ros: null,
     connection: 'disconnected',
     talkerTopic: null,
-    listenerTopic: null,
+    commandTopic: null,
     imageTopic: null,
+    pathTopic: null,
     onConnection: () => set({connection:'connected'}),
     onError: () => set({connection:'disconnected'}),
     onClose: () => set({connection:'disconnected'}),
@@ -27,23 +28,31 @@ const store = (set) => ({
             messageType: 'std_msgs/String'
         });
 
-        const listenerTopic = new ROSLIB.Topic({
+        const commandTopic = new ROSLIB.Topic({
             ros: ros,
-            name: 'ros_server/listener',
+            name: 'ui/commands',
             messageType: 'std_msgs/String'
         });
 
+		const pathTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/ui/path',
+			messageType: 'std_msgs/String',
+		});
+
+        pathTopic.subscribe(function (message) {
+			useAppStore.getState().setPath(message.data.split(';'));
+		});
+
 		const imageTopic = new ROSLIB.Topic({
 			ros: ros,
-			name: 'camera/image_raw/compressed',
-			//name: '/rviz1/camera1/image/compressed',
+			name: '/rgb/image_raw/compressed',
 			messageType: 'sensor_msgs/CompressedImage',
 		});
 
         imageTopic.subscribe(function (message) {
-			var imagedata = 'data:image/jpg;base64,' + message.data;
+			useAppStore.getState().setImage('data:image/jpg;base64,' + message.data);
 			// console.log(imagedata);
-			document.getElementById('livestream').src = imagedata;
 		});
 
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
@@ -55,7 +64,7 @@ const store = (set) => ({
             connection:'connecting',
             ros:ros,
             talkerTopic:talkerTopic,
-            listenerTopic:listenerTopic,
+            commandTopic:commandTopic,
             imageTopic:imageTopic,
         };
     })

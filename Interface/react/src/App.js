@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
 // import {List,Button,Checkbox,Card,Space,Input} from 'antd';
 // import {EnterOutlined} from '@ant-design/icons';
-import Stream from './Stream';
-import { Grommet, List, Button, TextInput, Card, Grid, Box,CheckBox } from 'grommet';
+import {Stream} from './Stream';
+import {Canvas} from './Canvas';
+import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box,CheckBox } from 'grommet';
 import styled from "styled-components";
 import useAppStore from './AppStore';
 import useRosStore from './RosStore';
@@ -28,7 +29,11 @@ function App() {
       ]}
     >
       <Box gridArea="top" background="brand" />
-      <Stream gridArea='video' imageTopic={imageTopic} />
+      <Stack gridArea='video'>
+        <Stream />
+        <Canvas />
+    </Stack>
+      
       <Button gridArea="topleft" onClick={connect}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
       <CheckBox gridArea="topright" disabled={true} checked={connection==='connected'}/>
       <TextInput  gridArea="botleft"
@@ -39,9 +44,9 @@ function App() {
 
       <Button primary gridArea="botright" label="Send"
       onClick={() => {
-        sendMessage(text);
+        sendMessage();
       }}
-      />
+      /> 
     </Grid>
 
     // <Button onClick={connect}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>

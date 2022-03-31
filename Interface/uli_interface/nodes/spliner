@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+import numpy as np
+import signal
+import matplotlib.pyplot as plt
+from geometry_msgs.msg import Twist
+import time
+from pynput import keyboard
+import PyKDL
+import hmac
+import hashlib
+import base64
+import secrets
+import ctypes
+import struct
+from core_robotics.PyBSpline import convertToUV, BSplineSurface
+
+import sys
+
+import rospy
+from geometry_msgs.msg import Twist
+import numpy as np
+import rospkg
+import ros_numpy
+import sensor_msgs.point_cloud2 as pc2
+from sensor_msgs.msg import Image, PointCloud2, CameraInfo, JointState, CompressedImage,PointCloud2
+from geometry_msgs.msg import TransformStamped, PoseStamped, Point, Pose, PoseArray, Quaternion, Twist, Vector3
+from std_msgs.msg import String
+from nav_msgs.msg import Path
+
+import image_geometry
+from tf.transformations import quaternion_from_euler
+import tf
+import tf2_ros
+import tf2_geometry_msgs
+
+REFERENCE_FRAME='panda_link0'
+CAMERA_FRAME='rgb_camera_link'
+
+
+
+def get_mid_points(p1,p2,k):
+    return [[p1[0]+i*(p2[0]-p1[0])/(k-1),p1[1]+i*(p2[1]-p1[1])/(k-1)] for i in range(k)]
+
+def get_distance(p1,p2):
+    return np.sqrt((p2[0]-p1[0])**2+(p2[1]-p1[1])**2+(p2[2]-p1[2])**2)
+
+class Spliner(object):
+    def __init__(self):
+        self._tfBuffer = tf2_ros.Buffer()
+        self._tl = tf2_ros.TransformListener(self._tfBuffer)
+        self._model = None
+        # self._model = image_geometry.PinholeCameraModel()
+        # camInfo = CameraInfo()
+        # camInfo.header.frame_id="camera1"
+        # camInfo.height = 1536
+        # camInfo.width = 2048
+        # camInfo.distortion_model = "rational_polynomial"
+        # camInfo.D = [0.5248579382896423, -2.5943498611450195, 0.0008818571805022657, -0.000306136003928259, 1.4509135484695435, 0.4030783474445343, -2.42022705078125, 1.3811763525009155]
+        # camInfo.K = [976.9754638671875, 0.0, 1018.8711547851562, 0.0, 976.9026489257812, 780.8445434570312, 0.0, 0.0, 1.0]
+        # camInfo.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+        # camInfo.P = [976.9754638671875, 0.0, 1018.8711547851562, 0.0, 0.0, 976.9026489257812, 780.8445434570312, 0.0, 0.0, 0.0, 1.0, 0.0]
+        # self._model.fromCameraInfo(camInfo)
+
+        self._static_br = tf2_ros.StaticTransformBroadcaster()
+        self._br =tf2_ros.TransformBroadcaster()
+        static_transformStamped = TransformStamped()
+
+        static_transformStamped.header.stamp = rospy.Time.now()
+        static_transformStamped.header.frame_id = REFERENCE_FRAME
+        static_transformStamped.child_frame_id = "camera_base"
+
+        static_transformStamped.transform.translation.x = 0
+        static_transformStamped.transform.translation.y = 0
+        static_transformStamped.transform.translation.z = 1
+
+        quat = tf.transformations.quaternion_from_euler(np.pi,np.pi/2,0)
+        static_transformStamped.transform.rotation.x = quat[0]
+        static_transformStamped.transform.rotation.y = quat[1]
+        static_transformStamped.transform.rotation.z = quat[2]
+        static_transformStamped.transform.rotation.w = quat[3]
+        self._static_br.sendTransform(static_transformStamped)
+
+
+
+        self._depth = None
+        self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
+        self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
+        self._cam_info_sub = rospy.Subscriber("/depth_to_rgb/camera_info", CameraInfo, self.on_info)
+
+
+    def on_info(self,msg):
+        if self._model is None:
+            self._width = msg.width
+            self._height = msg.height
+            self._model = image_geometry.PinholeCameraModel()
+            self._model.fromCameraInfo(msg)
+            self._depth_sub = rospy.Subscriber("/depth_to_rgb/image_raw", Image, self.on_depth)
+            self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
+        
+    def on_command(self,msg):
+
+        self.get_spline(msg.data)
+            
+    def get_xyz_from_pixel(self, x,y,d):
+        
+        p = [x,y]
+        p = self._model.rectifyPoint(p)
+        p3d = self._model.projectPixelTo3dRay(p)
+        point = Point()
+        point.x=d/p3d[2]*p3d[0]
+        point.y=d/p3d[2]*p3d[1]
+        point.z=d/p3d[2]*p3d[2]
+        return point
+
+    def get_close_point(self, x,y):
+        dist = 1
+        while(True):
+            for i in range(-dist,dist):
+                if self._depth[x+i,y-dist] > 0:
+                    return x+i,y-dist,self._depth[y-dist,x+i]
+                if self._depth[x+i,y+dist] > 0:
+                    return x+i,y+dist,self._depth[y+dist,x+i]
+                if self._depth[x+dist,y+i] > 0:
+                    return x+dist,y+i,self._depth[y+i,x+dist]
+                if self._depth[x-dist,y+i] > 0:
+                    return x-dist,y+i,self._depth[y+i,x-dist]
+            dist+=1
+
+    def get_pose_from_pixel(self, x,y,frame_id=REFERENCE_FRAME):
+        x = int(x)
+        y=int(y)
+        d = self._depth[y,x]/1000.
+        if not d > 0:
+            x,y,d = self.get_close_point(x,y)
+            
+        point = self.get_xyz_from_pixel(x,y,d)
+        p = PoseStamped()
+        p.header.frame_id = CAMERA_FRAME
+        p.header.stamp = rospy.Time(0)
+        p.pose.position = point
+        p.pose.orientation.w = 1
+        return self._tfBuffer.transform(p,frame_id)
+
+    def get_point(self,p,frame_id = REFERENCE_FRAME):
+        p = self.get_pose_from_pixel(p[0],p[1], frame_id)
+        if p is None:
+            return
+        return [p.pose.position.x, p.pose.position.y,p.pose.position.z]
+
+    def on_depth(self, msg):
+        self._depth = ros_numpy.numpify(msg)
+
+    def get_spline(self,coord):
+        #s="484,436_615,436_615,816_484,816"
+
+        ps = coord.split(";")
+
+        p1 = [int(float(ps[0].split(',')[0])*self._width),int(float(ps[0].split(',')[1])*self._height)]
+        p2 = [int(float(ps[1].split(',')[0])*self._width),int(float(ps[1].split(',')[1])*self._height)]
+        p3 = [int(float(ps[2].split(',')[0])*self._width),int(float(ps[2].split(',')[1])*self._height)]
+        p4 = [int(float(ps[3].split(',')[0])*self._width),int(float(ps[3].split(',')[1])*self._height)]
+
+        pose1 = self.get_point(p1,CAMERA_FRAME)
+        pose2 = self.get_point(p2,CAMERA_FRAME)
+        pose3 = self.get_point(p3,CAMERA_FRAME)
+        pose4 = self.get_point(p4,CAMERA_FRAME)
+        
+        dt = get_distance(pose1,pose2)
+        dr = get_distance(pose2,pose3)
+        db = get_distance(pose3,pose4)
+        dl = get_distance(pose4,pose1)
+
+        spline_step = .02
+        
+        step_x = int(max(dt,db)/spline_step)+1
+        step_y = int(max(dr,dl)/spline_step)+1
+
+        top = get_mid_points(p1,p2,step_x)
+        bot = get_mid_points(p4,p3,step_x)
+        
+        p=[]
+        for i in range(step_x):
+            p = p + get_mid_points(top[i],bot[i],step_y)
+        p = [self.get_point(k,CAMERA_FRAME) for k in p]
+
+        ps = [pose1,pose2,pose3,pose4]
+        xs = [point[0] for point in p]
+        ys = [point[1] for point in p]
+        zs = [point[2] for point in p]
+        ctrl_p = np.array(p).reshape((step_x,step_y,3))
+        px = [p1[0],p2[0],p3[0],p4[0]]
+        py = [p1[1],p2[1],p3[1],p4[1]]
+        xs = []
+        ys = []
+        zs = []
+        
+        for i in range(min(px),max(px),int((max(px)-min(px))/100)):
+            for j in range(min(py),max(py),int((max(py)-min(py))/100)):
+                p = self.get_point([i,j])
+                xs += [p[0]]
+                ys += [p[1]]
+                zs += [p[2]]
+        curve = BSplineSurface()
+        curve.initialize(k=3, control_pts=ctrl_p)
+
+        dist_step = .03
+        line_gap = .05
+        dists = [dt,db,dr,dl]
+        #Horizontal
+        uvs=[]
+        horizontal = True
+        l=max(dt,db)
+        h=max(dl,dr)
+        if np.argmax(dists)>2:# Could do something to find the main axe...
+            horizontal = False
+            h=max(dt,db)
+            l=max(dl,dr)
+        n_l = int(np.ceil(l/dist_step))
+        n_passes = int(np.ceil(h/line_gap))
+        for i in range(n_passes+1):
+            for j in range(n_l+1):
+                x = j/n_l if (i%2 == 0) else 1-j/n_l
+                y = i/n_passes
+                val = [x,y]
+                if not horizontal:
+                    val = [y,x]
+                uvs.append(val)
+            if i != n_passes:
+                for j in range(int(np.ceil(line_gap/dist_step))-1):
+                    x = (i+1)%2
+                    y = i/n_passes+(j+1)/np.ceil(line_gap/dist_step)/n_passes
+                    val = [x,y]
+                    if not horizontal:
+                        val = [y,x]
+                    uvs.append(val)
+                    
+        for uv in uvs:
+            if uv[0] == 1:
+                uv[0] = .99
+            if uv[1] == 1:
+                uv[1] = .99
+
+        p1 = curve.calculate_surface_point(.99,0)[0]
+        p2 = curve.calculate_surface_point(.99,0.166)[0]
+        p3 = curve.calculate_surface_point(.99,0.33)[0]
+
+        xs2 = []
+        ys2 = []
+        zs2 = []
+        xs3 = []
+        ys3 = []
+        zs3 = []
+        path = Path()
+        path.header.frame_id = CAMERA_FRAME
+        for uv in uvs:
+            #print(uv)
+            pose = PoseStamped()
+            pose.header.frame_id = CAMERA_FRAME
+
+            point = curve.calculate_surface_point(uv[0],uv[1])[0]
+            
+            xs2.append(point[0])
+            ys2.append(point[1])
+            zs2.append(point[2])
+
+            pose.pose.position.x = point[0]
+            pose.pose.position.y = point[1]
+            pose.pose.position.z = point[2]
+            pose.pose.orientation.w = 1
+            path.poses.append(pose)
+        # for i in range(20):
+        #     for j in range(20):
+        #         point = curve.calculate_surface_point(i/20.,j/20)[0]
+        #         xs3.append(point[0])
+        #         ys3.append(point[1])
+        #         zs3.append(point[2])
+        
+        ratio_points = []
+        for p in path.poses:
+            coord = self.get_pixel_from_pose(p)
+            coord=[str(coord[0]/self._width),str(coord[1]/self._height)]
+            ratio_points.append(','.join(coord))
+        self._ui_path_pub.publish(String(';'.join(ratio_points)))
+        self._path_pub.publish(path)
+
+    def get_pixel_from_pose(self, pose):
+        if pose.header.frame_id != CAMERA_FRAME:
+            pose = self._tfBuffer.transform(pose,CAMERA_FRAME)
+            
+        p = pose.pose.position
+        if p.z < 0:
+            return None
+        p=[p.x,p.y,p.z]
+        return self._model.project3dToPixel(p)
+    
+    def run(self):
+        rospy.spin()
+
+    def signal_handler(self, signal, frame):
+        sys.exit()
+
+if __name__ == "__main__":
+    rospy.init_node('spliner')
+    spliner = Spliner()
+    signal.signal(signal.SIGINT, spliner.signal_handler)
+    spliner.run()
