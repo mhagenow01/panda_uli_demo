@@ -1,0 +1,9 @@
+<library path="lib/libaffordance_corrections">
+  <class name="corrections_panel/CorrectionsPanel"
+         type="corrections_panel::CorrectionsPanel"
+         base_class_type="rviz::Panel">
+    <description>
+      A panel widget for basic rviz selections
+    </description>
+  </class>
+</library>

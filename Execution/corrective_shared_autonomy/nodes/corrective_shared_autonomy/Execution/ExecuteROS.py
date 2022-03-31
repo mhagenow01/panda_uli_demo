@@ -47,12 +47,12 @@ class ExecuteROS:
         return self.input, self.input_button
 
     def publishToRobot(self,hpose):
-        print("-------- ROBOT COMMAND -------")
-        print("pos: ",hpose.pose.position.x,hpose.pose.position.y,hpose.pose.position.z)
-        print("quat: ",hpose.pose.orientation.x,hpose.pose.orientation.y,hpose.pose.orientation.z, hpose.pose.orientation.w)
-        print("force: ",hpose.wrench.force.x,hpose.wrench.force.y,hpose.wrench.force.z)
-        print("CF: ",hpose.constraint_frame.x,hhpose.constraint_frame.y,hpose.constraint_frame.z, hpose.constraint_frame.w)
-        # self.hybrid_pub.publish(hpose)
+        # print("-------- ROBOT COMMAND -------")
+        # print("pos: ",hpose.pose.position.x,hpose.pose.position.y,hpose.pose.position.z)
+        # print("quat: ",hpose.pose.orientation.x,hpose.pose.orientation.y,hpose.pose.orientation.z, hpose.pose.orientation.w)
+        # print("force: ",hpose.wrench.force.x,hpose.wrench.force.y,hpose.wrench.force.z)
+        # print("CF: ",hpose.constraint_frame.x,hpose.constraint_frame.y,hpose.constraint_frame.z, hpose.constraint_frame.w)
+        self.hybrid_pub.publish(hpose)
 
     def execute_states(self,state_names,state_vals,surface,correction):
         cor = Float64MultiArray()
@@ -77,14 +77,14 @@ class ExecuteROS:
 
                 # Rotate from task frame into robot frame
                 R_temp = R.from_quat(self.task_R)
-                rotated_pos = R_temp.apply(np.array([state_vals[pos_ind], state_vals[pos_ind], state_vals[pos_ind]])) + self.task_t
+                rotated_pos = R_temp.apply(np.array([state_vals[pos_ind], state_vals[pos_ind+1], state_vals[pos_ind+2]])) + self.task_t
 
                 hpose.pose.position.x = rotated_pos[0]
                 hpose.pose.position.y = rotated_pos[1]
                 hpose.pose.position.z = rotated_pos[2]
-                norm_q = np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]])/np.linalg.norm(np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]]))
                 
                 # Rotate rotation from task frame into robot frame
+                norm_q = np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]])/np.linalg.norm(np.array([state_vals[quat_ind], state_vals[quat_ind+1], state_vals[quat_ind+2], state_vals[quat_ind+3]]))
                 R_orientation = R.from_quat(norm_q)
                 rotated_orientation = (R_temp * R_orientation).as_quat()
 
@@ -186,6 +186,26 @@ class ExecuteROS:
             desired_x = start[pos_ind]; desired_y = start[pos_ind + 1]; desired_z = start[pos_ind + 2]
             desired_qx = start[quat_ind]; desired_qy = start[quat_ind + 1]
             desired_qz = start[quat_ind + 2]; desired_qw = start[quat_ind + 3]
+
+            # convert desired from task frame into robot frame
+                        
+            R_temp = R.from_quat(self.task_R)
+            rotated_pos = R_temp.apply(np.array([desired_x, desired_y, desired_z])) + self.task_t
+
+            desired_x = rotated_pos[0]
+            desired_y = rotated_pos[1]
+            desired_z = rotated_pos[2]
+            
+            # Rotate rotation from task frame into robot frame
+            norm_q = np.array([desired_qx, desired_qy, desired_qz, desired_qw])/np.linalg.norm(np.array([desired_qx, desired_qy, desired_qz, desired_qw]))
+            R_orientation = R.from_quat(norm_q)
+            rotated_orientation = (R_temp * R_orientation).as_quat()
+
+            desired_qx = rotated_orientation[0]
+            desired_qy = rotated_orientation[1]
+            desired_qz = rotated_orientation[2]
+            desired_qw = rotated_orientation[3]
+
 
             # Get current pose from TF2
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))
