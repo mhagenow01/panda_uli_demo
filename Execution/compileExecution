@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+# Build CPP for affordance corrections
+cd affordance_corrections/nodes/affordance_corrections/affordance_helpers/cppfitting
+source compile.sh
+cd ../../../../..
+
+# Build other ROS packages
+catkin build core_robotics --no-notify
+catkin build affordance_corrections --no-notify
+catkin build corrective_shared_autonomy --no-notify
+catkin build env_mapping --no-notify
+

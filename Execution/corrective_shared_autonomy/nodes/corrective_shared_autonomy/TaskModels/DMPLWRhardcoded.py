@@ -317,7 +317,7 @@ class DMPLWRhardcoded:
         # rospack = rospkg.RosPack()
         # root_dir = rospack.get_path(
         #     'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-        # pickle.dump(learnedSegments, open(root_dir + "yoyo.pkl", "wb"))
+        # pickle.dump(learnedSegments, open(root_dir + "yoyo.pkl", "wb"), protocol=2)
 
         # ####### 2. Corrections for provided values #############
         # for segment in learnedSegments:
@@ -334,7 +334,7 @@ class DMPLWRhardcoded:
         if outfile != '':
             rospack = rospkg.RosPack()
             root_dir = rospack.get_path('corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-            pickle.dump(learnedSegments,open(root_dir+outfile,"wb"))
+            pickle.dump(learnedSegments,open(root_dir+outfile,"wb"), protocol=2)
 
         if self.verbose:
             print("Time to learn model: %s seconds" % (time.time() - start_time))
@@ -560,19 +560,20 @@ class DMPLWRhardcoded:
             plt.show()
 
 
-    def executeModel(self,model_pkl_file,R_surface = np.eye(3),t_surface = np.zeros((3,)),input_type="none"):
+    def executeModel(self,learnedSegments = None, model_pkl_file = '',R_surface = np.array([0, 0, 0, 1]),t_surface = np.zeros((3,)),input_type="none"):
         #############################
         # Load model                #
         #############################
-        rospack = rospkg.RosPack()
-        root_dir = rospack.get_path(
-            'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-        learnedSegments = pickle.load(open(root_dir+model_pkl_file, "rb"))
+        if learnedSegments is None:
+            rospack = rospkg.RosPack()
+            root_dir = rospack.get_path(
+                'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
+            learnedSegments = pickle.load(open(root_dir+model_pkl_file, "rb"))
 
         #############################
         # Execute the learned model #
         #############################
-        rosExecution = ExecuteROS(input_tx=self.input_tx)
+        rosExecution = ExecuteROS(input_tx=self.input_tx, task_R=R_surface, task_t=t_surface)
 
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)

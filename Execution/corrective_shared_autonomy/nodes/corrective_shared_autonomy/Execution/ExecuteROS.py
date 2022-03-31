@@ -19,7 +19,7 @@ from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 
 class ExecuteROS:
-    def __init__(self,input_tx = np.array([0, 0, 0, 1]),task_R = np.array([0, 0, 0, 1], task_t = np.zeros((3,)))):
+    def __init__(self,input_tx = np.array([0, 0, 0, 1]),task_R = np.array([0, 0, 0, 1]), task_t = np.zeros((3,))):
         # Set up ROS Publishers
         rospy.init_node('executeROSfromState', anonymous=True)
         self.hybrid_pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
@@ -45,6 +45,14 @@ class ExecuteROS:
 
     def getZDInput(self):
         return self.input, self.input_button
+
+    def publishToRobot(self,hpose):
+        print("-------- ROBOT COMMAND -------")
+        print("pos: ",hpose.pose.position.x,hpose.pose.position.y,hpose.pose.position.z)
+        print("quat: ",hpose.pose.orientation.x,hpose.pose.orientation.y,hpose.pose.orientation.z, hpose.pose.orientation.w)
+        print("force: ",hpose.wrench.force.x,hpose.wrench.force.y,hpose.wrench.force.z)
+        print("CF: ",hpose.constraint_frame.x,hhpose.constraint_frame.y,hpose.constraint_frame.z, hpose.constraint_frame.w)
+        self.hybrid_pub.publish(hpose)
 
     def execute_states(self,state_names,state_vals,surface,correction):
         cor = Float64MultiArray()
@@ -85,7 +93,7 @@ class ExecuteROS:
                 hpose.pose.orientation.z = rotated_orientation[2]
                 hpose.pose.orientation.w = rotated_orientation[3]
 
-                self.hybrid_pub.publish(hpose)
+                self.publishToRobot(hpose)
 
             except:
                 return
@@ -147,7 +155,7 @@ class ExecuteROS:
             constraint_frame_ros.w = constraint_frame[3]
             hpose.constraint_frame = constraint_frame_ros
 
-            self.hybrid_pub.publish(hpose)
+            self.publishToRobot(hpose)
 
 
         if ("valve" in state_names):
@@ -215,7 +223,7 @@ class ExecuteROS:
             hpose.pose.orientation.y = slerp(jj / num_interp_samples).as_quat()[1]
             hpose.pose.orientation.z = slerp(jj / num_interp_samples).as_quat()[2]
             hpose.pose.orientation.w = slerp(jj / num_interp_samples).as_quat()[3]
-            self.hybrid_pub.publish(hpose)
+            self.publishToRobot(hpose)
             time.sleep(0.01)
 
 if __name__ == "__main__":

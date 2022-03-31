@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Build Panda Controller
-cd Panda
-source compilePanda
+# Build Actuation
+cd Actuation
+source compileActuation
+cd ..
 
 # Build Execution
-# TBD
+cd Execution
+source compileExecution
+cd ..
 
 # Build Interface
 # TBD

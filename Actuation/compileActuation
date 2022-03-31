@@ -7,7 +7,7 @@ mkdir build
 cd build
 cmake ..
 make install
-cd ../../..
+cd ../../
 
 
 # Build other ROS packages
