@@ -52,7 +52,7 @@ class ExecuteROS:
         print("quat: ",hpose.pose.orientation.x,hpose.pose.orientation.y,hpose.pose.orientation.z, hpose.pose.orientation.w)
         print("force: ",hpose.wrench.force.x,hpose.wrench.force.y,hpose.wrench.force.z)
         print("CF: ",hpose.constraint_frame.x,hhpose.constraint_frame.y,hpose.constraint_frame.z, hpose.constraint_frame.w)
-        self.hybrid_pub.publish(hpose)
+        # self.hybrid_pub.publish(hpose)
 
     def execute_states(self,state_names,state_vals,surface,correction):
         cor = Float64MultiArray()

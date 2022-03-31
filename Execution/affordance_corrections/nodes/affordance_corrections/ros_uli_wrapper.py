@@ -47,7 +47,10 @@ class ROSDemoAffordances(ROSAffordances):
 def getObjPose(data):
     global rosaff
     rot, pos = rosaff.engine.getActiveObjectPose()
-    print("OBJECT POSE: ", rot, pos)
+
+    R_temp = ScipyR.from_matrix(rot)
+
+    print("OBJECT POSE: ", R_temp.as_quat(), pos)
 
 def receivedScene(data):
     
