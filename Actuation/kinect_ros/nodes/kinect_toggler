@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """ Kinect toggler
  Created: 4/1/2022
@@ -18,7 +18,7 @@ import signal
 class Toggler:
     def __init__(self):
         rospy.init_node('kinect_toggler')
-        self._p = subprocess32.Popen(["roslaunch", "azure_kinect_ros_driver", "driver.launch"])
+        self._p = subprocess32.Popen(["roslaunch", "kinect_ros", "kinect_launcher.launch"])
 
         # Subscribe to start/stop mapping
         rospy.Subscriber("/mappingToggle", String, self.mappingToggle)
@@ -32,11 +32,13 @@ class Toggler:
     def startMapping(self):
         if self._p is not None:
             self._p.terminate()
+            rospy.sleep(4)
         self._p = subprocess32.Popen(["roslaunch", "env_mapping", "kinect_mapper.launch"])
        
     def stopMapping(self):
         if self._p is not None:
             self._p.terminate()  
+            rospy.sleep(4)
         self._p = subprocess32.Popen(["roslaunch", "azure_kinect_ros_driver", "driver.launch"])
             
 
