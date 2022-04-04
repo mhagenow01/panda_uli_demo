@@ -119,11 +119,12 @@ class AffordanceEngine:
             return True # default is enabled
         
     def getActiveObjectPose(self):
+        # returns position, rotation matrix, and name of model
         if len(self.objectsOfInterest) > 0:
             active_id = self.objectsOfInterest[self.active_obj].active_id
-            return self.objectsOfInterest[self.active_obj].fits[active_id].rot, self.objectsOfInterest[self.active_obj].fits[active_id].pos
+            return self.objectsOfInterest[self.active_obj].fits[active_id].rot, self.objectsOfInterest[self.active_obj].fits[active_id].pos, self.objectsOfInterest[self.active_obj].models[active_id].name
         # if nothing, return identity
-        return np.array([0, 0, 0, 1]), np.zeros((3,))
+        return np.array([0, 0, 0, 1]), np.zeros((3,)), ''
 
     def addObjOfInterest(self,pt):
         ''' Create a new object and fit the model for a given point in space'''

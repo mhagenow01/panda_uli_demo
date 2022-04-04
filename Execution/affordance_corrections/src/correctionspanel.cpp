@@ -63,27 +63,9 @@ namespace corrections_panel{
         setLayout(hlayout);
 
         // Turn on and off mapping
-        connect(toggleControlbutton, &QPushButton::clicked, [this,toggleMappingbutton](){
-           if(!mapping){
-            s_out.data = "on";
-            toggleMappingbutton->setText("End Mapping");
-            toggleMappingbutton->setStyleSheet("background-color: #FF968A; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
-            mapping = true;
-           }
-           else{
-               s_out.data = "off";
-               toggleMappingbutton->setText("Start Mapping");
-               toggleMappingbutton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
-               mapping = false;
-           }
+        connect(toggleControlbutton, &QPushButton::clicked, [this](){
+           s_out.data = "on";
            rviz_pub.publish(s_out);
-        });
-
-        // Go to current alternate view
-        connect(altViewbutton, &QPushButton::clicked, [this,altViewbutton](){
-            // altViewbutton->setEnabled(false);
-            s_out.data = "go";
-            altview_pub.publish(s_out);
         });
 
         
@@ -95,21 +77,29 @@ namespace corrections_panel{
             Ogre::Camera* camera = vc->getCamera();
             const Ogre::Quaternion quat = camera->getOrientation();
             const Ogre::Vector3 cam_pos = camera->getPosition();
+
+            // Convert from Ogre to ROS message
+            q_out.x = quat.x; q_out.y = quat.y; q_out.z = quat.z; q_out.w = quat.w;
+            pos_out.x = cam_pos.x; pos_out.y = cam_pos.y; pos_out.z = cam_pos.z; 
+            quat_pub.publish(q_out);
+            cam_pos_pub.publish(pos_out);
+
+            ros::spinOnce();
             
-            geometry_msgs::TransformStamped transformStamped;
-            transformStamped.header.stamp = ros::Time::now();
-            transformStamped.header.frame_id = "panda_link0";
-            transformStamped.child_frame_id = "rvizcamera";
+            // geometry_msgs::TransformStamped transformStamped;
+            // transformStamped.header.stamp = ros::Time::now();
+            // transformStamped.header.frame_id = "panda_link0";
+            // transformStamped.child_frame_id = "rvizcamera";
 
-            transformStamped.transform.translation.x = cam_pos.x;
-            transformStamped.transform.translation.y = cam_pos.y;
-            transformStamped.transform.translation.z = cam_pos.z;
-            transformStamped.transform.rotation.x = quat.x;
-            transformStamped.transform.rotation.y = quat.y;
-            transformStamped.transform.rotation.z = quat.z;
-            transformStamped.transform.rotation.w = quat.w;
+            // transformStamped.transform.translation.x = cam_pos.x;
+            // transformStamped.transform.translation.y = cam_pos.y;
+            // transformStamped.transform.translation.z = cam_pos.z;
+            // transformStamped.transform.rotation.x = quat.x;
+            // transformStamped.transform.rotation.y = quat.y;
+            // transformStamped.transform.rotation.z = quat.z;
+            // transformStamped.transform.rotation.w = quat.w;
 
-            br.sendTransform(transformStamped);
+            // br.sendTransform(transformStamped);
         }); 
         output_timer->start(100);
 

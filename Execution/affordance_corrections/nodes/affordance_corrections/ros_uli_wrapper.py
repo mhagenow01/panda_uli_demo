@@ -37,20 +37,37 @@ class ROSDemoAffordances(ROSAffordances):
         affordance engine which interfaces with many ROS topics"""
     def __init__(self):
         ''' Set up additionalROS topics'''
+        self.regobjposepub = rospy.Publisher('/registeredObject',PoseStamped,queue_size=1)
+        rospy.Subscriber("/getObjPose", String, self.getObjPose, queue_size=1)
         super().__init__('spacemouseNL')
+    
+    def getObjPose(self,data):
+        # gets pose and model from affordance engine and publish out registration info
+        global rosaff
+        rot, pos, model_name = rosaff.engine.getActiveObjectPose()
+
+        pose_temp = PoseStamped()
+        pose_temp.header.frame_id = model_name
+        pose_temp.pose.position.x = pos[0]
+        pose_temp.pose.position.y = pos[1]
+        pose_temp.pose.position.z = pos[2]
+
+        R_temp = ScipyR.from_matrix(rot)
+        quat_temp = R_temp.as_quat()
+
+        pose_temp.pose.orientation.x = quat_temp[0]
+        pose_temp.pose.orientation.y = quat_temp[1] 
+        pose_temp.pose.orientation.z = quat_temp[2] 
+        pose_temp.pose.orientation.w = quat_temp[3] 
+
+        self.regobjposepub.publish(pose_temp)
+
+        # print("OBJECT: ",model_name, R_temp.as_quat(), pos)
 
 # TODO: get pose of object
 # only one object?
 # refit when desired?
 # set the models in a different way
-
-def getObjPose(data):
-    global rosaff
-    rot, pos = rosaff.engine.getActiveObjectPose()
-
-    R_temp = ScipyR.from_matrix(rot)
-
-    print("OBJECT POSE: ", R_temp.as_quat(), pos)
 
 def receivedScene(data):
     
@@ -111,7 +128,7 @@ def main():
     rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_surface_demo.STL'])
 
     rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
-    rospy.Subscriber("/getObjPose", String, getObjPose, queue_size=1)
+    
 
     rosaff.runLoop()
     

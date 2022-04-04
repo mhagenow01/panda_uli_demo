@@ -333,8 +333,7 @@ class DMPLWRhardcoded:
         # Save segments to file for execution
         if outfile != '':
             rospack = rospkg.RosPack()
-            root_dir = rospack.get_path('corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-            pickle.dump(learnedSegments,open(root_dir+outfile,"wb"), protocol=2)
+            pickle.dump(learnedSegments,open(outfile,"wb"), protocol=2)
 
         if self.verbose:
             print("Time to learn model: %s seconds" % (time.time() - start_time))
@@ -565,10 +564,7 @@ class DMPLWRhardcoded:
         # Load model                #
         #############################
         if learnedSegments is None:
-            rospack = rospkg.RosPack()
-            root_dir = rospack.get_path(
-                'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
-            learnedSegments = pickle.load(open(root_dir+model_pkl_file, "rb"))
+            learnedSegments = pickle.load(open(model_pkl_file, "rb"))
 
         #############################
         # Execute the learned model #

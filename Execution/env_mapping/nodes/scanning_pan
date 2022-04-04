@@ -105,6 +105,7 @@ class PandaReg:
             pub.publish(hpose)
             time.sleep(0.01)
 
+        time.sleep(1.0)
 
         ###################################
         # Run the registration sequence 

@@ -35,6 +35,8 @@ namespace corrections_panel
             ros::NodeHandle n;
             ros::Publisher quat_pub;
             ros::Publisher cam_pos_pub;
+            geometry_msgs::Quaternion q_out;
+            geometry_msgs::Point pos_out;
             ros::Subscriber battery_sub;
             ros::Publisher cf_pub;
             ros::Publisher rviz_pub;

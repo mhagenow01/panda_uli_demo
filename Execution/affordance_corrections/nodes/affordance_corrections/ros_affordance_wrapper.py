@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # File name: ros_affordance_wrapper.py
 # Description: Creates affordance engine and deals with
 # passing of information between the input and engine interfaces

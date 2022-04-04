@@ -17,6 +17,13 @@
       </geometry>
     </collision>
   </link>
+  <link name="map" />
+  <joint name="panda_base_map" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0.0"/>
+    <parent link="panda_link0"/>
+    <child link="map"/>
+    <axis xyz="0 0 0"/>
+  </joint>
   <link name="panda_link1">
     <visual>
       <geometry>

@@ -22,7 +22,7 @@
 
     <!-- Spawn a nodelet manager -->
     <node pkg="nodelet" type="nodelet" name="manager" args="manager" output="log">
-      <param name="num_worker_threads" value="12" />
+      <param name="num_worker_threads" value="8" />
     </node>
 
     <!-- Spawn an image_proc/rectify nodelet to rectify the RGB image -->

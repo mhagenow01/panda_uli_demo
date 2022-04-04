@@ -2,11 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 project(affordance_corrections)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_SKIP_RPATH False)
 SET(CMAKE_INSTALL_RPATH ..)
 
-find_package(catkin REQUIRED COMPONENTS roscpp rviz rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg message_generation geometry_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp rviz tf rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg message_generation geometry_msgs)
 
 catkin_python_setup()
 
@@ -70,9 +71,17 @@ endif()
 
 add_definitions(-DQT_NO_KEYWORDS)
 
+include_directories(include ${catkin_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
+
+add_definitions(-std=c++11)
+
+set(LIBS 
+    ${catkin_LIBRARIES}
+    ${OpenCV_LIBRARIES}
+    )
+
 set(SOURCE_FILES src/correctionspanel.cpp)
 add_library(${PROJECT_NAME} ${SOURCE_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${QT_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES})
 
 
