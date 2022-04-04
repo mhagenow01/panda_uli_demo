@@ -33,7 +33,7 @@ class ModelRunner():
 
             quat = data.pose.orientation
             pos = data.pose.position
-            R_surface = np.array([quat.x, quat.y, quat.z, quat.z])
+            R_surface = np.array([quat.x, quat.y, quat.z, quat.w])
             t_surface = np.array([pos.x, pos.y, pos.z])
 
             model = DMPLWRhardcoded(verbose=True)
