@@ -21,7 +21,7 @@ from scipy.spatial.transform import Slerp
 class ExecuteROS:
     def __init__(self,input_tx = np.array([0, 0, 0, 1]),task_R = np.array([0, 0, 0, 1]), task_t = np.zeros((3,))):
         # Set up ROS Publishers
-        rospy.init_node('executeROSfromState', anonymous=True)
+        # rospy.init_node('executeROSfromState', anonymous=True)
         self.hybrid_pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
         self.valve_pub = rospy.Publisher('/valvestate',Int32,queue_size=1)
         self.correction_pub = rospy.Publisher('/correction',Float64MultiArray,queue_size=1)

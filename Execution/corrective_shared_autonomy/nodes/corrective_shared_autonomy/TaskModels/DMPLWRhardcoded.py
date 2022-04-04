@@ -609,8 +609,8 @@ class DMPLWRhardcoded:
                 # print("C:", correction)
                 # print("Y:", Y)
                 # print(input_vals)
-                if segment.hybrid:
-                    print("Fc: ",Y[3]," ",Z[3])
+                # if segment.hybrid:
+                #     print("Fc: ",Y[3]," ",Z[3])
 
                 # print("X:",X[0],X[1],X[2])
                 # print("start:",segment.start_vals[0],segment.start_vals[1],segment.start_vals[2])

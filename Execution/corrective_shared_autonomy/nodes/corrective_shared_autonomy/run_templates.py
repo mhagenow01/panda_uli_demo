@@ -8,8 +8,10 @@
 __author__ = "Mike Hagenow"
 
 from corrective_shared_autonomy.PreProcessing.PreProcessing import PreProcessing
-from corrective_shared_autonomy.TaskModels.DMPLWR import DMPLWRhardcoded
+from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import DMPLWRhardcoded
 from corrective_shared_autonomy.PreProcessing.solidworks_to_bsplinesurface import surfaceFromSTL
+
+from geometry_msgs.msg import PoseStamped
 
 import rospy
 import rospkg
@@ -37,20 +39,19 @@ class ModelRunner():
             model = DMPLWRhardcoded(verbose=True)
 
             rospack = rospkg.RosPack()
-            config_dir = rospack.get_path('panda_uli_demo')+'/ULIConfig/registration_models/'
+            config_dir = rospack.get_path('corrective_shared_autonomy')+'/../../ULIConfig/registration_models/'
             execution_path = config_dir+model_name+'.pkl'
 
             # Run the model if it exists
             if os.path.isfile(execution_path):
-                model.execute(model_pkl_file=execution_path, R_surface = R_surface, t_surface=t_surface)
+                model.executeModel(model_pkl_file=execution_path, R_surface = R_surface, t_surface=t_surface)
             else:
                 print("No Execution Model found for model: ",model_name)
 
             self.runningModel = False
 
-
-
     
 if __name__ == "__main__":
+    rospy.init_node('model_runner', anonymous=True)
     modelrunner = ModelRunner()
     
