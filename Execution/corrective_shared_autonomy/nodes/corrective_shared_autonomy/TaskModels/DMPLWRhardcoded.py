@@ -221,8 +221,7 @@ class DMPLWRhardcoded:
                     v = segment.original_vals[demo_id][v_ind, :]
 
                 # get x,y,z from BSpline
-                surface = BSplineSurface()
-                surface.loadSurface(segment.surface)
+                surface = segment.surface
 
                 for u_temp,v_temp in zip(u,v):
                     r, _, _, _ = surface.calculate_surface_point(u_temp,v_temp)
@@ -589,8 +588,7 @@ class DMPLWRhardcoded:
             Z = X
 
             if segment.hybrid:
-                surface = BSplineSurface()
-                surface.loadSurface(segment.surface)
+                surface = segment.surface
             else:
                 surface = None
 
@@ -642,8 +640,7 @@ class DMPLWRhardcoded:
                     segment, num_states, ddX, dX, X, s, ddY, dY, Y = self.setupSegment(learnedSegments, segID, from_back=True)
                     Z = self.getSaturatedZ(X,Y,segment.state_names)
                     if segment.hybrid:
-                        surface = BSplineSurface()
-                        surface.loadSurface(segment.surface)
+                        surface = segment.surface
                 elif(s < 0):
                     s = 0.0 # nowhere else to go backwards -- sit at this position
                     delta_s = 0.0
