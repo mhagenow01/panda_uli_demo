@@ -13,6 +13,8 @@ const store = (set,get) => ({
     imageWidth: 1200,
     imageHeight: 900,
     imagedata: "",
+    parameters: [{type: "select", label:"Number of passes", value:"1", options:["1","2","3"]},{type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},{type: "slider", label:"Force (N)", value:1,min:0,max:10}],
+    configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
       x: Math.random() * 500,
@@ -24,6 +26,7 @@ const store = (set,get) => ({
     }),
     sendMessage: () => set(state =>{
       useRosStore.getState().commandTopic.publish({data:state.corners.map((item) => (String(item.x/state.imageWidth)+','+String(item.y/state.imageHeight))).join(';')})
+      //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
     }),
     setImage: (msg) => set(state=>{
       state.imagedata = msg
@@ -39,7 +42,6 @@ const store = (set,get) => ({
       state.imageHeight = h
     }),
     setPath: (coords) => set(state=>{
-      console.log(coords)
       state.path = []
       coords.map((coord) => {
         coord = coord.split(',')
@@ -48,8 +50,13 @@ const store = (set,get) => ({
           y: parseFloat(coord[1])*state.imageHeight
         });   
       })
-      console.log(state.path)
-    })
+    }),
+    setParameter: (idx,value) => set(state=>{
+       state.parameters[idx].value = value
+       useRosStore.getState().paramTopic.publish({data:JSON.stringify(state.parameters)})
+     }),
+    setParameters: (param) => set(state=>{
+      state.parameters=JSON.parse(param)})
 });
 
 const useAppStore = create(immer(store));

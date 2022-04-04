@@ -34,8 +34,21 @@ const store = (set) => ({
             messageType: 'std_msgs/String'
         });
 
+        const paramTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'ui/parameters',
+            messageType: 'std_msgs/String'
+        });
+
+        const setParamTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'ui/set_parameters',
+            messageType: 'std_msgs/String'
+        });
+
 		const pathTopic = new ROSLIB.Topic({
 			ros: ros,
+			//name: 'camera/image_raw/compressed',
 			name: '/ui/path',
 			messageType: 'std_msgs/String',
 		});
@@ -46,6 +59,7 @@ const store = (set) => ({
 
 		const imageTopic = new ROSLIB.Topic({
 			ros: ros,
+			//name: 'camera/image_raw/compressed',
 			name: '/rgb/image_raw/compressed',
 			messageType: 'sensor_msgs/CompressedImage',
 		});
@@ -53,9 +67,11 @@ const store = (set) => ({
         imageTopic.subscribe(function (message) {
 			useAppStore.getState().setImage('data:image/jpg;base64,' + message.data);
 			// console.log(imagedata);
+			// document.getElementById('livestream').src = imagedata;
 		});
 
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
+        setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
 
         ros.connect();
 
@@ -66,6 +82,7 @@ const store = (set) => ({
             talkerTopic:talkerTopic,
             commandTopic:commandTopic,
             imageTopic:imageTopic,
+            paramTopic:paramTopic,
         };
     })
 });

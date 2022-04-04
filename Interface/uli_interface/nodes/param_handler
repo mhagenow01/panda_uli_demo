@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+import numpy as np
+import signal
+import time
+import sys
+import rospy
+from std_msgs.msg import String
+import json
+
+
+class Handler(object):
+    def __init__(self):
+        self._ui_param_pub = rospy.Publisher("/ui/set_parameters",String,queue_size = 1)
+        self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
+        self._param = None
+
+        
+    def on_param(self,msg):
+        self._param = json.loads(msg.data)
+        #self._param.append(self._param[2])
+        self._param.pop()
+        print(self._param)
+        self._ui_param_pub.publish(json.dumps(self._param))    
+    
+    def run(self):
+        rospy.spin()
+
+    def signal_handler(self, signal, frame):
+        sys.exit()
+
+if __name__ == "__main__":
+    rospy.init_node('param_handler')
+    handler = Handler()
+    signal.signal(signal.SIGINT, handler.signal_handler)
+    handler.run()
