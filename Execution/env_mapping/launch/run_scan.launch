@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
 <!-- Starts the node that turns on/off RTAB-Map and the node that republishes tf as odometry messages-->
 <launch>
-<node type="rviz" name="rviz" pkg="rviz" args="-d $(find env_mapping)/rviz/mappingrvizconfig.rviz" output="screen" />
-<!-- <include file="$(find panda_ros)/launch/runPandaROS.launch"/> -->
 <include file="$(find env_mapping)/launch/run_mapping.launch"/>
 <node pkg="env_mapping" type="scanning_pan" name="scanning_pan" output="screen"/>
 </launch>

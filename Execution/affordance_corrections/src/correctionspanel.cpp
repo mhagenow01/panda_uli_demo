@@ -45,28 +45,50 @@ namespace corrections_panel{
         // Initialize publishers
         cam_pos_pub = n.advertise<geometry_msgs::Point>("rviz_camera_p", 1);
         quat_pub = n.advertise<geometry_msgs::Quaternion>("rviz_camera_q", 1);
-        rviz_pub = n.advertise<std_msgs::String>("getObjPose", 1);
+        trigger_pub = n.advertise<std_msgs::String>("rviz_triggers", 1);
+        obj_pub = n.advertise<std_msgs::String>("getObjPose", 1);
 
         static tf2_ros::TransformBroadcaster br;
 
         QWidget *cfBox = new QWidget;
-        QHBoxLayout* cfLayout = new QHBoxLayout(cfBox);
+        QVBoxLayout* cfLayout = new QVBoxLayout(cfBox);
         cfBox->setStyleSheet("background-color: #dae3e3; border-radius: 10pt; border-color: #b6b8b8");
-        cfBox->setFixedWidth(500*screenRatio);
-        QPushButton* toggleControlbutton = new QPushButton("Run Behavior");
-        toggleControlbutton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
-        cfLayout->addWidget(toggleControlbutton);
+        cfBox->setFixedHeight(800*screenRatio);
 
+        QPushButton* scanButton = new QPushButton("Run Scan");
+        scanButton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
+        cfLayout->addWidget(scanButton);
+
+        QPushButton* deletebutton = new QPushButton("Delete Object");
+        deletebutton->setStyleSheet("background-color: #FF968A; border-style: solid; border-width: 2px; border-radius: 10px; border-color: #FF968A; font: bold 22px; min-width: 10em; padding: 6px;");
+        cfLayout->addWidget(deletebutton);
+
+        QPushButton* toggleBehaviorbutton = new QPushButton("Run Behavior");
+        toggleBehaviorbutton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
+        cfLayout->addWidget(toggleBehaviorbutton);
 
         QHBoxLayout* hlayout = new QHBoxLayout;
         hlayout->addWidget(cfBox);
         setLayout(hlayout);
 
-        // Turn on and off mapping
-        connect(toggleControlbutton, &QPushButton::clicked, [this](){
-           s_out.data = "on";
-           rviz_pub.publish(s_out);
+        // Run Scan
+        connect(scanButton, &QPushButton::clicked, [this](){
+           s_out.data = "scan";
+           trigger_pub.publish(s_out);
         });
+
+        // Run Behavior
+        connect(toggleBehaviorbutton, &QPushButton::clicked, [this](){
+           s_out.data = "on";
+           obj_pub.publish(s_out);
+        });
+
+        // Delete Object
+        connect(deletebutton, &QPushButton::clicked, [this](){
+           s_out.data = "deleteactive";
+           trigger_pub.publish(s_out);
+        });
+
 
         
         // Timer used to publish the camera orientation from RVIZ for camera-centric controls

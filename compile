@@ -10,5 +10,8 @@ cd Execution
 source compileExecution
 cd ..
 
+# Build ULI Config
+catkin build uli_config --no-notify
+
 # Build Interface
 # TBD

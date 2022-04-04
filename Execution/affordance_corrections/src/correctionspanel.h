@@ -35,11 +35,12 @@ namespace corrections_panel
             ros::NodeHandle n;
             ros::Publisher quat_pub;
             ros::Publisher cam_pos_pub;
+            ros::Publisher trigger_pub;
             geometry_msgs::Quaternion q_out;
             geometry_msgs::Point pos_out;
             ros::Subscriber battery_sub;
             ros::Publisher cf_pub;
-            ros::Publisher rviz_pub;
+            ros::Publisher obj_pub;
             ros::Publisher altview_pub;
             int cf; // int corresponding to which control frame
             bool mapping;
