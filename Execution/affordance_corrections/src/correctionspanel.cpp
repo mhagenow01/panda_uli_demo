@@ -53,7 +53,7 @@ namespace corrections_panel{
         QWidget *cfBox = new QWidget;
         QVBoxLayout* cfLayout = new QVBoxLayout(cfBox);
         cfBox->setStyleSheet("background-color: #dae3e3; border-radius: 10pt; border-color: #b6b8b8");
-        cfBox->setFixedHeight(800*screenRatio);
+        cfBox->setFixedHeight(125*screenRatio);
 
         QPushButton* scanButton = new QPushButton("Run Scan");
         scanButton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");

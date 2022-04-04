@@ -7,6 +7,5 @@ SET(CMAKE_INSTALL_RPATH ..)
 
 find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg)
 catkin_package()
-catkin_python_setup()
 
 
