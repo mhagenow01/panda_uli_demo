@@ -103,6 +103,7 @@ install(DIRECTORY
 
 catkin_install_python(PROGRAMS
     nodes/spliner
+    nodes/param_handler
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
