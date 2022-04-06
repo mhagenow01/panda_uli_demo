@@ -13,8 +13,11 @@ import secrets
 import ctypes
 import struct
 from core_robotics.PyBSpline import convertToUV, BSplineSurface
+from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment, DMPLWRhardcoded
+from scipy.spatial.transform import Rotation as ScipyR
 
 import sys
+import json
 
 import rospy
 from geometry_msgs.msg import Twist
@@ -32,10 +35,17 @@ from tf.transformations import quaternion_from_euler
 import tf
 import tf2_ros
 import tf2_geometry_msgs
+from scipy.spatial.transform import Rotation as ScipyR
 
 REFERENCE_FRAME='panda_link0'
 CAMERA_FRAME='rgb_camera_link'
 
+def interpMultD(starting_vals,ending_vals,num_pts):
+    vals = []
+    for ii in range(0,num_pts):
+        c_i = float(ii)/float(num_pts) # interpolation coefficient
+        vals.append(list(c_i*(e-s)+s for s,e in zip(starting_vals,ending_vals)))
+    return np.asarray(vals).T
 
 
 def get_mid_points(p1,p2,k):
@@ -48,7 +58,7 @@ class Spliner(object):
     def __init__(self):
         self._tfBuffer = tf2_ros.Buffer()
         self._tl = tf2_ros.TransformListener(self._tfBuffer)
-        self._model = None
+        self._camera_model = None
         # self._model = image_geometry.PinholeCameraModel()
         # camInfo = CameraInfo()
         # camInfo.header.frame_id="camera1"
@@ -61,51 +71,88 @@ class Spliner(object):
         # camInfo.P = [976.9754638671875, 0.0, 1018.8711547851562, 0.0, 0.0, 976.9026489257812, 780.8445434570312, 0.0, 0.0, 0.0, 1.0, 0.0]
         # self._model.fromCameraInfo(camInfo)
 
-        self._static_br = tf2_ros.StaticTransformBroadcaster()
-        self._br =tf2_ros.TransformBroadcaster()
-        static_transformStamped = TransformStamped()
+        # self._static_br = tf2_ros.StaticTransformBroadcaster()
+        # self._br =tf2_ros.TransformBroadcaster()
+        # static_transformStamped = TransformStamped()
 
-        static_transformStamped.header.stamp = rospy.Time.now()
-        static_transformStamped.header.frame_id = REFERENCE_FRAME
-        static_transformStamped.child_frame_id = "camera_base"
+        # static_transformStamped.header.stamp = rospy.Time.now()
+        # static_transformStamped.header.frame_id = REFERENCE_FRAME
+        # static_transformStamped.child_frame_id = "camera_base"
 
-        static_transformStamped.transform.translation.x = 0
-        static_transformStamped.transform.translation.y = 0
-        static_transformStamped.transform.translation.z = 1
+        # static_transformStamped.transform.translation.x = 0
+        # static_transformStamped.transform.translation.y = 0
+        # static_transformStamped.transform.translation.z = 1
 
-        quat = tf.transformations.quaternion_from_euler(np.pi,np.pi/2,0)
-        static_transformStamped.transform.rotation.x = quat[0]
-        static_transformStamped.transform.rotation.y = quat[1]
-        static_transformStamped.transform.rotation.z = quat[2]
-        static_transformStamped.transform.rotation.w = quat[3]
-        self._static_br.sendTransform(static_transformStamped)
-
-
+        # quat = tf.transformations.quaternion_from_euler(np.pi,np.pi/2,0)
+        # static_transformStamped.transform.rotation.x = quat[0]
+        # static_transformStamped.transform.rotation.y = quat[1]
+        # static_transformStamped.transform.rotation.z = quat[2]
+        # static_transformStamped.transform.rotation.w = quat[3]
+        # self._static_br.sendTransform(static_transformStamped)
 
         self._depth = None
+        self._camera_model = None
+        self._learnedSegments = None
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
         self._cam_info_sub = rospy.Subscriber("/depth_to_rgb/camera_info", CameraInfo, self.on_info)
 
+        self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
+        self._n_passes = 2
+        self._horizontal = True
+
+    def on_param(self,msg):
+        self._param = json.loads(msg.data)
+        print(self._param)
+        passes_idx = next((i for i, item in enumerate(self._param) if item["label"] == "Number of passes"), None)
+        if passes_idx is not None:
+            self._n_passes = int(self._param[passes_idx]["value"])
+
+        orientation_idx = next((i for i, item in enumerate(self._param) if item["label"] == "Orientation"), None)
+        if orientation_idx is not None:
+            self._horizontal = self._param[orientation_idx]["value"] == "horizontal"
 
     def on_info(self,msg):
-        if self._model is None:
+        if self._camera_model is None:
             self._width = msg.width
             self._height = msg.height
-            self._model = image_geometry.PinholeCameraModel()
-            self._model.fromCameraInfo(msg)
+            self._camera_model = image_geometry.PinholeCameraModel()
+            self._camera_model.fromCameraInfo(msg)
             self._depth_sub = rospy.Subscriber("/depth_to_rgb/image_raw", Image, self.on_depth)
             self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
         
     def on_command(self,msg):
+        l = msg.data.split(":")
+        if l[0] == "spline":
+            print("splining")
+            path = self.get_path(l[1])
 
-        self.get_spline(msg.data)
+            ratio_points = []
+            for p in path.poses:
+                coord = self.get_pixel_from_pose(p)
+                coord=[str(coord[0]/self._width),str(coord[1]/self._height)]
+                ratio_points.append(','.join(coord))
+            
+            self._ui_path_pub.publish(String(';'.join(ratio_points)))
+            self._path_pub.publish(path)
+            print("splining finished")
+        if l[0] == "execute":
+            if self._model is not None and self._learnedSegments is not None:
+                trans = self._tfBuffer.lookup_transform(REFERENCE_FRAME,CAMERA_FRAME, rospy.Time())
+
+                q=trans.transform.rotation
+                t=trans.transform.translation
+                R_surface=[q.x,q.y,q.z,q.w]
+                t_surface=[t.x,t.y,t.z]
+
+                self._model.executeModel(learnedSegments=self._learnedSegments,R_surface=R_surface,t_surface=t_surface)
+
             
     def get_xyz_from_pixel(self, x,y,d):
         
         p = [x,y]
-        p = self._model.rectifyPoint(p)
-        p3d = self._model.projectPixelTo3dRay(p)
+        p = self._camera_model.rectifyPoint(p)
+        p3d = self._camera_model.projectPixelTo3dRay(p)
         point = Point()
         point.x=d/p3d[2]*p3d[0]
         point.y=d/p3d[2]*p3d[1]
@@ -150,7 +197,9 @@ class Spliner(object):
     def on_depth(self, msg):
         self._depth = ros_numpy.numpify(msg)
 
-    def get_spline(self,coord):
+
+    
+    def get_surface(self,coord):
         #s="484,436_615,436_615,816_484,816"
 
         ps = coord.split(";")
@@ -170,118 +219,143 @@ class Spliner(object):
         db = get_distance(pose3,pose4)
         dl = get_distance(pose4,pose1)
 
+
         spline_step = .02
         
         step_x = int(max(dt,db)/spline_step)+1
         step_y = int(max(dr,dl)/spline_step)+1
 
-        top = get_mid_points(p1,p2,step_x)
-        bot = get_mid_points(p4,p3,step_x)
+        bot = get_mid_points(p1,p2,step_x)
+        top = get_mid_points(p4,p3,step_x)
         
         p=[]
         for i in range(step_x):
             p = p + get_mid_points(top[i],bot[i],step_y)
         p = [self.get_point(k,CAMERA_FRAME) for k in p]
 
-        ps = [pose1,pose2,pose3,pose4]
-        xs = [point[0] for point in p]
-        ys = [point[1] for point in p]
-        zs = [point[2] for point in p]
         ctrl_p = np.array(p).reshape((step_x,step_y,3))
-        px = [p1[0],p2[0],p3[0],p4[0]]
-        py = [p1[1],p2[1],p3[1],p4[1]]
-        xs = []
-        ys = []
-        zs = []
-        
-        for i in range(min(px),max(px),int((max(px)-min(px))/100)):
-            for j in range(min(py),max(py),int((max(py)-min(py))/100)):
-                p = self.get_point([i,j])
-                xs += [p[0]]
-                ys += [p[1]]
-                zs += [p[2]]
-        curve = BSplineSurface()
-        curve.initialize(k=3, control_pts=ctrl_p)
 
-        dist_step = .03
-        line_gap = .05
-        dists = [dt,db,dr,dl]
-        #Horizontal
-        uvs=[]
-        horizontal = True
-        l=max(dt,db)
-        h=max(dl,dr)
-        if np.argmax(dists)>2:# Could do something to find the main axe...
-            horizontal = False
-            h=max(dt,db)
-            l=max(dl,dr)
-        n_l = int(np.ceil(l/dist_step))
-        n_passes = int(np.ceil(h/line_gap))
-        for i in range(n_passes+1):
-            for j in range(n_l+1):
-                x = j/n_l if (i%2 == 0) else 1-j/n_l
-                y = i/n_passes
+        surfaceBSpline = BSplineSurface()
+        surfaceBSpline.initialize(k=3, control_pts=ctrl_p)
+
+        return surfaceBSpline
+
+    
+    def get_approach(self, surfaceBSpline, u0, v0):
+        ang_relative_to_surface = 0 # degrees
+        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        q_ts = R_tool_surf.as_quat()
+
+        segment = HybridSegment()
+        segment.hybrid = False
+        segment.num_samples = 100 # 2 seconds
+        segment.state_names = ['x','y','z','qx','qy','qz','qw']
+        approach_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(u0, v0)
+        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
+        q_app = (R_surf * R_tool_surf).as_quat()
+
+        offset =  0.05 * n_hat
+        starting = [approach_pt[0] + offset[0], approach_pt[1] + offset[1], approach_pt[2]  + offset[2], q_app[0], q_app[1], q_app[2], q_app[3]]
+        ending = [approach_pt[0], approach_pt[1], approach_pt[2] + 0.0, q_app[0], q_app[1], q_app[2], q_app[3]]
+        orig_vals = interpMultD(starting,ending,segment.num_samples)
+        segment.original_vals = []
+        segment.original_vals.append(orig_vals)
+        #segments.append(segment)
+        return segment
+
+    def get_segments(self, surfaceBSpline,us,vs):
+        ang_relative_to_surface = 0 # degrees
+        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        q_ts = R_tool_surf.as_quat()
+
+        segment = HybridSegment()
+        segment.hybrid = True
+        segment.surface = surfaceBSpline
+        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw']
+        segment.original_vals = []
+        samps = 150
+        segment.num_samples = samps *  (len(us)-1)
+
+        segments = []
+        for i in range(len(us)-1):
+            segments.append(interpMultD([us[i], vs[i], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3]],[us[i+1], vs[i+1], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3]],samps))
+        segment.original_vals.append(np.hstack(segments))
+        return segment
+
+    def get_return(self,surfaceBSpline,un,vn):
+        ang_relative_to_surface = 0 # degrees
+        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        q_ts = R_tool_surf.as_quat()
+
+        segment = HybridSegment()
+        segment.hybrid = False
+        segment.num_samples = 100 # 2 seconds
+        segment.state_names = ['x','y','z','qx','qy','qz','qw']
+        segment.original_vals = []
+
+        retract_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(un, vn)
+        offset =  0.05 * n_hat
+        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
+        q_ret = (R_surf * R_tool_surf).as_quat()
+        offset1 =  0.005 * n_hat
+        starting = [retract_pt[0]+offset1[0], retract_pt[1]+offset1[1], retract_pt[2]+offset1[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3]]
+        offset2 =  0.05 * n_hat
+        ending = [retract_pt[0]+offset2[0], retract_pt[1]+offset2[1], retract_pt[2]+offset2[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3]]
+        orig_vals = interpMultD(starting,ending,segment.num_samples)
+        segment.original_vals.append(orig_vals)
+        return segment
+
+    def get_uvs(self):
+        n_passes = self._n_passes
+        horizontal = self._horizontal
+        margin = 0.1
+        length = 1-2*margin
+        us=[margin]
+        vs=[margin]
+        for i in range(n_passes):
+            x = margin if i%2 else (1-margin)
+            y = margin+length*i/n_passes
+            val = [x,y]
+            if not horizontal:
+                val = [y,x]
+            us.append(val[0])
+            vs.append(val[1])
+            if i != (n_passes-1):
+                x = margin if i%2 else (1-margin)
+                y = margin+length*(i+1)/n_passes
                 val = [x,y]
                 if not horizontal:
                     val = [y,x]
-                uvs.append(val)
-            if i != n_passes:
-                for j in range(int(np.ceil(line_gap/dist_step))-1):
-                    x = (i+1)%2
-                    y = i/n_passes+(j+1)/np.ceil(line_gap/dist_step)/n_passes
-                    val = [x,y]
-                    if not horizontal:
-                        val = [y,x]
-                    uvs.append(val)
-                    
-        for uv in uvs:
-            if uv[0] == 1:
-                uv[0] = .99
-            if uv[1] == 1:
-                uv[1] = .99
+                us.append(val[0])
+                vs.append(val[1])
+                
+        return us,vs
 
-        p1 = curve.calculate_surface_point(.99,0)[0]
-        p2 = curve.calculate_surface_point(.99,0.166)[0]
-        p3 = curve.calculate_surface_point(.99,0.33)[0]
-
-        xs2 = []
-        ys2 = []
-        zs2 = []
-        xs3 = []
-        ys3 = []
-        zs3 = []
+    def get_path(self, coord):
+        surfaceBSpline = self.get_surface(coord)
+        us,vs = self.get_uvs()
+        
+        segments = [self.get_approach(surfaceBSpline, us[0],vs[0]), self.get_segments(surfaceBSpline,us,vs), self.get_return(surfaceBSpline,us[-1],vs[-1])]
+        segments = np.hstack(segments)
+        
+        self._model = DMPLWRhardcoded(verbose=False)
+        self._learnedSegments = self._model.learnModel(segments,'')
+        xs,ys,zs = self._model.getTraj(self._learnedSegments,orig=False)
+        
         path = Path()
         path.header.frame_id = CAMERA_FRAME
-        for uv in uvs:
-            #print(uv)
+        for x,y,z in zip(xs,ys,zs):
+            
             pose = PoseStamped()
             pose.header.frame_id = CAMERA_FRAME
 
-            point = curve.calculate_surface_point(uv[0],uv[1])[0]
-            
-            xs2.append(point[0])
-            ys2.append(point[1])
-            zs2.append(point[2])
-
-            pose.pose.position.x = point[0]
-            pose.pose.position.y = point[1]
-            pose.pose.position.z = point[2]
+            pose.pose.position.x = x
+            pose.pose.position.y = y
+            pose.pose.position.z = z
             pose.pose.orientation.w = 1
             path.poses.append(pose)
-        # for i in range(20):
-        #     for j in range(20):
-        #         point = curve.calculate_surface_point(i/20.,j/20)[0]
-        #         xs3.append(point[0])
-        #         ys3.append(point[1])
-        #         zs3.append(point[2])
-        
-        ratio_points = []
-        for p in path.poses:
-            coord = self.get_pixel_from_pose(p)
-            coord=[str(coord[0]/self._width),str(coord[1]/self._height)]
-            ratio_points.append(','.join(coord))
-        self._ui_path_pub.publish(String(';'.join(ratio_points)))
-        self._path_pub.publish(path)
+
+        return path
 
     def get_pixel_from_pose(self, pose):
         if pose.header.frame_id != CAMERA_FRAME:
@@ -291,7 +365,7 @@ class Spliner(object):
         if p.z < 0:
             return None
         p=[p.x,p.y,p.z]
-        return self._model.project3dToPixel(p)
+        return self._camera_model.project3dToPixel(p)
     
     def run(self):
         rospy.spin()
