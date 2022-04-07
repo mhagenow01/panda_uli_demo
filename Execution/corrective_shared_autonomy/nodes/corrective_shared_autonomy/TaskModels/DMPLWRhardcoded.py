@@ -25,6 +25,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import math
 
+from joblib import Parallel, delayed
+
 import tf2_ros
 
 def interp_matrx(Y,ind):
@@ -163,6 +165,28 @@ class HybridSegment:
     hybrid=False
 
 
+def learnDMP(segmentTemp,jj,num_demos,k,b,dt):
+    data_temp = []
+    data_temp_r = []
+    for kk in range(0,num_demos):
+        data_temp.append(segmentTemp.original_vals[kk][jj,:])
+        data_temp_r.append(np.flip(segmentTemp.original_vals[kk][jj, :]))
+
+    dmptemp = DMP(k,b,dt)
+
+    start,end,forcing = dmptemp.getForcing(data_temp)
+    _,_,reverse_forcing = dmptemp.getForcing(data_temp_r)
+
+    # # To see individual DMP plots
+    # import matplotlib.pyplot as plt
+    # for oo in range(0,num_demos):
+    #     plt.plot(data_temp[oo],color='gray')
+    # plt.plot(dmptemp.getPath(start, end, forcing),color='red')
+    # plt.show()
+
+    return start, end, forcing, reverse_forcing
+
+
 class DMPLWRhardcoded:
     def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1])):
         # DMP parameters
@@ -290,28 +314,28 @@ class DMPLWRhardcoded:
             segmentTemp.end_vals = np.zeros((len(segmentTemp.state_names, )))
             segmentTemp.forcing_vals = np.zeros((len(segmentTemp.state_names),segmentTemp.num_samples))
             segmentTemp.rev_forcing_vals = np.zeros((len(segmentTemp.state_names), segmentTemp.num_samples))
-            for jj in range(0,len(segmentTemp.state_names)):
-                data_temp = []
-                data_temp_r = []
-                for kk in range(0,num_demos):
-                    data_temp.append(segmentTemp.original_vals[kk][jj,:])
-                    data_temp_r.append(np.flip(segmentTemp.original_vals[kk][jj, :]))
+            
 
-                dmptemp = DMP(self.k,self.b,self.dt)
+            backend = 'loky'
+            num_states = len(segmentTemp.state_names)
+            behaviors = Parallel(n_jobs=8, backend=backend)(delayed(
+            learnDMP)(segmentTemp,jj,num_demos,self.k,self.b,self.dt) for jj in range(num_states))
 
-                start,end,forcing = dmptemp.getForcing(data_temp)
-                _,_,reverse_forcing = dmptemp.getForcing(data_temp_r)
+            for jj in range(0,num_states):
+                start, end, forcing, reverse_forcing = behaviors[jj]
                 segmentTemp.start_vals[jj] = start
                 segmentTemp.end_vals[jj] = end
                 segmentTemp.forcing_vals[jj,:] = forcing
                 segmentTemp.rev_forcing_vals[jj,:] = reverse_forcing
 
-                # # To see individual DMP plots
-                # import matplotlib.pyplot as plt
-                # for oo in range(0,num_demos):
-                #     plt.plot(data_temp[oo],color='gray')
-                # plt.plot(dmptemp.getPath(start, end, forcing),color='red')
-                # plt.show()
+
+            # for jj in range(0,len(segmentTemp.state_names)):
+            #     start, end, forcing, reverse_forcing = learnDMP(segmentTemp,jj,num_demos,self.k,self.b,self.dt)
+            #     segmentTemp.start_vals[jj] = start
+            #     segmentTemp.end_vals[jj] = end
+            #     segmentTemp.forcing_vals[jj,:] = forcing
+            #     segmentTemp.rev_forcing_vals[jj,:] = reverse_forcing
+
 
         # rospack = rospkg.RosPack()
         # root_dir = rospack.get_path(
