@@ -1,0 +1,20 @@
+<package format="2">
+  <name>actuation_group</name>
+  <version>0.1.0</version>
+  <description>
+    Groups all of the actuation nodes together.
+  </description>
+  <maintainer email="kevinwelsh132@gmail.com">Kevin Welsh</maintainer>
+  <license>BSD</license>
+
+  <author>Kevin Welsh</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>franka_interface</exec_depend>
+  <exec_depend>franka_msgs</exec_depend>
+  <exec_depend>franka_ros_controllers</exec_depend>
+  <exec_depend>franka_tools</exec_depend>
+  <exec_depend>collision_free_ik</exec_depend>
+  <exec_depend>franka_panda_description</exec_depend>
+</package>

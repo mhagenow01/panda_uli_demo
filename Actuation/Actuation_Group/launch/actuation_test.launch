@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="ik_test" pkg="collision_free_ik" type="ik_test.py" /> 
+
+  <include file="$(find actuation_group)/launch/Actuation.launch" />
+</launch>
