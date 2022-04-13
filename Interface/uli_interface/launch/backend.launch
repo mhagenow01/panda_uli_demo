@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+    <include file="$(find panda_sim)/launch/sim.launch"/>
+    <node pkg="uli_interface" type="spliner" name="spliner" output="screen">
+    </node>
+</launch>

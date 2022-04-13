@@ -299,13 +299,6 @@
     <child link="panda_gripper"/>
     <axis xyz="0 0 0"/>
   </joint>
-  <link name="panda_orbital" />
-  <joint name="panda_orbital_joint" type="fixed">
-    <origin rpy="3.1416 0.000 -0.785" xyz="-0.000 -0.000 0.144" />
-    <parent link="panda_link8"/>
-    <child link="panda_orbital"/>
-    <axis xyz="0 0 0"/>
-  </joint>
   <!--<xacro:sensor_d435 parent="panda_link8">
 		<origin xyz="-0.032 0.038 0.031" rpy="-2.731 -1.517 -1.209" />
 	</xacro:sensor_d435>-->

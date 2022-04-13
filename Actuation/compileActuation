@@ -13,3 +13,5 @@ cd ../../
 # Build other ROS packages
 catkin build panda_ros --no-notify
 catkin build panda_ros_msgs --no-notify
+catkin build panda_sim --no-notify
+catkin build collision_free_ik --no-notify

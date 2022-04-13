@@ -13,7 +13,7 @@ const store = (set,get) => ({
     imageWidth: 1200,
     imageHeight: 900,
     imagedata: "",
-    parameters: [{type: "select", label:"Number of passes", value:"1", options:["1","2","3"]},{type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},{type: "slider", label:"Force (N)", value:1,min:0,max:10}],
+    parameters: [{type: "select", label:"Number of passes", value:"2", options:["2","3","4","5"]},{type: "select", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},{type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},{type: "slider", label:"Force (N)", value:1,min:0,max:10}],
     configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
@@ -24,8 +24,12 @@ const store = (set,get) => ({
     addMessage: (message) => set(state=>{
         state.messages = [message,...state.messages]
     }),
-    sendMessage: () => set(state =>{
-      useRosStore.getState().commandTopic.publish({data:state.corners.map((item) => (String(item.x/state.imageWidth)+','+String(item.y/state.imageHeight))).join(';')})
+    sendCoordinates: () => set(state =>{
+      useRosStore.getState().commandTopic.publish({data:"spline:"+state.corners.map((item) => (String(item.x/state.imageWidth)+','+String(item.y/state.imageHeight))).join(';')})
+      //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
+    }),
+    sendMessage: (msg) => set(state =>{
+      useRosStore.getState().commandTopic.publish({data:msg})
       //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
     }),
     setImage: (msg) => set(state=>{

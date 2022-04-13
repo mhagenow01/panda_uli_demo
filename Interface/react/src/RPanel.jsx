@@ -8,7 +8,7 @@ export const RPanel = (props) => {
   const [connect, connection, url,imageTopic] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic])) 
   const parameters = useAppStore(state=>state.parameters)
   
-  const [messages, addMessage, sendMessage] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage]))
+  const [messages, addMessage, sendMessage, sendCoordinates] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates]))
     return (
       <Grid
       rows={['10%', '10%','70%']}
@@ -24,12 +24,17 @@ export const RPanel = (props) => {
         <Button gridArea='tl' onClick={connect}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
 
        <CheckBox gridArea="tr" disabled={true} checked={connection==='connected'}/>
-       <Box gridArea='send'  basis="medium"  alignSelf="center">
+       <Box gridArea='send'  basis="medium"  alignSelf="center"  direction="row">
         <Button size="large" alignSelf="center" label="Send"
           onClick={() => {
-            sendMessage();
+            sendCoordinates();
           }}
           />
+
+        <Button size="large" alignSelf="center" label="Execute"
+          onClick={() => {
+            sendMessage("execute");
+          }} />
           </Box> 
           <Box gridArea='main'>
             <Card background="light-1">

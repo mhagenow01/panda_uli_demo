@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+""" Keeps track of tool and sets appropriate chains
+ Created: 4/11/2022
+"""
+
+__author__ = "Mike Hagenow"
+
+import rospy
+import time
+from std_msgs.msg import String, Float64
+from geometry_msgs.msg import Wrench, Pose
+from sensor_msgs.msg import PointCloud2
+import numpy as np
+import rospkg
+from scipy.spatial.transform import Rotation as ScipyR
+from scipy import signal as scisignal
+
+from tf2_ros import TransformBroadcaster
+from geometry_msgs.msg import TransformStamped
+import tf_transformations
+
+class EEProcessor:
+    def __init__(self):
+        rospy.init_node('ee_processor')
+        rospy.Subscriber("/panda/set_ee", String, self.processNewEE)
+
+        self.br = TransformBroadcaster(self)
+
+        rospy.Publisher()
+        self.ee_link = 'panda_orbital' # default is orbital sander
+
+        self.broadcastEE()
+
+    def processNewEE(self,data):
+        self.ee_link = data.data
+    
+    def broadcastEE(self):
+        # Takes the current ee and sets it equivalent to panda_ee in the TF tree
+        t = TransformStamped()
+        t.header.seq = 0
+        t.child_frame_id = 'panda_ee'
+        t.transform.translation.x = 0
+        t.transform.translation.y = 0
+        t.transform.translation.z = 0
+        t.transform.rotation.x = 0
+        t.transform.rotation.y = 0
+        t.transform.rotation.z = 0
+        t.transform.rotation.w = 1
+
+        rate = rospy.Rate(1000.0)
+        while not rospy.is_shutdown():
+            t.header.stamp = rospy.Time.now()
+            t.header.frame_id = self.ee_link
+            self.br.sendTransform(t)
+
+
+
+       
+if __name__ == "__main__":
+    ee_proc = EEProcessor()
+
+
+
+
+

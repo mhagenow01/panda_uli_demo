@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="virtual_robot" default="true"/>
+    <arg name="rvizconfig" default="sim.rviz"/> 
+
+    <node pkg="panda_sim" type="static_publisher" name="camera_static_publisher"/>
+
+    <node pkg="panda_sim" type="simulator" name="simulator" output="screen">
+        <param name="only_virtual" value="true" />
+    </node>
+        
+    <!-- startup rviz -->
+    <node pkg="panda_sim" type="rviz_manager" name="rviz_manager">
+        <param name="rvizconfig" type="string" value="$(arg rvizconfig)" />
+    </node>
+
+    <group if="$(arg virtual_robot)">
+        <include file="$(find panda_sim)/launch/joint_state_pub.launch">  
+        </include>
+	</group>
+    
+    <node pkg="collision_free_ik" type="main" name="ik" output="screen">
+        <param name="urdf_fp" type="string" value="$(find collision_free_ik)/config/panda.urdf"/>
+        <param name="ee_frame" type="string" value="panda_gripper_joint"/>
+        <param name="arm_collider_fp" type="string" value="$(find collision_free_ik)/config/panda_collision.json"/>
+        <param name="environment_fp" type="string" value="$(find collision_free_ik)/config/environment.json"/>
+        <param name="initial_q" type="yaml" value="[0, 0, 0, 0, 0, 0, 0]"/>
+        <remap from="out" to="/joint_commands"/>
+        <remap from="in" to="/commanded_pose"/>
+    </node>
+</launch>

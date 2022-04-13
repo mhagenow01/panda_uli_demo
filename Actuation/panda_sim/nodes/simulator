@@ -1,0 +1,259 @@
+#!/usr/bin/env python
+import rospy
+import signal
+import sys
+import math
+import tf
+import PyKDL
+import tf2_ros
+import PyKDL
+import copy
+
+from std_msgs.msg import String, Float64MultiArray
+from nav_msgs.msg import Path
+from franka_core_msgs.msg import JointCommand
+from panda_ros_msgs.msg import HybridPose
+from scipy.spatial.transform import Rotation as scipyR
+
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Twist, TwistStamped, Pose, PoseStamped
+
+import numpy as np 
+
+REFERENCE_FRAME='panda_link0'
+
+class Simulator(object):
+    def __init__(self):
+        print("STARTING")
+        self._tfBuffer = tf2_ros.Buffer()
+        self._tl = tf2_ros.TransformListener(self._tfBuffer)
+        self._br = tf.TransformBroadcaster()
+    
+        #Rviz value
+        self._viz_pub = rospy.Publisher("/simulator/joint_states", JointState, queue_size = 5)
+        rospy.sleep(1.) # sleep a bit to make sure the TF cache is filled
+        self._event_sub = rospy.Subscriber("/event", String, self.on_event)
+        self._event_pub = rospy.Publisher("/simulator/events", String, queue_size=5)
+
+        self._hybrid_sub = rospy.Subscriber("/panda/hybrid_pose",HybridPose,self.on_pose)
+        self._pose_pub = rospy.Publisher("/commanded_pose",Pose, queue_size=1)
+        self._pose_pub2 = rospy.Publisher("/commanded_pose2",PoseStamped, queue_size=1)
+        
+
+        self._sim = False
+        self._init = False
+        self._finger_val = .035
+        self._current_joint = [0., -0.34, 0., -1.66, 0., 1.32, 0.8,self._finger_val,self._finger_val]
+        self._starting_joint = self._current_joint
+        self._starting_time = rospy.Time.now()
+        self._pre_sim_joints = copy.deepcopy(self._current_joint)
+        self._current_velocity = [0,0,0,0,0,0,0]
+        self._freq = 100
+        
+        #Publish init state for the robot
+        self.init_states()
+        self._init = False
+        self._desired_joint_pose = copy.deepcopy(self._current_joint)        
+
+        self._command_sub = rospy.Subscriber("/simulator/commands", String, self.on_command, queue_size = 1)
+        self._command_sub2 = rospy.Subscriber("/joint_commands", JointCommand, self.on_joints, queue_size = 1)
+        
+    def on_pose(self,msg):
+        #Rotate all in constraint frame
+        p = msg.pose.position
+        p=[p.x,p.y,p.z]
+        o = msg.pose.orientation
+        o=scipyR.from_quat([o.x,o.y,o.z,o.w])
+
+        R = scipyR.from_quat([msg.constraint_frame.x,msg.constraint_frame.y,msg.constraint_frame.z,msg.constraint_frame.w])
+        
+        p = R.apply(p)
+        o = (R*o).as_quat()
+        pose = PoseStamped()
+        pose.header.frame_id=REFERENCE_FRAME
+        pose.header.stamp = rospy.Time.now()
+        pose.pose.position.x = p[0]
+        pose.pose.position.y = p[1]
+        pose.pose.position.z = p[2]
+        pose.pose.orientation.x = o[0]
+        pose.pose.orientation.y = o[1]
+        pose.pose.orientation.z = o[2]
+        pose.pose.orientation.w = o[3]
+        self._pose_pub.publish(pose.pose)
+        self._pose_pub2.publish(pose)
+
+    def on_joints(self, msg):
+        self._desired_joint_pose[:7] = list(msg.position)
+
+    def init_states(self):
+        joint = JointState()
+        joint.header.stamp = rospy.Time.now()
+        joint.name = ["panda_joint1", "panda_joint2","panda_joint3","panda_joint4","panda_joint5","panda_joint6","panda_joint7","panda_finger_joint1","panda_finger_joint2"]
+        joint.position = self._current_joint
+        self._viz_pub.publish(joint)
+
+    def run(self):
+        r = rospy.Rate(self._freq)
+        while not rospy.is_shutdown():
+            self.move()
+            r.sleep()
+
+    def clamp(self, val, bound):
+        return min(bound,max(-bound, val))
+
+    def move(self):
+        if self._desired_joint_pose != self._current_joint:            
+            joint = JointState()
+            joint.header.stamp = rospy.Time.now()
+            joint.name = ["panda_joint1", "panda_joint2","panda_joint3","panda_joint4","panda_joint5","panda_joint6","panda_joint7","panda_finger_joint1","panda_finger_joint2"]
+            self._current_joint = self._desired_joint_pose #[s+self.clamp((d-s),.005) for s,d in zip(self._current_joint,self._desired_joint_pose)]
+            joint.position = self._current_joint
+            self._viz_pub.publish(joint)
+            return    
+        joint = JointState()
+        joint.header.stamp = rospy.Time.now()
+        joint.name = ["panda_joint1", "panda_joint2","panda_joint3","panda_joint4","panda_joint5","panda_joint6","panda_joint7","panda_finger_joint1","panda_finger_joint2"]
+        joint.position = list(self._current_joint)
+        self._viz_pub.publish(joint)
+
+#    def on_joint(self, msg):
+#        self._current_velocity = [0,0,0,0,0,0,0]
+#        self._desired_joint_pose = msg
+#        self._starting_joint = copy.deepcopy(self._current_joint)
+#        self._starting_time = rospy.Time.now()
+
+    def on_event(self, msg):
+        cmd = msg.data.split(";")[0]
+        if cmd == "motion_finished":
+            if self._sim:
+                joint = JointState()
+                joint.header.stamp = rospy.Time.now()
+                joint.name = ["panda_joint1", "panda_joint2","panda_joint3","panda_joint4","panda_joint5","panda_joint6","panda_joint7","panda_finger_joint1","panda_finger_joint2"]
+                self._current_joint = self._pre_sim_joints
+                joint.position = list(self._current_joint)
+                self._viz_pub.publish(joint)
+                self._sim = False
+            self._current_velocity = [0,0,0,0,0,0,0]
+        if cmd == "start_sim":
+            if not self._sim:
+                self._pre_sim_joints = copy.deepcopy(self._current_joint)
+                self._sim = True
+        if cmd == "start_exec":
+            self._sim = False
+        if cmd == "start_cam":
+            self._cam_control = True
+        if cmd == "stop_cam":
+            self._cam_control = False
+        if cmd == "pause":
+            self._pause = True
+        if cmd == "play":
+            self._pause = False
+    
+    def on_command(self, msg):
+        if msg.data == "grasp":
+            self._finger_val = 0.0
+            self._current_joint[-1] = self._finger_val
+            self._current_joint[-2] = self._finger_val
+            rospy.sleep(.5)
+            self._event_pub.publish("grasp_finished")
+
+        if msg.data == "release":
+            self._finger_val = .035
+            self._current_joint[-1] = self._finger_val
+            self._current_joint[-2] = self._finger_val
+            rospy.sleep(.5)
+            self._event_pub.publish("release_finished")
+        
+        if msg.data == "toggle_gripper":
+            if self._finger_val < 0.01:
+                self._finger_val = .035
+                self._current_joint[-1] = self._finger_val
+                self._current_joint[-2] = self._finger_val
+                rospy.sleep(.5)
+                self._event_pub.publish("release_finished")
+            else:
+                self._finger_val = 0.0
+                self._current_joint[-1] = self._finger_val
+                self._current_joint[-2] = self._finger_val
+                rospy.sleep(.5)
+                self._event_pub.publish("grasp_finished")
+
+    def on_state(self, msg):
+        self._init = True
+        if not self._sim:
+            self._viz_pub.publish(msg)
+            self._finger_val = msg.position[7]
+            for i,v in enumerate(msg.position):
+                self._current_joint[i]=v
+        
+    def signal_handler(self, signal, frame):
+        sys.exit(0)
+
+##################### Helpers ##########################3####
+
+    def get_lin_ang_rot(self,linear,angular,q):
+        rot = PyKDL.Rotation.Quaternion(q.x,q.y,q.z,q.w)
+        v = PyKDL.Vector(linear[0],linear[1],linear[2])
+        orientation = PyKDL.Rotation.RPY(angular[0],angular[1],angular[2])
+        linear = rot*v
+        angular = (rot.Inverse()*orientation).GetRPY()
+        return (linear,angular)
+        
+    def get_trans_rot(self, t, q):
+        p = t.translation
+        o = t.rotation
+        
+        rot = PyKDL.Rotation.Quaternion(q.x,q.y,q.z,q.w)
+        v = PyKDL.Vector(p.x,p.y,p.z)
+        orientation = PyKDL.Rotation.Quaternion(o.x,o.y,o.z,o.w)
+        v_rot = rot.Inverse()*v
+        q_rot = (rot.Inverse()*orientation).GetQuaternion()
+        t.translation.x = v_rot[0]
+        t.translation.y = v_rot[1]
+        t.translation.z = v_rot[2]
+        t.rotation.x = q_rot[0]
+        t.rotation.y = q_rot[1]
+        t.rotation.z = q_rot[2]
+        t.rotation.w = q_rot[3]
+        
+    def get_pose_rot(self, pose, q):
+        p = pose.position
+        o = pose.orientation
+        
+        rot = PyKDL.Rotation.Quaternion(q.x,q.y,q.z,q.w)
+        v = PyKDL.Vector(p.x,p.y,p.z)
+        orientation = PyKDL.Rotation.Quaternion(o.x,o.y,o.z,o.w)
+        v_rot = rot.Inverse()*v
+        q_rot = (rot.Inverse()*orientation).GetQuaternion()
+        p.x = v_rot[0]
+        p.y = v_rot[1]
+        p.z = v_rot[2]
+        o.x = q_rot[0]
+        o.y = q_rot[1]
+        o.z = q_rot[2]
+        o.w = q_rot[3]
+
+    def get_diff_pose_trans(self,pose, t):
+        trans = t.transform.translation
+        rot = t.transform.rotation
+        linear = np.array([pose.position.x-trans.x, pose.position.y-trans.y, pose.position.z-trans.z])
+        qp = PyKDL.Rotation.Quaternion(rot.x,rot.y,rot.z,rot.w)
+        current_angle = qp.GetRPY()
+        rot = pose.orientation
+        qg = PyKDL.Rotation.Quaternion(rot.x,rot.y,rot.z,rot.w)
+        q = qg*qp.Inverse()
+        difference_angle = q.GetRPY()
+        angular = np.array(difference_angle)
+        d = current_angle[2] + difference_angle[2]
+        if d > np.pi:
+            angular[2] -= 2 * np.pi
+        if d < -np.pi:
+            angular[2] += 2 * np.pi 
+        return (linear,angular)
+
+if __name__ == "__main__":
+    rospy.init_node("simulator")
+    simulator = Simulator()
+    signal.signal(signal.SIGINT, simulator.signal_handler)
+    simulator.run()
+

@@ -1,0 +1,163 @@
+#!/usr/bin/env python
+
+""" Takes raw force-torque and rotates/filters/bias/removes tool weight
+ Created: 4/11/2022
+"""
+
+__author__ = "Mike Hagenow"
+
+import rospy
+import time
+from std_msgs.msg import String, Float64
+from geometry_msgs.msg import Wrench, Pose
+from sensor_msgs.msg import PointCloud2
+import numpy as np
+import rospkg
+from scipy.spatial.transform import Rotation as ScipyR
+from scipy import signal as scisignal
+
+class FTProcessor:
+    def __init__(self):
+        rospy.init_node('ft_processor')
+        self.ft_comp_pub = rospy.Publisher("/ft/wrench", Wrench, queue_size =1, latch = False)
+        rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT)
+        time.sleep(0.5)
+
+        self.ft_pose = None
+        self.setupTool() # deal with this
+
+        ####################
+        # Biasing related  #
+        ####################
+        self.stale_time = 3.0 # seconds
+        self.t_reqd_stationary = 0.5 # seconds
+        self.t_bias = rospy.get_time()-self.stale_time
+        self.t_stationary = None
+        self.stationary = False
+
+        #####################
+        # Filtering related #
+        #####################
+        # TODO: try lowpass vs bandstop
+        self._b,self._a = scisignal.butter(1,0.001)
+        self.y_prev = np.zeros((6,))
+        self.x_prev = np.zeros((6,))
+
+
+        # TODO: subscribe to new EE weight/pos?
+        # TODO: dynamic compensation?
+
+        # run main loop
+        self.loopFT()
+
+
+    def setupTool(self):
+       self.tool_weight = 1.0 # kg
+
+    def biasFT(self):
+        print("DOING THE BIAS!")
+
+    def isCurrStationary(self):
+        # TODO: check if panda is moving and valve is turned off
+        print("hello")
+
+    def checkBias(self):
+        # if it has been enough time and the sensor is appropriately stationary, do a bias
+
+        # check if stationary
+        curr_stationary = 1 # TODO: panda not moving and valve is turned off
+        if(curr_stationary and not self.stationary):
+            self.stationary = True
+            self.t_stationary = rospy.get_time()
+        elife(not curr_stationary and self.stationary):
+            self.stationary = False
+
+        # check for bias
+        curr_t = rospy.get_time()
+        if (self.stationary and curr_t > (self.t_bias+self.stale_time) and curr_t > (self.t_stationary + self.t_reqd_stationary)):
+            self.biasFT()
+            self.t_bias = curr_t
+
+    def loopFT(self):
+        # tf2 for rotation
+        rate = rospy.Rate(1000.0)
+        while not rospy.is_shutdown():
+            try:
+                # check for new FT location (from panda movement)
+                trans = tfBuffer.lookup_transform('panda_link0', 'ft_sensor', rospy.Time())
+                pose_temp = Pose()
+                pose_temp.position.x = trans.translation.x
+                pose_temp.position.y = trans.translation.y
+                pose_temp.position.z = trans.translation.z
+                pose_temp.orientation = trans.rotation
+                self.ft_pose = pose_temp
+
+                # check for location of the tool weight
+                trans2 = tfBuffer.lookup_transform('panda_link0', 'panda_ee', rospy.Time())
+                ft_sensor_loc = np.array([trans.translation.x, trans.translation.y, trans.translation.z])
+                ee_loc = np.array([trans2.translation.x, trans2.translation.y, trans2.translation.z])
+                
+                self.ee_disp_global = ee_loc - ft_sensor_loc # TODO: center of mass of tool
+                
+                # check for autobiasing
+                self.checkBias()
+                
+                rate.sleep()
+
+            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+                rate.sleep()
+
+    def filter(self, last_x,x,last_y):
+        # apply low pass filter
+        a=self._a
+        b=self._b
+        return (b[0]*x+b[1]*last_x-a[1]*last_y)/a[0]
+
+    def processNewFT(self,data):
+        # Once a new message arrives, need to rotate, compensate for tool weight, and filter
+
+        f_local = np.array([data.force.x, data.force.y, data.force.z])
+        t_local = np.array([data.torque.x, data.torque.y, data.torque.z])
+
+        if self.ft_pose is not None:
+            # rotate measurement (pure rotation)
+            q_ft = np.array([self.ft_pose.position.x, self.ft_pose.position.y,
+                            self.ft_pose.position.z, self.ft_pose.position.w])
+            R_ft = ScipyR.from_quat(q_ft)
+
+            f_global = R_ft.apply(f_local)
+            t_global = R_ft.apply(t_local)
+            
+            # Offset weight (force and torque)
+            g = 9.81
+            weight = np.array([0.0, 0.0, -g*self.tool_weight]) # tool is pulling in negative-z
+            f_global = f_global - weight
+            
+            t_weight = np.cross(self.ee_disp_global,weight)
+            t_global = t_global - t_weight
+
+            # filter measurement
+            w_global = np.array([f_global, t_global])
+            w_filt = self.filter(self.last_x,w_global,self.last_y)
+            self.last_y = w_filt
+            self.last_x = w_global
+
+            # publish topic
+            wrench_out = Wrench()
+            wrench_out.force.x = w_filt[0]
+            wrench_out.force.y = w_filt[1]
+            wrench_out.force.z = w_filt[2]
+            wrench_out.torque.x = w_filt[3]
+            wrench_out.torque.y = w_filt[4]
+            wrench_out.torque.z = w_filt[5]
+            
+            self.ft_comp_pub.publish(wrench_out)                       
+       
+if __name__ == "__main__":
+    ft = FTProcessor()
+    rospy.spin()
+
+
+
+
+

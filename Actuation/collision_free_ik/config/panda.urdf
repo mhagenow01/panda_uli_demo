@@ -102,7 +102,7 @@
     <parent link="panda_link3"/>
     <child link="panda_link4"/>
     <axis xyz="0 0 1"/>
-    <limit effort="87" lower="-3.0718" upper="-0.0698" velocity="2.1750"/>
+    <limit effort="87" lower="-3.0718" upper="-0.3698" velocity="2.1750"/>
   </joint>
   <link name="panda_link5">
     <visual>
@@ -299,11 +299,11 @@
     <child link="panda_gripper"/>
     <axis xyz="0 0 0"/>
   </joint>
-  <link name="panda_orbital" />
-  <joint name="panda_orbital_joint" type="fixed">
+  <link name="sander" />
+  <joint name="sander_joint" type="fixed">
     <origin rpy="3.1416 0.000 -0.785" xyz="-0.000 -0.000 0.144" />
     <parent link="panda_link8"/>
-    <child link="panda_orbital"/>
+    <child link="sander"/>
     <axis xyz="0 0 0"/>
   </joint>
   <!--<xacro:sensor_d435 parent="panda_link8">

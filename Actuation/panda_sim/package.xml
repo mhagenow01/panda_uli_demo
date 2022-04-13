@@ -1,0 +1,17 @@
+<?xml version="1.0.0"?>
+<package format="2">
+    <name>panda_sim</name>
+    <version>1.0.0</version>
+    <description>
+        ROS wrapper for the pandaController
+    </description>
+    <maintainer email="wisconsinhci@gmail.com">Mike H., Kevin W., Tim L., Luis M., Emmanuel S.</maintainer>
+    <license>WTFPL</license>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <depend>roscpp</depend>
+    <depend>std_msgs</depend>
+    <depend>panda_ros_msgs</depend>
+
+</package>
