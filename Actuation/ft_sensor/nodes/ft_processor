@@ -96,7 +96,7 @@ class FTProcessor:
 
     def checkHybrid(self,data):
         # if any selection vector entry is 0, hybrid mode is engaged
-        self.hybrid_mode = (np.array(data.sel_vector)==0).any()
+        self.hybrid_mode = (np.frombuffer(data.sel_vector, dtype=np.uint8)==0).any()
 
     def isCurrStationary(self):
         # TODO: check if valve is turned off
@@ -189,11 +189,13 @@ class FTProcessor:
 
             # filter measurement
             w_global = np.concatenate([f_global, t_global], axis=0)
-            # w_filt = self.filter(self.last_x,w_global,self.last_y)
-            # self.last_y = w_filt
-            # self.last_x = w_global
+            w_filt = self.filter(self.last_x,w_global,self.last_y)
+            self.last_y = w_filt
+            self.last_x = w_global
             w_filt = w_global
             w_filt = np.round(w_filt,4)
+
+            w_filt = -w_filt # applied forces/torques rather than reaction
 
             # publish topic
             wrench_out = Wrench()

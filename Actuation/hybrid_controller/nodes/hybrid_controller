@@ -12,25 +12,74 @@ from std_msgs.msg import Float64
 from geometry_msgs.msg import Wrench, Pose
 from hybrid_controller.msg import HybridPose
 import numpy as np
+from scipy.spatial.transform import Rotation as ScipyR
+import tf2_ros
 
 class HybridController:
     def __init__(self):
         rospy.init_node('hybrid_controller')
-        rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
-        rospy.Subscriber("/panda/set_hybrid_gain_linear", Float64, self.setGainLinear)
-        rospy.Subscriber("/panda/set_hybrid_gain_angular", Float64, self.setGainAngular)
-        rospy.Subscriber("/ft/wrench", Wrench, self.recordFT, queue=1)
-
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.ik_pub = rospy.Publisher('/in', Pose, queue_size=1)
 
-        self.gain_lin = 0.001
+        time.sleep(0.5)
+
+        self.gain_lin = 0.002
         self.gain_ang = 0.001
 
         self.forces = np.zeros((3,))
         self.torques = np.zeros((3,))
 
-        time.sleep(0.5)
-        rospy.spin()
+        rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
+        rospy.Subscriber("/panda/set_hybrid_gain_linear", Float64, self.setGainLinear)
+        rospy.Subscriber("/panda/set_hybrid_gain_angular", Float64, self.setGainAngular)
+        rospy.Subscriber("/ft/wrench", Wrench, self.recordFT, queue_size=1)
+
+        self.runHybrid()
+
+
+    def runHybrid(self):
+        rate = rospy.Rate(100.0)
+        while not rospy.is_shutdown():
+            # Compute Hybrid Control Law TODO: how fast does this run
+            try:
+                # check for new FT location (from panda movement)
+                trans = self.tfBuffer.lookup_transform('panda_link0', 'panda_ee', rospy.Time())
+                curr_pos = np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
+                curr_q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
+
+                # convert current state into constraint frame
+                R_cf = ScipyR.from_quat(self.cf)
+                curr_pos_cf = (R_cf.inv()).apply(curr_pos)
+                curr_f_cf = (R_cf.inv()).apply(self.forces)
+
+                print(curr_f_cf)
+
+                # apply control law TODO: check that this works
+                new_pos_cf = self.sel_vector[0:3]*self.desired_pos_cf + (np.ones(3,)-self.sel_vector[0:3])*(self.gain_lin*(self.desired_force_cf-curr_f_cf)+curr_pos_cf)
+                # TODO: hybrid for torque
+
+                # Convert back to global frame
+                new_pos = R_cf.apply(new_pos_cf)
+                R_desired_q = ScipyR.from_quat(self.desired_q_cf)
+                new_quat = (R_cf * R_desired_q).as_quat()
+
+                # send to IK
+                pose_out = Pose()
+                pose_out.position.x = new_pos[0]
+                pose_out.position.y = new_pos[1]
+                pose_out.position.z = new_pos[2]
+                pose_out.orientation.x = new_quat[0]
+                pose_out.orientation.y = new_quat[1]
+                pose_out.orientation.z = new_quat[2]
+                pose_out.orientation.w = new_quat[3]
+                self.ik_pub.publish(pose_out)
+
+                rate.sleep()
+            
+            except Exception as e:
+                print(e)
+                rate.sleep()
 
     def setGainLinear(self,data):
         self.gain_lin = data.data
@@ -43,16 +92,14 @@ class HybridController:
         self.torques = np.array([data.torque.x, data.torque.y, data.torque.z])
 
     def commandHybrid(self,hpose):
-        # Compute Hybrid Control Law
-        sel_vector = hpose.sel_vector
+        self.sel_vector = np.frombuffer(hpose.sel_vector, dtype=np.uint8)
+        self.cf = np.array([hpose.constraint_frame.x, hpose.constraint_frame.y, hpose.constraint_frame.z, hpose.constraint_frame.w])
+        self.desired_pos_cf = np.array([hpose.pose.position.x, hpose.pose.position.y, hpose.pose.position.z])
+        self.desired_q_cf = np.array([hpose.pose.orientation.x, hpose.pose.orientation.y, hpose.pose.orientation.z, hpose.pose.orientation.w])
+        self.desired_force_cf = np.array([hpose.wrench.force.x, hpose.wrench.force.y, hpose.wrench.force.z])
+        self.desired_torque = np.array([hpose.wrench.torque.x, hpose.wrench.torque.y, hpose.wrench.torque.z])
+       
 
-        # TODO: where should the current pose come from...
-        
-
-
-        # send to IK
-        pose_out = Pose()
-        self.ik_pub.publish(pose_out)
        
 if __name__ == "__main__":
     hybrid = HybridController()

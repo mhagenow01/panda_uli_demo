@@ -71,7 +71,7 @@ class EEProcessor:
             t.header.stamp = rospy.Time.now()
             t.header.frame_id = self.ee_COM_link
             self.br.sendTransform(t)
-
+            rate.sleep()
 
        
 if __name__ == "__main__":
