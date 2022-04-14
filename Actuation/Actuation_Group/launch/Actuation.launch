@@ -3,14 +3,14 @@
   <arg name="config" value="$(find actuation_group)/../config" />
   <arg name="rate" value="30" />
   <arg name="load_gripper" value="false" />
-  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(find franka_panda_description)/robots/panda_arm.urdf.xacro'" />
+  <param name="robot_description" command="$(find xacro)/xacro --inorder '$(arg config)/panda.urdf'" />
 
   <node pkg="collision_free_ik" type="main" name="main" output="screen">
       <param name="urdf_fp" type="string" value="$(arg config)/panda.urdf"/>
-      <param name="ee_frame" type="string" value="sander_joint"/>
+      <param name="ee_frame" type="string" value="panda_orbital_joint"/>
       <param name="arm_collider_fp" type="string" value="$(arg config)/ik/panda_collision.json"/>
       <param name="environment_fp" type="string" value="$(arg config)/ik/environment.json"/>
-      <param name="initial_q" type="yaml" value="[0, 0, 0, 0, 0, 0, 0]"/>
+      <param name="initial_q" type="yaml" value="[0.0754606,-0.337453,0.150729,-2.46194,0.0587094,2.12597,0.972193]"/>
       <param name="joint_names" type="yaml" value="['panda_joint1','panda_joint2','panda_joint3','panda_joint4','panda_joint5','panda_joint6','panda_joint7']"/>
 
       <remap from="out" to="/franka_ros_interface/motion_controller/arm/joint_commands" />
@@ -53,5 +53,11 @@
                                           franka_ros_interface/effort_joint_position_controller" />
 
   <node pkg="tf" type="static_transform_publisher" name="base_to_link0" args="0 0 0 0 0 0 1 base panda_link0 100" />                                                                      
-  <node pkg="tf" type="static_transform_publisher" name="world_to_base" args="0 0 0 0 0 0 1 world base 100" />        
+  <node pkg="tf" type="static_transform_publisher" name="world_to_base" args="0 0 0 0 0 0 1 world base 100" />
+
+  <!-- Force-Torque Sensor-->
+  <node name="ftsocket" pkg="ft_sensor" type="ftsocket" output="screen"/>
+  <node name="ee_selector" pkg="ft_sensor" type="ee_selector" output="screen"/>
+  <node name="ft_processor" pkg="ft_sensor" type="ft_processor" output="screen"/>
+
 </launch>

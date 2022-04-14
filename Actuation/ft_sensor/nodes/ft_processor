@@ -11,6 +11,7 @@ import time
 from std_msgs.msg import String, Float64
 from geometry_msgs.msg import Wrench, Pose
 from sensor_msgs.msg import PointCloud2, JointState
+from hybrid_controller.msg import HybridPose
 import numpy as np
 import rospkg
 from scipy.spatial.transform import Rotation as ScipyR
@@ -60,6 +61,7 @@ class FTProcessor:
         rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
         rospy.Subscriber("/panda/ee_mass", Float64, self.setupToolMass)
         rospy.Subscriber("/joint_states", JointState, self.recordJointVelocity)
+        rospy.Subscriber("/panda/hybrid_pose",HybridPose, self.checkHybrid)
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         time.sleep(0.5)
@@ -74,7 +76,6 @@ class FTProcessor:
        self.tool_weight = data.data # kg
 
     def biasFT(self):
-        
         # Have the required values for calculation
         if self.last_f_global is not None and self.last_t_global is not None and self.ee_disp_global is not None:
             f_global_wo_mass = self.last_f_global
@@ -87,17 +88,20 @@ class FTProcessor:
                             self.ft_pose.orientation.z, self.ft_pose.orientation.w])
             R_ft = ScipyR.from_quat(q_ft)
 
-            self.force_bias = (R_ft.inv()).apply(f_global_wo_mass) 
-            self.torque_bias = (R_ft.inv()).apply(t_global_no_mass)
+            self.force_bias += (R_ft.inv()).apply(f_global_wo_mass) 
+            self.torque_bias += (R_ft.inv()).apply(t_global_no_mass)
 
             print("Biasing: ",self.force_bias)
 
 
+    def checkHybrid(self,data):
+        # if any selection vector entry is 0, hybrid mode is engaged
+        self.hybrid_mode = (np.array(data.sel_vector)==0).any()
+
     def isCurrStationary(self):
-        # TODO: check if panda is moving and valve is turned off
-        # TODO: and not in hybrid mode!!!!
+        # TODO: check if valve is turned off
         # print("stationary: ",self.velmag)
-        return self.velmag<0.01
+        return (self.velmag < 0.01 and not self.hybrid_mode and not self.valve_on)
 
     def checkBias(self):
         # if it has been enough time and the sensor is appropriately stationary, do a bias
