@@ -10,66 +10,104 @@ import rospy
 import time
 from std_msgs.msg import String, Float64
 from geometry_msgs.msg import Wrench, Pose
-from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import PointCloud2, JointState
 import numpy as np
 import rospkg
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy import signal as scisignal
+import tf2_ros
 
 class FTProcessor:
     def __init__(self):
         rospy.init_node('ft_processor')
-        self.ft_comp_pub = rospy.Publisher("/ft/wrench", Wrench, queue_size =1, latch = False)
-        rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT)
-        time.sleep(0.5)
-
+        
         self.ft_pose = None
-        self.setupTool() # deal with this
+        self.ee_disp_global = None
+
+        self.g = 9.81 # m/s^2
 
         ####################
         # Biasing related  #
         ####################
-        self.stale_time = 3.0 # seconds
+        self.force_bias = np.zeros((3,)) # local
+        self.torque_bias = np.zeros((3,)) # local
+
+        self.last_f_global = None
+        self.last_t_global = None
+
+        self.stale_time = 5.0 # seconds
         self.t_reqd_stationary = 0.5 # seconds
         self.t_bias = rospy.get_time()-self.stale_time
         self.t_stationary = None
         self.stationary = False
+        
+        self.velmag = 999.9
+        self.valve_on = False
+        self.hybrid_mode = False
 
         #####################
         # Filtering related #
         #####################
         # TODO: try lowpass vs bandstop
-        self._b,self._a = scisignal.butter(1,0.001)
-        self.y_prev = np.zeros((6,))
-        self.x_prev = np.zeros((6,))
-
+        self._b,self._a = scisignal.butter(2,20,fs=750)
+        self.last_y = np.zeros((6,))
+        self.last_x = np.zeros((6,))
 
         # TODO: subscribe to new EE weight/pos?
         # TODO: dynamic compensation?
 
+        self.ft_comp_pub = rospy.Publisher("/ft/wrench", Wrench, queue_size =1, latch = False)
+        rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
+        rospy.Subscriber("/panda/ee_mass", Float64, self.setupToolMass)
+        rospy.Subscriber("/joint_states", JointState, self.recordJointVelocity)
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
+        time.sleep(0.5)
+
         # run main loop
         self.loopFT()
 
+    def recordJointVelocity(self,data):
+        self.velmag = np.linalg.norm(data.velocity)
 
-    def setupTool(self):
-       self.tool_weight = 1.0 # kg
+    def setupToolMass(self,data):
+       self.tool_weight = data.data # kg
 
     def biasFT(self):
-        print("DOING THE BIAS!")
+        
+        # Have the required values for calculation
+        if self.last_f_global is not None and self.last_t_global is not None and self.ee_disp_global is not None:
+            f_global_wo_mass = self.last_f_global
+
+            # t_weight = np.cross(self.ee_disp_global,weight)
+            t_global_no_mass = self.last_t_global
+
+            # rotate into local frame (pure rotation)
+            q_ft = np.array([self.ft_pose.orientation.x, self.ft_pose.orientation.y,
+                            self.ft_pose.orientation.z, self.ft_pose.orientation.w])
+            R_ft = ScipyR.from_quat(q_ft)
+
+            self.force_bias = (R_ft.inv()).apply(f_global_wo_mass) 
+            self.torque_bias = (R_ft.inv()).apply(t_global_no_mass)
+
+            print("Biasing: ",self.force_bias)
+
 
     def isCurrStationary(self):
         # TODO: check if panda is moving and valve is turned off
-        print("hello")
+        # TODO: and not in hybrid mode!!!!
+        # print("stationary: ",self.velmag)
+        return self.velmag<0.01
 
     def checkBias(self):
         # if it has been enough time and the sensor is appropriately stationary, do a bias
 
         # check if stationary
-        curr_stationary = 1 # TODO: panda not moving and valve is turned off
+        curr_stationary = self.isCurrStationary() # TODO: panda not moving and valve is turned off
         if(curr_stationary and not self.stationary):
             self.stationary = True
             self.t_stationary = rospy.get_time()
-        elife(not curr_stationary and self.stationary):
+        elif(not curr_stationary and self.stationary):
             self.stationary = False
 
         # check for bias
@@ -81,30 +119,32 @@ class FTProcessor:
     def loopFT(self):
         # tf2 for rotation
         rate = rospy.Rate(1000.0)
+        
         while not rospy.is_shutdown():
             try:
                 # check for new FT location (from panda movement)
-                trans = tfBuffer.lookup_transform('panda_link0', 'ft_sensor', rospy.Time())
+                trans = self.tfBuffer.lookup_transform('panda_link0', 'ft_sensor_mid_link', rospy.Time())
                 pose_temp = Pose()
-                pose_temp.position.x = trans.translation.x
-                pose_temp.position.y = trans.translation.y
-                pose_temp.position.z = trans.translation.z
-                pose_temp.orientation = trans.rotation
+                pose_temp.position.x = trans.transform.translation.x
+                pose_temp.position.y = trans.transform.translation.y
+                pose_temp.position.z = trans.transform.translation.z
+                pose_temp.orientation = trans.transform.rotation
                 self.ft_pose = pose_temp
 
                 # check for location of the tool weight
-                trans2 = tfBuffer.lookup_transform('panda_link0', 'panda_ee', rospy.Time())
-                ft_sensor_loc = np.array([trans.translation.x, trans.translation.y, trans.translation.z])
-                ee_loc = np.array([trans2.translation.x, trans2.translation.y, trans2.translation.z])
+                trans2 = self.tfBuffer.lookup_transform('panda_link0', 'panda_ee_COM', rospy.Time())
+                ft_sensor_loc = np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
+                ee_loc = np.array([trans2.transform.translation.x, trans2.transform.translation.y, trans2.transform.translation.z])
                 
-                self.ee_disp_global = ee_loc - ft_sensor_loc # TODO: center of mass of tool
+                self.ee_disp_global = ee_loc - ft_sensor_loc
                 
                 # check for autobiasing
                 self.checkBias()
                 
                 rate.sleep()
 
-            except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            except Exception as e:
+                print("unable to lookup transform: ", e)
                 rate.sleep()
 
     def filter(self, last_x,x,last_y):
@@ -114,33 +154,42 @@ class FTProcessor:
         return (b[0]*x+b[1]*last_x-a[1]*last_y)/a[0]
 
     def processNewFT(self,data):
-        # Once a new message arrives, need to rotate, compensate for tool weight, and filter
+        # Once a new message arrives, need to remove bias, need to rotate, compensate for tool weight, and filter
 
         f_local = np.array([data.force.x, data.force.y, data.force.z])
         t_local = np.array([data.torque.x, data.torque.y, data.torque.z])
 
-        if self.ft_pose is not None:
+        if self.ft_pose is not None and self.ee_disp_global is not None:
+            # remove bias
+            f_local = f_local - self.force_bias
+            t_local = t_local - self.torque_bias
+            
             # rotate measurement (pure rotation)
-            q_ft = np.array([self.ft_pose.position.x, self.ft_pose.position.y,
-                            self.ft_pose.position.z, self.ft_pose.position.w])
+            q_ft = np.array([self.ft_pose.orientation.x, self.ft_pose.orientation.y,
+                            self.ft_pose.orientation.z, self.ft_pose.orientation.w])
             R_ft = ScipyR.from_quat(q_ft)
 
             f_global = R_ft.apply(f_local)
             t_global = R_ft.apply(t_local)
+
             
             # Offset weight (force and torque)
-            g = 9.81
-            weight = np.array([0.0, 0.0, -g*self.tool_weight]) # tool is pulling in negative-z
+            weight = np.array([0.0, 0.0, -self.g*self.tool_weight]) # tool is pulling in negative-z
             f_global = f_global - weight
             
             t_weight = np.cross(self.ee_disp_global,weight)
             t_global = t_global - t_weight
 
+            self.last_f_global = np.copy(f_global)
+            self.last_t_global = np.copy(t_global)
+
             # filter measurement
-            w_global = np.array([f_global, t_global])
-            w_filt = self.filter(self.last_x,w_global,self.last_y)
-            self.last_y = w_filt
-            self.last_x = w_global
+            w_global = np.concatenate([f_global, t_global], axis=0)
+            # w_filt = self.filter(self.last_x,w_global,self.last_y)
+            # self.last_y = w_filt
+            # self.last_x = w_global
+            w_filt = w_global
+            w_filt = np.round(w_filt,4)
 
             # publish topic
             wrench_out = Wrench()

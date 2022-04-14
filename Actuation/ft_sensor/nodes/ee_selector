@@ -18,22 +18,35 @@ from scipy import signal as scisignal
 
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
-import tf_transformations
 
 class EEProcessor:
     def __init__(self):
         rospy.init_node('ee_processor')
         rospy.Subscriber("/panda/set_ee", String, self.processNewEE)
+        self.mass_pub = rospy.Publisher('/panda/ee_mass', Float64, queue_size=1, latch=True)
 
-        self.br = TransformBroadcaster(self)
+        self.br = TransformBroadcaster()
 
-        rospy.Publisher()
+        time.sleep(0.5)
+
         self.ee_link = 'panda_orbital' # default is orbital sander
+        str_temp = String(data=self.ee_link)
+        self.processNewEE(str_temp)
 
         self.broadcastEE()
 
     def processNewEE(self,data):
         self.ee_link = data.data
+        self.ee_COM_link = data.data + '_COM'
+        
+        if(self.ee_link=='panda_orbital'):
+            ee_mass = 0.956 # kg
+        else:
+            ee_mass = 0.0 # kg
+        
+        mass_msg = Float64()
+        mass_msg.data = ee_mass
+        self.mass_pub.publish(mass_msg)
     
     def broadcastEE(self):
         # Takes the current ee and sets it equivalent to panda_ee in the TF tree
@@ -50,10 +63,14 @@ class EEProcessor:
 
         rate = rospy.Rate(1000.0)
         while not rospy.is_shutdown():
+            t.child_frame_id = 'panda_ee'
             t.header.stamp = rospy.Time.now()
             t.header.frame_id = self.ee_link
             self.br.sendTransform(t)
-
+            t.child_frame_id = 'panda_ee_COM'
+            t.header.stamp = rospy.Time.now()
+            t.header.frame_id = self.ee_COM_link
+            self.br.sendTransform(t)
 
 
        
