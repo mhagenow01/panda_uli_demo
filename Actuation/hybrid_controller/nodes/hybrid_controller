@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+""" Commands hybrid pose to Panda IK (Admittance)
+ Created: 4/14/2022
+"""
+
+__author__ = "Mike Hagenow"
+
+import rospy
+import time
+from std_msgs.msg import Float64
+from geometry_msgs.msg import Wrench, Pose
+from hybrid_controller.msg import HybridPose
+import numpy as np
+
+class HybridController:
+    def __init__(self):
+        rospy.init_node('hybrid_controller')
+        rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
+        rospy.Subscriber("/panda/set_hybrid_gain_linear", Float64, self.setGainLinear)
+        rospy.Subscriber("/panda/set_hybrid_gain_angular", Float64, self.setGainAngular)
+        rospy.Subscriber("/ft/wrench", Wrench, self.recordFT, queue=1)
+
+        self.ik_pub = rospy.Publisher('/in', Pose, queue_size=1)
+
+        self.gain_lin = 0.001
+        self.gain_ang = 0.001
+
+        self.forces = np.zeros((3,))
+        self.torques = np.zeros((3,))
+
+        time.sleep(0.5)
+        rospy.spin()
+
+    def setGainLinear(self,data):
+        self.gain_lin = data.data
+
+    def setGainAngular(self,data):
+        self.gain_ang = data.data
+
+    def recordFT(self,data):
+        self.forces = np.array([data.force.x, data.force.y, data.force.z])
+        self.torques = np.array([data.torque.x, data.torque.y, data.torque.z])
+
+    def commandHybrid(self,hpose):
+        # Compute Hybrid Control Law
+        sel_vector = hpose.sel_vector
+
+        # TODO: where should the current pose come from...
+        
+
+
+        # send to IK
+        pose_out = Pose()
+        self.ik_pub.publish(pose_out)
+       
+if __name__ == "__main__":
+    hybrid = HybridController()
+
+
+
+

@@ -11,7 +11,7 @@ __author__ = "Mike Hagenow"
 import time
 import rospy
 import numpy as np
-from panda_ros_msgs.msg import HybridPose
+from hybrid_controller.msg import HybridPose
 from geometry_msgs.msg import Quaternion, Pose, Vector3
 from std_msgs.msg import Float64, Float64MultiArray
 from std_msgs.msg import Int32
@@ -24,7 +24,7 @@ class ExecuteROS:
         # rospy.init_node('executeROSfromState', anonymous=True)
         self.hybrid_pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
         self.valve_pub = rospy.Publisher('/valvestate',Int32,queue_size=1)
-        self.correction_pub = rospy.Publisher('/correction',Float64MultiArray,queue_size=1)
+        self.correction_pub = rospy.Publisher('/csacorrection',Float64MultiArray,queue_size=1)
         self.input = np.zeros((3,))
         self.input_button = 0.0
         self.input_tx = input_tx # if the transform should be further rotated
