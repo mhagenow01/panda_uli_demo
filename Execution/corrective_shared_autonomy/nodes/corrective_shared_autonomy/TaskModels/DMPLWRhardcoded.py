@@ -151,18 +151,19 @@ class DMP:
 ##############################
 
 class HybridSegment:
-    k = 50
-    b = 2*np.sqrt(50)
-    surface=''
-    num_samples = 0
-    state_names=[] # list of names e.g., ['x','y','z']
-    forcing_vals=[]
-    rev_forcing_vals = []
-    original_vals = []
-    corrections = []
-    start_vals = []
-    end_vals = []
-    hybrid=False
+    def __init__(self):
+        self.k = 50
+        self.b = 2*np.sqrt(50)
+        self.surface=''
+        self.num_samples = 0
+        self.state_names=[] # list of names e.g., ['x','y','z']
+        self.forcing_vals=[]
+        self.rev_forcing_vals = []
+        self.original_vals = []
+        self.corrections = [] # list (one correction per append) with num_state_var by num_samples
+        self.start_vals = []
+        self.end_vals = []
+        self.hybrid=False
 
 
 def learnDMP(segmentTemp,jj,num_demos,k,b,dt):
@@ -651,8 +652,6 @@ class DMPLWRhardcoded:
                         delta_s = 0.05 # Avoid traps (delta_s ==0)
                 if input_button == 1.0:
                     delta_s *= -1.0
-
-
 
                 # Increment demonstration
                 # print("deltas:", delta_s," ",Y[segment.state_names.index('delta_s')])

@@ -44,7 +44,7 @@ class ModelRunner():
 
             # Run the model if it exists
             if os.path.isfile(execution_path):
-                model.executeModel(model_pkl_file=execution_path, R_surface = R_surface, t_surface=t_surface)
+                model.executeModel(model_pkl_file=execution_path, R_surface = R_surface, t_surface=t_surface, input_type='1dof')
             else:
                 print("No Execution Model found for model: ",model_name)
 

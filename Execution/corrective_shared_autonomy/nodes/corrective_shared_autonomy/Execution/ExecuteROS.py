@@ -209,8 +209,7 @@ class ExecuteROS:
 
             # Get current pose from TF2
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))
-            trans = tfBuffer.lookup_transform("panda_link0", "panda_gripper", rospy.Time(), rospy.Duration(4.0))
-            # trans = tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(4.0))
+            trans = tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(1.0))
             x = trans.transform.translation.x; y = trans.transform.translation.y; z = trans.transform.translation.z
             qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z;
             qw = trans.transform.rotation.w
