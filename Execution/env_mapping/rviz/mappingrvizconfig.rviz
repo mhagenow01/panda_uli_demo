@@ -38,7 +38,8 @@ Panels:
         - /PointCloud21
         - /PointCloud22
         - /PointCloud23
-      Splitter Ratio: 0.5
+        - /Pose1
+      Splitter Ratio: 0.5162393450737
     Tree Height: 209
   - Class: corrections_panel/CorrectionsPanel
     Name: CorrectionsPanel
@@ -109,6 +110,7 @@ Visualization Manager:
         Grid: true
         MarkerArray: true
         PointCloud2: true
+        Pose: true
         Value: true
       Zoom Factor: 1
     - Alpha: 1
@@ -183,6 +185,21 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Axes Length: 0.20000000298023224
+      Axes Radius: 0.009999999776482582
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic: /ik/pose_command
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -211,7 +228,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.0482704639434814
+      Distance: 1.0009191036224365
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -226,10 +243,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.40479761362075806
+      Pitch: 0.5397976636886597
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.1585373878479
+      Yaw: 5.853533744812012
     Saved: ~
 Window Geometry:
   Camera:

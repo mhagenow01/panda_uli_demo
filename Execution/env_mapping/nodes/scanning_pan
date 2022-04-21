@@ -11,7 +11,7 @@ import time
 from std_msgs.msg import String, Float64
 from panda_ros_msgs.msg import HybridPose
 from tf2_msgs.msg import TFMessage
-from scipy.spatial.transform import Rotation
+from scipy.spatial.transform import Rotation as ScipyR
 import numpy as np
 import rosbag
 import rospkg
@@ -28,8 +28,6 @@ class PandaReg:
 
     def runRR(self):
         pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
-        pub_ee = rospy.Publisher('/panda/set_ee_link', String, queue_size=1)
-        pub_chain = rospy.Publisher('/panda/set_kinematic_chain', String, queue_size=1)
         pub_mapping = rospy.Publisher('/mappingToggle', String, queue_size=1)
         pub_done = rospy.Publisher('/panda/pan', String, queue_size=1)
         tfBuffer = tf2_ros.Buffer()
@@ -45,14 +43,7 @@ class PandaReg:
         strDone.data = "start"
         pub_done.publish(strDone)
 
-        # Change the end effector
-        strEE = String()
-        strEE.data = "pandaOrbital"
-        pub_ee.publish(strEE)
-        strChain = String()
-        strChain.data = "pandaFlange"
-        pub_chain.publish(strChain)
-        rospy.sleep(2.0)
+        rospy.sleep(2.0) # give a second for kinect driver to start
 
         hpose = HybridPose()
         hpose.sel_vector = [1,1,1,1,1,1]
@@ -67,11 +58,6 @@ class PandaReg:
         hpose.constraint_frame.z = 0.0
         hpose.constraint_frame.w = 1.0
 
-        #Interpolate to the starting position
-        starting = [0.45, 0.0, 0.31]
-        startingR = Rotation.from_euler('XYZ', [0.0, 0.0, 0.0])
-        q_startingR = startingR.as_quat()
-
         try:
             # Get current pose from TF2
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))
@@ -79,49 +65,30 @@ class PandaReg:
             x = trans.transform.translation.x; y = trans.transform.translation.y; z = trans.transform.translation.z
             qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z
             qw = trans.transform.rotation.w
+            starting = np.array([x, y, z])
 
         except Exception as e:
             print(str(e))
             return
 
-        # Set up SLERP for interpolation
-        rots = np.array([[qx,qy,qz,qw],[q_startingR[0],q_startingR[1],q_startingR[2],q_startingR[3]]])
-        print(rots)
-        key_rots = Rotation.from_quat(rots)
-        print(len(key_rots))
-        key_times = [0,1]
-        slerp = Slerp(key_times, key_rots)
-
-        # 100 samples per second
-        num_interp_samples = 200
-        for jj in range(0,num_interp_samples):
-            hpose.pose.position.x = self.linearInterpolation(x, starting[0], float(jj) / num_interp_samples)
-            hpose.pose.position.y = self.linearInterpolation(y, starting[1], float(jj) / num_interp_samples)
-            hpose.pose.position.z = self.linearInterpolation(z, starting[2], float(jj) / num_interp_samples)
-            hpose.pose.orientation.x = slerp([float(jj) / num_interp_samples]).as_quat()[0][0]
-            hpose.pose.orientation.y = slerp([float(jj) / num_interp_samples]).as_quat()[0][1]
-            hpose.pose.orientation.z = slerp([float(jj) / num_interp_samples]).as_quat()[0][2]
-            hpose.pose.orientation.w = slerp([float(jj) / num_interp_samples]).as_quat()[0][3]
-            pub.publish(hpose)
-            time.sleep(0.01)
-
-        time.sleep(1.0)
-
         ###################################
         # Run the registration sequence 
         ###################################
+        R_start = ScipyR.from_quat([qx,qy,qz,qw])
         
         # Left Right
         max_theta = 8 * np.pi
         for theta in np.arange(0, max_theta, 0.008):
             
             if not rospy.is_shutdown():
-                hpose.pose.position.x = - 0.0 * np.sin(0.5*theta) + 0.1 * theta/(max_theta) + starting[0]
-                hpose.pose.position.y = 0.15 * np.sin(0.5*theta) + starting[1]
-                hpose.pose.position.z = 0.0 * np.sin((0.5*theta)) + starting[2]
+                cam_motion_rotated = R_start.apply(np.array([0.1 * theta/(max_theta), 0.15*np.sin(0.5*theta), 0.0]))
+                hpose.pose.position.x = cam_motion_rotated[0] + starting[0]
+                hpose.pose.position.y = cam_motion_rotated[1] + starting[1]
+                hpose.pose.position.z = cam_motion_rotated[2] + starting[2]
 
-                R = Rotation.from_euler('XYZ', [-0.2*np.sin(0.5*theta), -0.00*(theta/(4*np.pi)), 0.0*np.abs(np.sin(0.5*theta))])
-                q = R.as_quat()
+                R_cam = ScipyR.from_euler('XYZ', [-0.2*np.sin(0.5*theta), 0.0, 0.0])
+
+                q = (R_start * R_cam).as_quat()
                 hpose.pose.orientation.x = q[0]
                 hpose.pose.orientation.y = q[1]
                 hpose.pose.orientation.z = q[2]
