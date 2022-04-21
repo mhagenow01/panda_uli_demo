@@ -29,7 +29,7 @@ class ControlledValve():
     def __init__(self, computerControl=False):
         rospy.init_node('controlledvalve', anonymous=True)
 
-        self.ser = serial.Serial('/dev/ttyACM0', 9600, timeout=0.5)
+        self.ser = serial.Serial('/dev/serial/by-id/usb-Arduino__www.arduino.cc__0043_85937313630351601132-if00', 9600, timeout=0.5)
         time.sleep(2) # wait 2 seconds to allow port to open
         self.r = rospy.Rate(1000)  # 1000hz (Arduino runs at 100)
         self.curr_val = 0
