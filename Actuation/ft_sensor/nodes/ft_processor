@@ -61,7 +61,7 @@ class FTProcessor:
         rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
         rospy.Subscriber("/panda/ee_mass", Float64, self.setupToolMass)
         rospy.Subscriber("/joint_states", JointState, self.recordJointVelocity)
-        rospy.Subscriber("/panda/hybrid_pose",HybridPose, self.checkHybrid)
+        rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.checkHybrid)
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         time.sleep(0.5)
@@ -148,7 +148,7 @@ class FTProcessor:
                 rate.sleep()
 
             except Exception as e:
-                print("unable to lookup transform: ", e)
+                #print("unable to lookup transform: ", e)
                 rate.sleep()
 
     def filter(self, last_x,x,last_y):

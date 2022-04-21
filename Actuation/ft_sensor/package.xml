@@ -12,5 +12,6 @@
 
     <depend>roscpp</depend>
     <depend>std_msgs</depend>
+    <depend>hybrid_controller</depend>
 
 </package>
