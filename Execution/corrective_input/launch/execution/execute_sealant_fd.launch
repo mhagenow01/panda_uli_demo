@@ -1,0 +1,10 @@
+<launch>
+    <node pkg="panda_ros" type="pandaRosWrapper" name="panda_controller" output="screen">
+    </node>
+    <node pkg="corrective_shared_autonomy" type="fdzdcontroller" name="fdzdcontroller" output="screen">
+    </node>-->
+    <node pkg="corrective_shared_autonomy" type="pandaSealantSetup.py" name="pandaSealantSetup" output="screen">
+    </node>
+    <node pkg="corrective_shared_autonomy" type="controlledValveNode.py" name="controlledValveNode" args="True" output="screen">
+    </node>
+</launch>

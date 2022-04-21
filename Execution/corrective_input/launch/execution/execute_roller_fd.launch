@@ -1,0 +1,8 @@
+<launch>
+    <node pkg="panda_ros" type="pandaRosWrapper" name="panda_controller" output="screen">
+    </node>
+    <node pkg="corrective_shared_autonomy" type="fdzdcontroller" name="fdzdcontroller" output="screen">
+    </node>-->
+    <node pkg="corrective_shared_autonomy" type="pandaRollerSetup.py" name="pandaRollerSetup" output="screen">
+    </node>
+</launch>
