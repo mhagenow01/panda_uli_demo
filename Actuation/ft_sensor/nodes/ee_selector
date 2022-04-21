@@ -29,7 +29,7 @@ class EEProcessor:
 
         time.sleep(0.5)
 
-        self.ee_link = rospy.get_param("/default_end_effector_frame")
+        self.ee_link = rospy.get_param("/default_end_effector_frame").split("_joint")[0] # currently default has joint appended (for ik)
         str_temp = String(data=self.ee_link)
         self.processNewEE(str_temp)
 

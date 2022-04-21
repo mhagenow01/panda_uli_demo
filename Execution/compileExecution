@@ -11,4 +11,5 @@ catkin build core_robotics --no-notify
 catkin build affordance_corrections --no-notify
 catkin build corrective_shared_autonomy --no-notify
 catkin build env_mapping --no-notify
+catkin build corrective_input --no-notify
 

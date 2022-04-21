@@ -66,6 +66,9 @@
   <!-- Hybrid Controller-->
   <node name="hybrid_controller" pkg="hybrid_controller" type="hybrid_controller" output="screen" />
 
+  <!-- Controlled Valve -->
+  <node pkg="controlled_valve" type="controlledValveNode" name="controlledValveNode" output="screen"/>
+
   <!-- <node name="user_experience_enhancer" pkg="user_experience_enhancer" type="user_experience_enhancer" output="screen" /> -->
 
 </launch>
