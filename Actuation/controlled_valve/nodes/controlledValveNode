@@ -22,7 +22,7 @@ from functools import partial
 
 def signal_handler(valve, sig, frame):
     print('You pressed Ctrl+C!')
-    valve.ser.write(bytearray('e', 'ascii'))
+    # valve.ser.write(bytearray('e', 'ascii')) # disable LFD mode for now
     sys.exit(0)
 
 class ControlledValve():
