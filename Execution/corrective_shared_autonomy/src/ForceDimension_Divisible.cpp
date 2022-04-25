@@ -8,7 +8,7 @@
 
 #include <ros/ros.h>
 #include "std_msgs/String.h"
-#include <panda_ros_msgs/HybridPose.h>
+#include <hybrid_controller/HybridPose.h>
 
 #include "tf2_ros/transform_listener.h"
 #include <geometry_msgs/TransformStamped.h>
@@ -74,7 +74,7 @@ bool init_input() {
 }
 
 void publishPose(ros::Publisher hybrid_pub, std::array<double, 7> panda_pose, bool divisible_on) {
-    panda_ros_msgs::HybridPose hybridPose;
+    hybrid_controller::HybridPose hybridPose;
     hybridPose.pose.position.x = panda_pose[0];
     hybridPose.pose.position.y = panda_pose[1];
     hybridPose.pose.position.z = panda_pose[2];
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
         n.advertise<std_msgs::String>("/panda/commands", 5);
     ros::Subscriber force_sub = n.subscribe("/panda/wrench", 10, feedbackInput);
     ros::Publisher hybrid_pub = 
-        n.advertise<panda_ros_msgs::HybridPose>("/panda/hybrid_pose", 1); 
+        n.advertise<hybrid_controller::HybridPose>("/panda/hybrid_pose", 1); 
     
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);

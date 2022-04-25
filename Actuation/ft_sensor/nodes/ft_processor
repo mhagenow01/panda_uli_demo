@@ -8,7 +8,7 @@ __author__ = "Mike Hagenow"
 
 import rospy
 import time
-from std_msgs.msg import String, Float64
+from std_msgs.msg import String, Float64, Int32
 from geometry_msgs.msg import Wrench, Pose
 from sensor_msgs.msg import PointCloud2, JointState
 from hybrid_controller.msg import HybridPose
@@ -17,6 +17,7 @@ import rospkg
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy import signal as scisignal
 import tf2_ros
+from core_robotics.filters import ButterNotchFilter
 
 class FTProcessor:
     def __init__(self):
@@ -26,6 +27,8 @@ class FTProcessor:
         self.ee_disp_global = None
 
         self.g = 9.81 # m/s^2
+
+        self.bnf = ButterNotchFilter(4,30,150,900,6)
 
         ####################
         # Biasing related  #
@@ -61,6 +64,7 @@ class FTProcessor:
         rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
         rospy.Subscriber("/panda/ee_mass", Float64, self.setupToolMass)
         rospy.Subscriber("/joint_states", JointState, self.recordJointVelocity)
+        rospy.Subscriber("/valvestate", Int32, self.recordValveState)
         rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.checkHybrid)
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
@@ -74,6 +78,12 @@ class FTProcessor:
 
     def setupToolMass(self,data):
        self.tool_weight = data.data # kg
+    
+    def recordValveState(self,data):
+        if data.data == 0:
+            self.valve_on = False
+        if data.data == 1:
+            self.valve_on = True
 
     def biasFT(self):
         # Have the required values for calculation
@@ -189,10 +199,7 @@ class FTProcessor:
 
             # filter measurement
             w_global = np.concatenate([f_global, t_global], axis=0)
-            w_filt = self.filter(self.last_x,w_global,self.last_y)
-            self.last_y = w_filt
-            self.last_x = w_global
-            w_filt = w_global
+            w_filt = self.bnf.getFilteredOutput(w_global)
             w_filt = np.round(w_filt,4)
 
             w_filt = -w_filt # applied forces/torques rather than reaction
