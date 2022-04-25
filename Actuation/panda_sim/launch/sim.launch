@@ -3,11 +3,16 @@
     <arg name="virtual_robot" default="true"/>
     <arg name="rvizconfig" default="sim.rviz"/> 
 
+    <arg name="config" value="$(find actuation_group)/../config" />
+    <rosparam command="load" file="$(arg config)/robot_config.yaml" />
+
     <node pkg="panda_sim" type="static_publisher" name="camera_static_publisher"/>
 
     <node pkg="panda_sim" type="simulator" name="simulator" output="screen">
         <param name="only_virtual" value="true" />
     </node>
+
+    <node name="ee_selector" pkg="ft_sensor" type="ee_selector" output="screen" />
         
     <!-- startup rviz -->
     <node pkg="panda_sim" type="rviz_manager" name="rviz_manager">
@@ -19,12 +24,12 @@
         </include>
 	</group>
     
-    <node pkg="collision_free_ik" type="main" name="ik" output="screen">
-        <param name="urdf_fp" type="string" value="$(find collision_free_ik)/config/panda.urdf"/>
-        <param name="ee_frame" type="string" value="panda_gripper_joint"/>
-        <param name="arm_collider_fp" type="string" value="$(find collision_free_ik)/config/panda_collision.json"/>
-        <param name="environment_fp" type="string" value="$(find collision_free_ik)/config/environment.json"/>
-        <param name="initial_q" type="yaml" value="[0, 0, 0, 0, 0, 0, 0]"/>
+    <node pkg="collision_free_ik" type="main" name="main" output="screen">
+        <param name="urdf_fp" type="string" value="$(arg config)/panda.urdf"/>
+        <param name="arm_collider_fp" type="string" value="$(arg config)/ik/panda_collision.json"/>
+        <param name="environment_fp" type="string" value="$(arg config)/ik/environment.json"/>
+        <param name="initial_q" type="yaml" value="[0.0754606,-0.337453,0.150729,-2.46194,0.0587094,2.12597,0.972193]"/>
+        <param name="joint_names" type="yaml" value="['panda_joint1','panda_joint2','panda_joint3','panda_joint4','panda_joint5','panda_joint6','panda_joint7']"/>
         <remap from="out" to="/joint_commands"/>
         <remap from="in" to="/commanded_pose"/>
     </node>

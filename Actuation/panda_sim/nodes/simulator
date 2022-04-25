@@ -36,9 +36,7 @@ class Simulator(object):
         self._event_pub = rospy.Publisher("/simulator/events", String, queue_size=5)
 
         self._hybrid_sub = rospy.Subscriber("/panda/hybrid_pose",HybridPose,self.on_pose)
-        self._pose_pub = rospy.Publisher("/commanded_pose",Pose, queue_size=1)
-        self._pose_pub2 = rospy.Publisher("/commanded_pose2",PoseStamped, queue_size=1)
-        
+        self._pose_pub = rospy.Publisher("/commanded_pose",PoseStamped, queue_size=1)
 
         self._sim = False
         self._init = False
@@ -79,8 +77,7 @@ class Simulator(object):
         pose.pose.orientation.y = o[1]
         pose.pose.orientation.z = o[2]
         pose.pose.orientation.w = o[3]
-        self._pose_pub.publish(pose.pose)
-        self._pose_pub2.publish(pose)
+        self._pose_pub.publish(pose)
 
     def on_joints(self, msg):
         self._desired_joint_pose[:7] = list(msg.position)

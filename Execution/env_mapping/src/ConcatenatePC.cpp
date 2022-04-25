@@ -32,12 +32,12 @@ double cam_z;
 
 bool currmapping;
 
-boost::mutex mutex;
+boost::mutex mutexlock;
 
 // When new PC2 messages come in, add them to the aggregate
 void addNewPC(const sensor_msgs::PointCloud2ConstPtr& msg){
   if (currmapping){
-    boost::lock_guard<boost::mutex> lock(mutex);
+    boost::lock_guard<boost::mutex> lock(mutexlock);
 
     pcl::PCLPointCloud2* cloud2 = new pcl::PCLPointCloud2; 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -67,7 +67,7 @@ void addNewPC(const sensor_msgs::PointCloud2ConstPtr& msg){
 // When mapping is done, publish the final aggregated cloud to the filtered topic
 void mappingToggle(std_msgs::String msg){
   if(msg.data=="on"){ // starting mapping, clear aggregate
-    boost::lock_guard<boost::mutex> lock(mutex);
+    boost::lock_guard<boost::mutex> lock(mutexlock);
     cout << "WOWOWO" << endl;
     currmapping = true;
 
@@ -114,7 +114,7 @@ void mappingToggle(std_msgs::String msg){
     delete PCAgg;
   }
   if(msg.data=="off"){ // mapping done, export aggregate
-    boost::lock_guard<boost::mutex> lock(mutex);
+    boost::lock_guard<boost::mutex> lock(mutexlock);
     currmapping = false;
     cout << "YOYOYO" << endl;
     PCAgg = new sensor_msgs::PointCloud2;

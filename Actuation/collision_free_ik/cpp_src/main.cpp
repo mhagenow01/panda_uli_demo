@@ -64,7 +64,8 @@ int main(int argc, char** argv) {
     
     IKSolver iksolver = IKSolver(urdf, ee_frame, arm_colliders, environment);
     if (current_q.size() != iksolver.dof()) {
-        cout << iksolver.dof() << endl;
+        cout << "IK SOLVER NUM DOF: " << iksolver.dof() << endl;
+        cout << "for file: " << urdf_fp << endl;
         return 1;
     }
     
