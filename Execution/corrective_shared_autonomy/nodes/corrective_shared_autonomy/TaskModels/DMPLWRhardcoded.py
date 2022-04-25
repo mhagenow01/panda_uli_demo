@@ -188,6 +188,11 @@ def learnDMP(segmentTemp,jj,num_demos,k,b,dt):
     return start, end, forcing, reverse_forcing
 
 
+def parallelSurfPt(surface,u_temp,v_temp):
+    r, _, _, _ = surface.calculate_surface_point(u_temp,v_temp)
+    return r
+
+
 class DMPLWRhardcoded:
     def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1])):
         # DMP parameters
@@ -227,11 +232,12 @@ class DMPLWRhardcoded:
 
 
     def getTraj(self,learnedSegments,orig=False, demo_id = 0):
-        x = np.zeros((0,))
-        y = np.zeros((0,))
-        z = np.zeros((0,))
+        x = []
+        y = []
+        z = []
         dmptemp = DMP(self.k, self.b, self.dt)
         for segment in learnedSegments:
+            startt = time.time()
             if segment.hybrid:
                 u_ind = segment.state_names.index("u")
                 v_ind = segment.state_names.index("v")
@@ -247,12 +253,14 @@ class DMPLWRhardcoded:
 
                 # get x,y,z from BSpline
                 surface = segment.surface
-
-                for u_temp,v_temp in zip(u,v):
-                    r, _, _, _ = surface.calculate_surface_point(u_temp,v_temp)
-                    x = np.append(x,r[0])
-                    y = np.append(y,r[1])
-                    z = np.append(z,r[2])
+                backend = 'loky'
+                # parallelize retrieval of surface locations
+                behaviors = Parallel(n_jobs=8, backend=backend)(delayed(
+                parallelSurfPt)(surface,u_temp,v_temp) for u_temp, v_temp in zip(u,v))
+                behaviors = np.array(behaviors)
+                x.extend(behaviors[:,0])
+                y.extend(behaviors[:,1])
+                z.extend(behaviors[:,2])
 
             else:
                 if orig == False:
@@ -267,10 +275,12 @@ class DMPLWRhardcoded:
                     y_temp = segment.original_vals[demo_id][1, :]
                     z_temp = segment.original_vals[demo_id][2, :]
 
-                x = np.append(x,x_temp)
-                y = np.append(y,y_temp)
-                z = np.append(z,z_temp)
-        return x, y, z
+                x.extend(x_temp)
+                y.extend(y_temp)
+                z.extend(z_temp)
+        
+            print("seg time: ",time.time()-startt)
+        return np.array(x), np.array(y), np.array(z)
 
     def plotModel(self, num_demos, learnedSegments):
         # Plot Kinematics

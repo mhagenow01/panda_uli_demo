@@ -8,21 +8,22 @@ __author__ = "Guru Subramani and Mike Hagenow"
 from scipy.signal import butter,filtfilt
 import numpy as np
 
-class ButterLPFilter:
-    def __init__(self,order,wn,fs,num_vars):
+class ButterNotchFilter:
+    def __init__(self,order,notch_start,notch_end,fs,num_vars):
         self.order = order
-        self.wn = wn
+        self.notch_start = notch_start
+        self.notch_end = notch_end
         self.fs = fs
         self.num_vars = num_vars
-        self.b, self.a = butter(self.order,self.wn,fs=self.fs)
+        self.b, self.a = butter(self.order,[self.notch_start, self.notch_end],btype='bandstop',fs=self.fs)
 
-        print(len(self.b), len(self.a))
-
-        self.coefflen = len(self.b)
+        self.alen = len(self.a)
+        self.blen = len(self.b)
         self.xs = []
         self.ys = []
-        for ii in range(0,self.coefflen):
+        for ii in range(0,self.blen):
             self.xs.append(np.zeros((self.num_vars)))
+        for ii in range(1,self.alen):
             self.ys.append(np.zeros((self.num_vars)))
         
     
@@ -33,11 +34,10 @@ class ButterLPFilter:
         val = np.zeros((self.num_vars))
         self.xs.insert(0,signal)
         self.xs.pop(-1)
-        for ii in range(0,self.coefflen):
+        for ii in range(0,self.blen):
             val += self.b[ii]*self.xs[ii]
-            if ii!=0:
-                val -= self.a[ii]*self.ys[ii-1]
-
+        for ii in range(1,self.alen):
+            val -= self.a[ii]*self.ys[ii-1]
         val = val / self.a[0]
         
         self.ys.insert(0,val)
