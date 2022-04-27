@@ -2,8 +2,6 @@
 <launch>
     <include file="$(find actuation_group)/launch/Actuation.launch"/>
     <node pkg="kinect_ros" type="kinect_toggler" name="kinect_toggler" output="screen"/>
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find env_mapping)/rviz/mappingrvizconfig.rviz" output="screen" />
-    <include file="$(find affordance_corrections)/launch/affordance_corrections.launch"/>
     <node pkg="env_mapping" type="scan_toggler" name="scan_toggler" output="screen"/>
     <node pkg="corrective_input" type="fdonedzdcontroller" name="fdonedzdcontroller" output="screen"/>
 </launch>

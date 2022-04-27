@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find env_mapping)/rviz/mappingrvizconfig.rviz" output="screen" />
+    <include file="$(find affordance_corrections)/launch/affordance_corrections.launch"/>
+    <node pkg="corrective_shared_autonomy" type="run_templates" name="run_templates" output="screen"/>
+</launch>
