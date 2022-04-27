@@ -128,8 +128,8 @@ def main():
     rosaff.toggleSVDforInitialArticulation(True)
     rosaff.setCppFitting(True)
     rosaff.setFitting(True)
-    rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_surface_demo.STL',package_dir+'ULIConfig/registration_models/stringer_surface_demo.STL'])
-
+    # rosaff.setModels([package_dir+'ULIConfig/registration_models/layup_tool2_surface_demo.STL',package_dir+'ULIConfig/registration_models/stringer_surface_demo.STL'])
+    rosaff.setModels([package_dir+'ULIConfig/registration_models/IRC_piece1.STL'])
     rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
     
 
