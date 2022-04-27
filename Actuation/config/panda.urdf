@@ -167,12 +167,12 @@
   <link name="ft_sensor_link">
     <visual>
       <geometry>
-        <mesh filename="package://uli_config/meshes/force_torque_sensor.dae"/>
+        <mesh filename="package://panda_sim/meshes/force_torque_sensor.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://uli_config/meshes/force_torque_sensor.stl"/>
+        <mesh filename="package://panda_sim/meshes/force_torque_sensor.stl"/>
       </geometry>
     </collision>
   </link>
@@ -198,6 +198,66 @@
     <child link="panda_link8"/>
     <axis xyz="0 0 0"/>
   </joint>
+  
+  <material name="black">
+    <color rgba="0. 0. 0. 1"/>
+  </material>
+  <material name="dark_grey">
+    <color rgba="0.1 0.1 0.1 1"/>
+  </material>
+  <material name="grey">
+    <color rgba="0.6 0.6 0.6 1"/>
+  </material>
+  <material name="white">
+    <color rgba="0.9 0.9 0.9 1"/>
+  </material>
+  <link name="camera_body">
+    <visual>
+      <origin rpy="0 3.1416 0"  xyz=".047 0.04 0.0115"/>
+      <geometry>
+        <mesh filename="package://panda_sim/meshes/visual/kinect-model.stl"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+  </link>
+  <link name="panda_flange"/>
+  <joint name="panda_flange_rotated_joint" type="fixed">
+    <parent link="ft_sensor_link"/>
+    <child link="panda_flange"/>
+    <origin rpy="0 0 -0.785398163397" xyz="0 0 0"/>
+  </joint>
+  <link name="camera_base">
+  </link>
+  <link name="camera_visor">
+  </link>
+  <joint name="fake_base" type="fixed">
+    <parent link="panda_flange"/>
+    <child link="camera_base"/>
+    <origin rpy="3.14 -1.57 0.0" xyz="0.08211274 0.0 0.02823"/>
+  </joint>
+  <joint name="camera_base_to_body" type="fixed">
+    <parent link="camera_base"/>
+    <child link="camera_body"/>
+    <origin rpy="0. 0. 0." xyz="-0.0757 0. 0.008"/>
+  </joint>
+  <joint name="camera_base_to_visor" type="fixed">
+    <parent link="camera_base"/>
+    <child link="camera_visor"/>
+    <origin rpy="0. 0. 0." xyz="0. 0. 0."/>
+  </joint>
+
+
+  <!--  ########################## -->
+  <!--  # Panda Gripper            -->
+  <!--  ########################## -->
+
+  <!-- <link name="panda_gripper" />
+  <joint name="panda_gripper_joint" type="fixed">
+    <origin rpy="3.1416 0.000 -0.785" xyz="-0.000 -0.000 0.103" />
+    <parent link="panda_link8"/>
+    <child link="panda_gripper"/>
+    <axis xyz="0 0 0"/>
+  </joint>
   <joint name="panda_hand_joint" type="fixed">
     <parent link="ft_sensor_link"/>
     <child link="panda_hand"/>
@@ -221,11 +281,6 @@
         <mesh filename="package://franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://franka_description/meshes/collision/finger.stl"/>
-      </geometry>
-    </collision>
   </link>
   <link name="panda_rightfinger">
     <visual>
@@ -234,12 +289,6 @@
         <mesh filename="package://franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
-    <collision>
-      <origin rpy="0 0 3.14159265359" xyz="0 0 0"/>
-      <geometry>
-        <mesh filename="package://franka_description/meshes/collision/finger.stl"/>
-      </geometry>
-    </collision>
   </link>
   <joint name="panda_finger_joint1" type="prismatic">
     <parent link="panda_hand"/>
@@ -255,61 +304,21 @@
     <axis xyz="0 -1 0"/>
     <limit effort="20" lower="0.0" upper="0.04" velocity="0.2"/>
     <mimic joint="panda_finger_joint1"/>
-  </joint>
-  <material name="black">
-    <color rgba="0. 0. 0. 1"/>
-  </material>
-  <material name="dark_grey">
-    <color rgba="0.1 0.1 0.1 1"/>
-  </material>
-  <material name="grey">
-    <color rgba="0.6 0.6 0.6 1"/>
-  </material>
-  <material name="white">
-    <color rgba="0.9 0.9 0.9 1"/>
-  </material>
-  <link name="camera_body">
-    <visual>
-      <origin rpy="0 3.1416 0"  xyz=".047 0.04 0.0115"/>
-      <geometry>
-        <mesh filename="package://uli_config/meshes/visual/kinect-model.stl"/>
-      </geometry>
-      <material name="white"/>
-    </visual>
-  </link>
-  <link name="camera_base">
-  </link>
-  <link name="camera_visor">
-  </link>
-  <joint name="fake_base" type="fixed">
-    <parent link="panda_hand"/>
-    <child link="camera_base"/>
-    <origin rpy="3.14 -1.57 0.0" xyz="0.08211274 0.0 0.02823"/>
-  </joint>
-  <joint name="camera_base_to_body" type="fixed">
-    <parent link="camera_base"/>
-    <child link="camera_body"/>
-    <origin rpy="0. 0. 0." xyz="-0.0757 0. 0.008"/>
-  </joint>
-  <joint name="camera_base_to_visor" type="fixed">
-    <parent link="camera_base"/>
-    <child link="camera_visor"/>
-    <origin rpy="0. 0. 0." xyz="0. 0. 0."/>
-  </joint>
-  <link name="panda_gripper" />
-  <joint name="panda_gripper_joint" type="fixed">
-    <origin rpy="3.1416 0.000 -0.785" xyz="-0.000 -0.000 0.103" />
-    <parent link="panda_link8"/>
-    <child link="panda_gripper"/>
-    <axis xyz="0 0 0"/>
-  </joint>
+  </joint> -->
 
   <!--  ########################## -->
   <!--  # Defining custom EEs      -->
   <!--  ########################## -->
 
   <!-- START ORBITAL SANDER-->
-  <link name="panda_orbital" />
+  <link name="panda_orbital">
+  <visual>
+      <geometry>
+        <mesh filename="package://panda_sim/meshes/sander_orbital_w_vib.STL"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+  </link>
   <joint name="panda_orbital_joint" type="fixed">
     <origin rpy="3.1416 0.000 -0.785" xyz="-0.000 -0.000 0.144" />
     <parent link="ft_sensor_link"/>

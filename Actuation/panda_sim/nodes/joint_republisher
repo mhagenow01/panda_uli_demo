@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# joint_republisher: captures franka_core_msgs::JointCommand and republishes on sensor_msgs::JointState to 
+# simulate getting actual current joint state from franka
+import rospy
+import sys
+import tf2_ros
+import geometry_msgs.msg
+from franka_core_msgs.msg import JointCommand
+from sensor_msgs.msg import JointState
+
+class JointRepublisher:
+    def __init__(self):
+        self._joint_sub = rospy.Subscriber("/joint_commands", JointCommand, self.newcommand, queue_size=1)
+        self._joint_pub = rospy.Publisher("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState, queue_size=5)
+        rospy.sleep(0.5)
+        rospy.spin()
+
+    def newcommand(self,msg):
+        self._desired_joint_pose = list(msg.position)
+        js_temp = JointState()
+        js_temp.position = msg.position
+        self._joint_pub.publish(js_temp)
+
+if __name__ == '__main__':
+    rospy.init_node('joint_republisher')
+    jrepub = JointRepublisher()
+    

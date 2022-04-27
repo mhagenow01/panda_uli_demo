@@ -313,9 +313,9 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file= '',breadboard_offset=[0,0])
 
 
 if __name__ == "__main__":
-    stl_file = '/home/mike/Documents/panda_uli_workspace/src/panda_uli_demo/ULIConfig/registration_models/stringer_surface_demo.STL'
+    stl_file = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/IRC_piece1_surf.STL'
     rigid_file = ''
-    surface_file = '/home/mike/Documents/panda_uli_workspace/src/panda_uli_demo/ULIConfig/registration_models/stringer_surface_demo.csv'
+    surface_file = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/IRC_piece1.csv'
     surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0])
 
 
