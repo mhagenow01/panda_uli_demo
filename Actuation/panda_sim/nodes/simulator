@@ -12,7 +12,7 @@ import copy
 from std_msgs.msg import String, Float64MultiArray
 from nav_msgs.msg import Path
 from franka_core_msgs.msg import JointCommand
-from panda_ros_msgs.msg import HybridPose
+from hybrid_controller.msg import HybridPose
 from scipy.spatial.transform import Rotation as scipyR
 
 from sensor_msgs.msg import JointState

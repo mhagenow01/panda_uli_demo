@@ -167,12 +167,12 @@
   <link name="ft_sensor_link">
     <visual>
       <geometry>
-        <mesh filename="package://uli_config/meshes/force_torque_sensor.dae"/>
+        <mesh filename="package://panda_sim/meshes/force_torque_sensor.dae"/>
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="package://uli_config/meshes/force_torque_sensor.stl"/>
+        <mesh filename="package://panda_sim/meshes/force_torque_sensor.stl"/>
       </geometry>
     </collision>
   </link>
@@ -221,11 +221,6 @@
         <mesh filename="package://franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
-    <collision>
-      <geometry>
-        <mesh filename="package://franka_description/meshes/collision/finger.stl"/>
-      </geometry>
-    </collision>
   </link>
   <link name="panda_rightfinger">
     <visual>
@@ -234,12 +229,6 @@
         <mesh filename="package://franka_description/meshes/visual/finger.dae"/>
       </geometry>
     </visual>
-    <collision>
-      <origin rpy="0 0 3.14159265359" xyz="0 0 0"/>
-      <geometry>
-        <mesh filename="package://franka_description/meshes/collision/finger.stl"/>
-      </geometry>
-    </collision>
   </link>
   <joint name="panda_finger_joint1" type="prismatic">
     <parent link="panda_hand"/>
@@ -272,7 +261,7 @@
     <visual>
       <origin rpy="0 3.1416 0"  xyz=".047 0.04 0.0115"/>
       <geometry>
-        <mesh filename="package://uli_config/meshes/visual/kinect-model.stl"/>
+        <mesh filename="package://panda_sim/meshes/visual/kinect-model.stl"/>
       </geometry>
       <material name="white"/>
     </visual>

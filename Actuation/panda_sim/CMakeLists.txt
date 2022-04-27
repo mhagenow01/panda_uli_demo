@@ -16,4 +16,5 @@ catkin_install_python(PROGRAMS
     nodes/simulator
     nodes/static_publisher
     nodes/rviz_manager
+    nodes/joint_republisher
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

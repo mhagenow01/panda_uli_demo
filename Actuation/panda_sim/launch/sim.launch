@@ -6,13 +6,16 @@
     <arg name="config" value="$(find actuation_group)/../config" />
     <rosparam command="load" file="$(arg config)/robot_config.yaml" />
 
-    <node pkg="panda_sim" type="static_publisher" name="camera_static_publisher"/>
+    <!-- <node pkg="panda_sim" type="static_publisher" name="camera_static_publisher"/> -->
 
     <node pkg="panda_sim" type="simulator" name="simulator" output="screen">
         <param name="only_virtual" value="true" />
     </node>
 
     <node name="ee_selector" pkg="ft_sensor" type="ee_selector" output="screen" />
+    
+    <!-- republishes outgoing joint angles to fake real joint angles for ik current command-->
+    <node name="joint_republisher" pkg="panda_sim" type="joint_republisher" output="screen" />
         
     <!-- startup rviz -->
     <node pkg="panda_sim" type="rviz_manager" name="rviz_manager">
