@@ -16,6 +16,7 @@
 #include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Int16.h"
+#include "std_msgs/Bool.h"
 #include <QLabel>
 
 #include <QCheckBox>
@@ -28,7 +29,7 @@ namespace corrections_panel
     class CorrectionsPanel: public rviz::Panel{
         public:
             CorrectionsPanel( QWidget* parent = 0);
-            void batteryCallback(std_msgs::Int16 data);
+            void refitCallback(std_msgs::Bool data);
         protected:
             DriveWidget* drive_widget_;
         private:
@@ -36,6 +37,7 @@ namespace corrections_panel
             ros::Publisher quat_pub;
             ros::Publisher cam_pos_pub;
             ros::Publisher trigger_pub;
+            ros::Subscriber refit_sub;
             geometry_msgs::Quaternion q_out;
             geometry_msgs::Point pos_out;
             ros::Subscriber battery_sub;
@@ -46,6 +48,8 @@ namespace corrections_panel
             bool mapping;
             QLabel* bat;
             std_msgs::String s_out;
+
+            QCheckBox* refitting;
 
             std_msgs::Int8 artic_out;
             ros::Publisher artic_pub;

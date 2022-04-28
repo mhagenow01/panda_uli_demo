@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(corrective_input)
+project(input_corrections)
 
 SET(CMAKE_BUILD_TYPE Release)
 SET(CMAKE_SKIP_RPATH False)

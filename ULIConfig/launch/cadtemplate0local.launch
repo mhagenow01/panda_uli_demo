@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <node type="rviz" name="rviz" pkg="rviz" args="-d $(find env_mapping)/rviz/mappingrvizconfig.rviz" output="screen" />
-    <include file="$(find affordance_corrections)/launch/affordance_corrections.launch"/>
+    <include file="$(find affordance_corrections)/launch/affordance_corrections.launch">
+        <arg name="models" value="IRC_piece1.STL" /> <!-- semi-colon delimited list-->
+        <arg name="model_dir" value="ULIConfig/registration_models/" /> <!-- path of model directory within src-->
+    </include>
     <node pkg="corrective_shared_autonomy" type="run_templates" name="run_templates" output="screen"/>
 </launch>

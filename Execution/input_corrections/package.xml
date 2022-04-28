@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>corrective_input</name>
+    <name>input_corrections</name>
     <version>1.0.0</version>
     <description>
         Code to run and send commands from different input devices to CSA

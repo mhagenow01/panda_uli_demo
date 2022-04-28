@@ -47,13 +47,14 @@ namespace corrections_panel{
         quat_pub = n.advertise<geometry_msgs::Quaternion>("rviz_camera_q", 1);
         trigger_pub = n.advertise<std_msgs::String>("rviz_triggers", 1);
         obj_pub = n.advertise<std_msgs::String>("getObjPose", 1);
+        refit_sub = n.subscribe("objRefittingUpdate", 1, &CorrectionsPanel::refitCallback, this);
 
         static tf2_ros::TransformBroadcaster br;
 
         QWidget *cfBox = new QWidget;
         QVBoxLayout* cfLayout = new QVBoxLayout(cfBox);
         cfBox->setStyleSheet("background-color: #dae3e3; border-radius: 10pt; border-color: #b6b8b8");
-        cfBox->setFixedHeight(125*screenRatio);
+        cfBox->setFixedHeight(150*screenRatio);
 
         QPushButton* scanButton = new QPushButton("Run Scan");
         scanButton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
@@ -66,6 +67,11 @@ namespace corrections_panel{
         QPushButton* toggleBehaviorbutton = new QPushButton("Run Behavior");
         toggleBehaviorbutton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
         cfLayout->addWidget(toggleBehaviorbutton);
+
+        refitting = new QCheckBox("Refitting Enabled");
+        refitting->setChecked(true);
+        refitting->setStyleSheet("font: bold 18px; min-width: 10em; padding-left:130%; margin-left:50%; margin-right:50%;");
+        cfLayout->addWidget(refitting);
 
         QHBoxLayout* hlayout = new QHBoxLayout;
         hlayout->addWidget(cfBox);
@@ -89,6 +95,17 @@ namespace corrections_panel{
            trigger_pub.publish(s_out);
         });
 
+        // Toggle refitting
+        connect(refitting, &QCheckBox::stateChanged, [this](){
+           if(refitting->isChecked()){
+               s_out.data = "refittingon";
+           }
+           else{
+               s_out.data = "refittingoff";
+           }
+           
+           trigger_pub.publish(s_out);
+        });
 
         
         // Timer used to publish the camera orientation from RVIZ for camera-centric controls
@@ -125,6 +142,11 @@ namespace corrections_panel{
         }); 
         output_timer->start(100);
 
+    }
+
+    void CorrectionsPanel::refitCallback(std_msgs::Bool data){
+            // Update the refitting checkbox for the active object
+            refitting->setChecked(data.data);
     }
 
 
