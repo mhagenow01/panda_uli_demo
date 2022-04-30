@@ -12,14 +12,21 @@ class JointRepublisher:
     def __init__(self):
         self._joint_sub = rospy.Subscriber("/joint_commands", JointCommand, self.newcommand, queue_size=1)
         self._joint_pub = rospy.Publisher("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState, queue_size=5)
+        self.jointpos = rospy.get_param("/main/initial_q")
+
         rospy.sleep(0.5)
-        rospy.spin()
+        self.commandLoop()
 
     def newcommand(self,msg):
-        self._desired_joint_pose = list(msg.position)
-        js_temp = JointState()
-        js_temp.position = msg.position
-        self._joint_pub.publish(js_temp)
+        # self._desired_joint_pose = list(msg.position)
+        self.jointpos = msg.position
+
+    def commandLoop(self):
+        r = rospy.Rate(100) # Hz
+        while not rospy.is_shutdown():
+            js_temp = JointState()
+            js_temp.position = self.jointpos
+            self._joint_pub.publish(js_temp)
 
 if __name__ == '__main__':
     rospy.init_node('joint_republisher')

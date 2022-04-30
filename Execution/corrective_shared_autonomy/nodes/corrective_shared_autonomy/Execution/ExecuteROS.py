@@ -13,6 +13,7 @@ import rospy
 import numpy as np
 from hybrid_controller.msg import HybridPose
 from geometry_msgs.msg import Quaternion, Pose, Vector3
+from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64, Float64MultiArray
 from std_msgs.msg import Int32
 from scipy.spatial.transform import Rotation as R
@@ -32,8 +33,11 @@ class ExecuteROS:
         self.task_R = task_R
         self.task_t = task_t
 
+        self.last_robot_state = rospy.get_time()
+
         rospy.Subscriber("/zdinput/input", Vector3, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
+        rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState, self.storePandaStateTime)
         time.sleep(0.5)
 
     def storeZDInput(self, data):
@@ -42,6 +46,16 @@ class ExecuteROS:
 
     def storeZDButton(self,data):
         self.input_button = data.data
+
+    def robotActive(self):
+        # checks whether the robot has sent the state recently. used by task model to know whether to continue
+        if rospy.get_time()-self.last_robot_state > 1.0:
+            return False
+        else:
+            return True
+
+    def storePandaStateTime(self,data):
+        self.last_robot_state = rospy.get_time()
 
     def getZDInput(self):
         return self.input, self.input_button
@@ -236,6 +250,8 @@ class ExecuteROS:
         # 100 samples per second
         num_interp_samples = int(100*np.max([num_samples_cart, num_samples_ang]))
         for jj in range(0,num_interp_samples):
+            if not self.robotActive():
+                return
             hpose.pose.position.x = self.linearInterpolation(x, desired_x, jj / num_interp_samples)
             hpose.pose.position.y = self.linearInterpolation(y, desired_y, jj / num_interp_samples)
             hpose.pose.position.z = self.linearInterpolation(z, desired_z, jj / num_interp_samples)
