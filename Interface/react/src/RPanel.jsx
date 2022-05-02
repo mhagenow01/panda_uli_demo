@@ -5,10 +5,10 @@ import {ParameterModule} from './ParameterModule';
 import { Grommet, List, Stack,Button, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
 
 export const RPanel = (props) => {  
-  const [connect, connection, url,imageTopic] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic])) 
+  const [connect, connection, url,imageTopic,setCanvasOpacity,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.setCanvasOpacity,state.tmpSub])) 
   const parameters = useAppStore(state=>state.parameters)
   
-  const [messages, addMessage, sendMessage, sendCoordinates] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates]))
+  const [messages, addMessage, sendMessage, sendCoordinates,publishStates] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates,state.publishStates]))
     return (
       <Grid
       rows={['10%', '10%','70%']}
@@ -21,19 +21,24 @@ export const RPanel = (props) => {
         {name: 'main', start:[0,2], end: [1,2]},
       ]}
     > 
-        <Button gridArea='tl' onClick={connect}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
+        <Button gridArea='tl' onClick={()=>{
+          connect();
+          publishStates();
+        }}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
 
        <CheckBox gridArea="tr" disabled={true} checked={connection==='connected'}/>
        <Box gridArea='send'  basis="medium"  alignSelf="center"  direction="row">
         <Button size="large" alignSelf="center" label="Send"
           onClick={() => {
-            sendCoordinates();
+            // sendCoordinates();
+            tmpSub.displayCloud();
           }}
           />
 
         <Button size="large" alignSelf="center" label="Execute"
           onClick={() => {
             sendMessage("execute");
+            setCanvasOpacity(0);
           }} />
           </Box> 
           <Box gridArea='main'>

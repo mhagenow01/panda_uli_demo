@@ -13,7 +13,13 @@ const store = (set,get) => ({
     imageWidth: 1200,
     imageHeight: 900,
     imagedata: "",
-    parameters: [{type: "select", label:"Number of passes", value:"2", options:["2","3","4","5"]},{type: "select", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},{type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},{type: "slider", label:"Force (N)", value:1,min:0,max:10}],
+    canvasOpacity: 1.,
+    parameters: [ {type: "select", label:"Number of passes", value:"2", options:["2","3","4","5"]},
+                  {type: "select", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
+                  {type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
+                  {type: "slider", label:"Force (N)", value:1,min:0,max:10},
+                  {type: "select", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
+                ],
     configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
@@ -59,8 +65,13 @@ const store = (set,get) => ({
        state.parameters[idx].value = value
        useRosStore.getState().paramTopic.publish({data:JSON.stringify(state.parameters)})
      }),
-    setParameters: (param) => set(state=>{
-      state.parameters=JSON.parse(param)})
+     publishStates: () => set(state=>{
+      useRosStore.getState().paramTopic.publish({data:JSON.stringify(state.parameters)})
+    }),
+     setParameters: (param) => set(state=>{
+       state.parameters=JSON.parse(param)}),
+     setCanvasOpacity: (val) => set(state=>{
+         state.canvasOpacity=val})
 });
 
 const useAppStore = create(immer(store));

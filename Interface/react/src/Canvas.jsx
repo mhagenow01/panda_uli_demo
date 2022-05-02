@@ -4,10 +4,9 @@ import { Stage, Layer, Circle, Shape, Text } from 'react-konva';
 import { Stack } from 'grommet';
 
 export const Canvas = (props) => {
-    var [corners,path] = useAppStore(state=>[state.corners,state.path]);
+    var [corners,path,canvasOpacity] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
-
     const handleDragEnd = (e) => {
         setCorner(e.target.attrs["cornerId"],Math.min(Math.max(e.target.attrs["x"],0),maxWidth),Math.min(Math.max(e.target.attrs["y"],0),maxHeight))
         corners.map((corner) => {
@@ -43,7 +42,7 @@ export const Canvas = (props) => {
               context.fillStrokeShape(shape);
             }}
             stroke="green"
-            opacity={.5}
+            opacity={.5*canvasOpacity}
             strokeWidth={4}
           />
 
@@ -60,7 +59,7 @@ export const Canvas = (props) => {
             }}
             fill="#00D2FF"
             stroke="red"
-            opacity={.1}
+            opacity={.1*canvasOpacity}
             strokeWidth={4}
           />
           {corners.map((corner) => (
@@ -72,7 +71,7 @@ export const Canvas = (props) => {
                 y={corner.y}
                 Radius={20}
                 fill="#0000ff"
-                opacity={0.8}
+                opacity={0.8*canvasOpacity}
                 draggable
                 shadowColor="black"
                 shadowBlur={10}

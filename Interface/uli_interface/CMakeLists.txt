@@ -96,14 +96,9 @@ install(DIRECTORY
 #     meshes/
 #     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
 # )
-# install(DIRECTORY
-#     urdfs/
-#     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/urdfs
-# )
 
 catkin_install_python(PROGRAMS
     nodes/spliner
-    nodes/param_handler
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 

@@ -11,16 +11,34 @@ import json
 class Handler(object):
     def __init__(self):
         self._ui_param_pub = rospy.Publisher("/ui/set_parameters",String,queue_size = 1)
+        self._pub_ee = rospy.Publisher('/panda/set_ee_link', String, queue_size=1)
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self._param = None
+
+
+        rospy.sleep(.5)
+
+        # Change the end effector
+        # strEE = String()
+        # strEE.data = "pandaOrbital"
+        # pub_ee.publish(strEE)
 
         
     def on_param(self,msg):
         self._param = json.loads(msg.data)
-        #self._param.append(self._param[2])
-        self._param.pop()
         print(self._param)
-        self._ui_param_pub.publish(json.dumps(self._param))    
+        for p in self._param:
+            print(p)
+            if p["label"] == "Tool":
+                print(p["value"])
+                strEE = String()
+                strEE.data = p["value"]
+                self._pub_ee.publish(strEE)
+
+        #self._param.append(self._param[2])
+        # self._param.pop()
+        # print(self._param)
+        # self._ui_param_pub.publish(json.dumps(self._param))    
     
     def run(self):
         rospy.spin()
