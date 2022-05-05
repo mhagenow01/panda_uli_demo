@@ -1,8 +1,10 @@
-    #![allow(dead_code)]
+#![allow(dead_code)]
 #![allow(unused_variables)]
 use std::collections::HashMap;
 use std::error::Error;
 use std::ptr::null;
+use serde_yaml;
+use serde::{Serialize, Deserialize};
 use rapier3d_f64::geometry::*;
 use rapier3d_f64::na;
 use na::{Vector3, UnitQuaternion, Quaternion};
@@ -17,6 +19,22 @@ mod planner;
 mod geometry;
 use crate::geometry::*;
 
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct SolverConfig {
+    pub max_iter: usize,
+    pub max_time_ms: u64
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct PlannerConfig {
+    pub dq : f64
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct IKSolverConfig {
+   pub solver: SolverConfig,
+   pub planner: PlannerConfig
+}
 
 pub struct IKSolver {
     pub cache : PANOCCache,
@@ -25,11 +43,12 @@ pub struct IKSolver {
     pub arm_colliders : HashMap::<String, Collider>,
     pub environment : ColliderSet,
     pub lb: Vec<f64>,
-    pub ub: Vec<f64>
+    pub ub: Vec<f64>,
+    pub config: IKSolverConfig
 }
 
 impl IKSolver {
-    pub fn new(cache : PANOCCache, robot: k::Chain<f64>, arm : k::SerialChain<f64>, arm_colliders : HashMap<String, Collider>, environment: ColliderSet) -> IKSolver {
+    pub fn new(cache : PANOCCache, robot: k::Chain<f64>, arm : k::SerialChain<f64>, arm_colliders : HashMap<String, Collider>, environment: ColliderSet, config: IKSolverConfig) -> IKSolver {
 
         let mut lb = Vec::new();
         let mut ub = Vec::new();
@@ -39,7 +58,7 @@ impl IKSolver {
             ub.push(joint.limits.unwrap().max - 0.1);
         }
     
-        IKSolver { cache, robot, arm, arm_colliders, environment, lb, ub }
+        IKSolver { cache, robot, arm, arm_colliders, environment, lb, ub, config}
     }
 
     pub fn set_ee(&mut self, name: &str) -> bool {
@@ -60,7 +79,7 @@ fn parse_c_str(s: *const c_char) -> Result<&'static str, Box<dyn Error>> {
 }
 
 
-fn make_solver(urdf: &str, ee_frame: &str, arm_colliders : &str, environment : &str) -> Option<IKSolver> {
+fn make_solver(urdf: &str, ee_frame: &str, arm_colliders : &str, environment : &str, config: &str) -> Option<IKSolver> {
     let robot : k::Chain<f64> = urdf_rs::read_from_string(urdf).ok()?.into();
     let arm = k::SerialChain::from_end(robot.find(ee_frame)?);
     let mut qs = Vec::new();
@@ -94,18 +113,20 @@ fn make_solver(urdf: &str, ee_frame: &str, arm_colliders : &str, environment : &
         );
     }
 
+
     
-    Some(IKSolver::new(cache, robot, arm, arm_colliders, environment))
+    Some(IKSolver::new(cache, robot, arm, arm_colliders, environment, serde_yaml::from_str(config).unwrap()))
 }
 
 #[no_mangle]
-pub extern "C" fn new_solver(urdf_ptr: *const c_char, ee_frame_ptr: *const c_char, arm_colliders_ptr: *const c_char, environment_ptr: *const c_char) -> *const IKSolver {
+pub extern "C" fn new_solver(urdf_ptr: *const c_char, ee_frame_ptr: *const c_char, arm_colliders_ptr: *const c_char, environment_ptr: *const c_char, config_ptr: *const c_char) -> *const IKSolver {
     let urdf = parse_c_str(urdf_ptr).unwrap();
     let ee_frame = parse_c_str(ee_frame_ptr).unwrap();
     let arm_colliders = parse_c_str(arm_colliders_ptr).unwrap();
     let environment = parse_c_str(environment_ptr).unwrap();
+    let config = parse_c_str(config_ptr).unwrap();
     
-    match make_solver(urdf, ee_frame, arm_colliders, environment) {
+    match make_solver(urdf, ee_frame, arm_colliders, environment, config) {
         Some(solver) => {
             Box::into_raw(Box::new(solver))
         },
@@ -128,16 +149,18 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
     let x = Vector3::new(trans[0], trans[1], trans[2]);
     let rot = UnitQuaternion::from_quaternion(Quaternion::new(trans[3], trans[4], trans[5], trans[6]));
     iksolver.arm.set_joint_positions_clamped(&current_q);
-    let res = solver::solve(&iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, &x, &rot, &iksolver.lb, &iksolver.ub);
+    let res = solver::solve(
+        &iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, 
+        &x, &rot, &iksolver.lb, &iksolver.ub,
+        iksolver.config.solver.max_iter,
+        iksolver.config.solver.max_time_ms, // Yea, this is way too may parameters. Ohh well.
+    );
     res.and_then(|q| { 
         iksolver.arm.set_joint_positions_clamped(&current_q);
-        //let q = planner::lerp(&iksolver.arm, &q, &iksolver.arm_colliders, &iksolver.environment);
+        let q = planner::lerp(&iksolver.arm, &q, &iksolver.arm_colliders, &iksolver.environment, iksolver.config.planner.dq);
         iksolver.arm.set_joint_positions_clamped(&q);
         iksolver.arm.update_transforms();
-        return Some(q);
-        Some(
-           q
-        ) 
+        Some(q)
     })
 }
 
@@ -153,7 +176,7 @@ pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_
                 q_array[i] = q[i];
             }
             true
-        }, 
+        },
         None => {
             false
         }
@@ -200,5 +223,39 @@ pub extern "C" fn set_ee(iksolver: *mut IKSolver, ee_frame_ptr: *const c_char) -
         None => {
             false
         }
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::fs::read_to_string;
+    use crate::{make_solver};
+    use crate::solver;
+    use rapier3d_f64::na;
+    use na::{Vector3, UnitQuaternion, Quaternion};
+    #[test]
+    fn collision_test() {
+        let mut iksolver = make_solver(
+            &read_to_string("config/panda.urdf").unwrap(),
+            "panda_gripper_joint", 
+            &read_to_string("config/panda_collision.json").unwrap(),
+            &read_to_string("config/environment.json").unwrap(),
+            &read_to_string("config/solver_config.yaml").unwrap(),
+        ).unwrap();
+        
+        let x = Vector3::new(0.3, 0., 0.2);
+        let rot = UnitQuaternion::from_quaternion(Quaternion::new(1., 0., 0., 0.));
+        
+        let res = solver::solve(
+            &iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, 
+            &x, &rot, &iksolver.lb, &iksolver.ub,
+            iksolver.config.solver.max_iter,
+            iksolver.config.solver.max_time_ms, // Yea, this is way too may parameters. Ohh well.
+        ).unwrap();
+        println!("{:?}", res);
+        println!("{}", iksolver.arm.end_transform());
+
+        assert!(false);
     }
 }

@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "collision_free_ik");
     ros::NodeHandle n;
 
-    string urdf, ee_frame, arm_colliders, environment;
-    string urdf_fp, arm_collider_fp, environment_fp;
+    string urdf, ee_frame, arm_colliders, environment, solver_config;
+    string urdf_fp, arm_collider_fp, environment_fp, solver_config_fp;
     bool valid_ee = true;
     vector<double> current_q;
     vector<string> joint_names;
@@ -55,14 +55,16 @@ int main(int argc, char** argv) {
     n.getParam("/default_end_effector_frame", ee_frame);
     n.getParam("/main/arm_collider_fp", arm_collider_fp);
     n.getParam("/main/environment_fp", environment_fp);
+    n.getParam("/main/solver_config_fp", solver_config_fp);
     n.getParam("/main/initial_q", current_q);
     n.getParam("/main/joint_names", joint_names);
 
     urdf = readFile(urdf_fp);
     arm_colliders = readFile(arm_collider_fp);
     environment = readFile(environment_fp);
+    solver_config = readFile(solver_config_fp);
     
-    IKSolver iksolver = IKSolver(urdf, ee_frame, arm_colliders, environment);
+    IKSolver iksolver = IKSolver(urdf, ee_frame, arm_colliders, environment, solver_config);
     if (current_q.size() != iksolver.dof()) {
         cout << "IK SOLVER NUM DOF: " << iksolver.dof() << endl;
         cout << "for file: " << urdf_fp << endl;

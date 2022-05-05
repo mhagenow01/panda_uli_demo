@@ -6,8 +6,8 @@ private:
     void* solver_ptr;
     
 public:
-    IKSolver(const std::string urdf_ptr, const std::string ee_frame_ptr, const std::string arm_colliders_ptr, const std::string environment_ptr) {
-        solver_ptr = IKSolverInterface::new_solver(urdf_ptr.c_str(), ee_frame_ptr.c_str(), arm_colliders_ptr.c_str(), environment_ptr.c_str());
+    IKSolver(const std::string urdf_ptr, const std::string ee_frame_ptr, const std::string arm_colliders_ptr, const std::string environment_ptr, const std::string solver_config_ptr) {
+        solver_ptr = IKSolverInterface::new_solver(urdf_ptr.c_str(), ee_frame_ptr.c_str(), arm_colliders_ptr.c_str(), environment_ptr.c_str(), solver_config_ptr.c_str());
     }
 
     int dof() {

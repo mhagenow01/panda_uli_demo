@@ -18,10 +18,10 @@ fn sign(x: f64) -> f64 {
 /// respecting collision geometry
 /// Returns the new end angles along with updated joint constraints
 pub fn lerp(arm: &k::SerialChain<f64>, end: &Vec<f64>, 
-    robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet) -> Vec<f64> {
+    robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet,
+    dq: f64) -> Vec<f64> {
     
     let mut q = arm.joint_positions();
-    let dq = 1e-1;
     
     let cutoff = 0.02;
     if collision_check(arm, robot_geometry, static_geometry, cutoff) {

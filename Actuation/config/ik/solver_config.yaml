@@ -1,0 +1,5 @@
+solver:
+  max_iter: 1000
+  max_time_ms: 100
+planner:
+  dq: 0.1
