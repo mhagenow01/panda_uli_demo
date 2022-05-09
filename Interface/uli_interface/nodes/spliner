@@ -314,7 +314,7 @@ class Spliner(object):
         vs=[margin]
         for i in range(n_passes):
             x = margin if i%2 else (1-margin)
-            y = margin+length*i/n_passes
+            y = margin+length*i/(n_passes-1)
             val = [x,y]
             if not horizontal:
                 val = [y,x]
@@ -322,7 +322,7 @@ class Spliner(object):
             vs.append(val[1])
             if i != (n_passes-1):
                 x = margin if i%2 else (1-margin)
-                y = margin+length*(i+1)/n_passes
+                y = margin+length*(i+1)/(n_passes-1)
                 val = [x,y]
                 if not horizontal:
                     val = [y,x]

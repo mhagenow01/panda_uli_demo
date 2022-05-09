@@ -279,7 +279,7 @@ class DMPLWRhardcoded:
                 y.extend(y_temp)
                 z.extend(z_temp)
         
-            print("seg time: ",time.time()-startt)
+            # print("seg time: ",time.time()-startt)
         return np.array(x), np.array(y), np.array(z)
 
     def plotModel(self, num_demos, learnedSegments):
@@ -629,6 +629,10 @@ class DMPLWRhardcoded:
 
             while np.ceil(s) < segment.num_samples:
                 input_vals, input_button = rosExecution.getZDInput()
+
+                # Quit if the robot isn't active anymore
+                if not rosExecution.robotActive():
+                    return
 
                 correction = self.getCorrection(segment.corrections,input_type,input_vals,segment.state_names,s,surface,Z,dX)
                 # correction = np.zeros(np.shape(correction))

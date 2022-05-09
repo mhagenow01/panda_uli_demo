@@ -45,7 +45,6 @@ impl IntoCollider for Geometry {
                     size[1] / 2., 
                     size[2] / 2.
                 ).build();
-                println!("{:?}", size);
                 collider.set_position(trans);
                 collider
             },

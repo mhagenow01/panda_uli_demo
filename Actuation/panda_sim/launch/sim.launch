@@ -11,9 +11,6 @@
     </node>
 
     <node name="ee_selector" pkg="ft_sensor" type="ee_selector" output="screen" />
-    
-    <!-- republishes outgoing joint angles to fake real joint angles for ik current command-->
-    <node name="joint_republisher" pkg="panda_sim" type="joint_republisher" output="screen" />
         
     <!-- startup rviz -->
     <node pkg="panda_sim" type="rviz_manager" name="rviz_manager">
@@ -24,6 +21,9 @@
         <include file="$(find panda_sim)/launch/joint_state_pub.launch">  
         </include>
 	</group>
+
+    <!-- republishes outgoing joint angles to fake real joint angles for ik current command-->
+    <node name="joint_republisher" pkg="panda_sim" type="joint_republisher" output="screen" />
     
     <node pkg="collision_free_ik" type="main" name="main" output="screen">
         <param name="urdf_fp" type="string" value="$(arg config)/panda.urdf"/>

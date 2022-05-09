@@ -110,7 +110,9 @@ fn regularization(current_q: &Vec<f64>, u: &[f64]) -> f64 {
 pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache, 
     robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet, 
     x: &rna::Vector3<f64>, rot: &rna::UnitQuaternion<f64>,
-    lb: &Vec<f64>, ub: &Vec<f64>) -> Option<Vec<f64>> {
+    lb: &Vec<f64>, ub: &Vec<f64>,
+    max_iter: usize,
+    max_time_ms: u64) -> Option<Vec<f64>> {
     
     let x_k = Vector3::from_iterator(x.iter().map(|&v| v));
     let rot_k = UnitQuaternion::from_quaternion(Quaternion::new(rot.w, rot.i, rot.j, rot.k));
@@ -155,20 +157,11 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
     arm.set_joint_positions_clamped(&u);
 
     //let jksolver = k::JacobianIkSolver::new(0.05, 0.05, 1., 100);
-    let mut panoc = PANOCOptimizer::new(problem, &mut cache).with_max_iter(10).with_max_duration(Duration::from_millis(2));
+    let mut panoc = PANOCOptimizer::new(problem, &mut cache).with_max_iter(max_iter).with_max_duration(Duration::from_millis(max_time_ms));
     let status = panoc.solve(&mut u);
-    // let jsstatus = jksolver.solve(&arm, &na::Isometry3::from_parts(
-    //     na::Translation { vector: *x }, 
-    //     *rot
-    // ));
-
-    // if jsstatus.is_ok() {
-    //     u.copy_from_slice(arm.joint_positions().as_slice());
-    // }
     if status.is_err() {
         println!("{:?}", status);
         return None;
     }
-    //println!("{:?}", status.unwrap().solve_time());
     Some(u)
 }

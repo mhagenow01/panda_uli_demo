@@ -12,24 +12,24 @@ export const ParameterModule = (props) => {
   const [setParameter] = useAppStore(state=>([state.setParameter]))
   if(!parameterInfo)
     return null
-  const label =<Text alignSelf="center">{parameterInfo.label}</Text>
+  const label =<Box alignContent={"center"} width={'30%'}><Text alignSelf="center">{parameterInfo.label}</Text></Box>
   return (
     <Box direction="row" gap="medium">
       {label}
       {parameterInfo.type === 'button' && (
         <Button label={parameterInfo.label} 
-      margin={"small"}/>
+        margin={"small"}/>
       )}
       {parameterInfo.type === 'slider' && (
-      <Box direction="row" gap="medium">
-          <RangeInput 
-          value= {parameterInfo.value}
-          min = {parameterInfo.min}
-          max = {parameterInfo.max}
-          onChange={event => setParameter(idx,event.target.value)}
-          margin={"small"}/>
-          <Text >{parameterInfo.value}</Text>
-      </Box>
+        <Box direction="row" gap="medium">
+            <RangeInput 
+            value= {parameterInfo.value}
+            min = {parameterInfo.min}
+            max = {parameterInfo.max}
+            onChange={event => setParameter(idx,event.target.value)}
+            margin={"small"}/>
+            <Text >{parameterInfo.value}</Text>
+        </Box>
       )}
       {parameterInfo.type === 'select' && (
         <Select
