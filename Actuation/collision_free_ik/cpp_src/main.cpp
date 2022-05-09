@@ -23,7 +23,7 @@ string readFile(string fp) {
     
     if (myfile.is_open()) {
         while (getline(myfile, line))
-            allText += line;
+            allText += line + '\n';
         myfile.close();
     }
 
@@ -51,13 +51,13 @@ int main(int argc, char** argv) {
     bool valid_ee = true;
     vector<double> current_q;
     vector<string> joint_names;
-    n.getParam("/main/urdf_fp", urdf_fp);
     n.getParam("/default_end_effector_frame", ee_frame);
-    n.getParam("/main/arm_collider_fp", arm_collider_fp);
-    n.getParam("/main/environment_fp", environment_fp);
-    n.getParam("/main/solver_config_fp", solver_config_fp);
-    n.getParam("/main/initial_q", current_q);
-    n.getParam("/main/joint_names", joint_names);
+    n.getParam("/collision_free_ik/urdf_fp", urdf_fp);
+    n.getParam("/collision_free_ik/arm_collider_fp", arm_collider_fp);
+    n.getParam("/collision_free_ik/environment_fp", environment_fp);
+    n.getParam("/collision_free_ik/solver_config_fp", solver_config_fp);
+    n.getParam("/collision_free_ik/initial_q", current_q);
+    n.getParam("/collision_free_ik/joint_names", joint_names);
 
     urdf = readFile(urdf_fp);
     arm_colliders = readFile(arm_collider_fp);

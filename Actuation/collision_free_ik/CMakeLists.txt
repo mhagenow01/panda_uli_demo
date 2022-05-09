@@ -32,19 +32,19 @@ set_target_properties(panda_ik_rust_lib PROPERTIES IMPORTED_LOCATION ${IK_LIB})
 # End rust compile
 
 include_directories(${catkin_INCLUDE_DIRS})
-add_executable(main cpp_src/main.cpp)
+add_executable(collision_free_ik cpp_src/main.cpp)
 
 add_dependencies(
-    main
+    collision_free_ik
     panda_ik_rust
     panda_ik_rust_lib
 )
 
-target_include_directories(main PUBLIC include)
-target_link_libraries(main ${catkin_LIBRARIES} panda_ik_rust_lib)
+target_include_directories(collision_free_ik PUBLIC include)
+target_link_libraries(collision_free_ik ${catkin_LIBRARIES} panda_ik_rust_lib)
 
 
-# install(TARGETS main
+# install(TARGETS collision_free_ik
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

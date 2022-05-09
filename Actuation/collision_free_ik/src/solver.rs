@@ -92,7 +92,7 @@ fn collision_cost(arm: &k::SerialChain<f64>, robot_geometry: &HashMap<String, Co
             let world_trans = trans * robot_collider.position();
             let dist = proximity(static_geometry, &world_trans, shape, max_dist).max(min_dist);
             dists.push(dist);
-            c += dist.powi(-exp) - max_dist.powi(-exp);
+            c += dist.powi(-exp) - max_dist.powi(-exp); // Uhh. this is non-differentiable.
         }
     }
     c

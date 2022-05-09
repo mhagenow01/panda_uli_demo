@@ -19,19 +19,19 @@ fn sign(x: f64) -> f64 {
 /// Returns the new end angles along with updated joint constraints
 pub fn lerp(arm: &k::SerialChain<f64>, end: &Vec<f64>, 
     robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet,
-    dq: f64) -> Vec<f64> {
+    dq: f64,
+    safety_radius: f64) -> Vec<f64> {
     
     let mut q = arm.joint_positions();
     
-    let cutoff = 0.02;
-    if collision_check(arm, robot_geometry, static_geometry, cutoff) {
+    if collision_check(arm, robot_geometry, static_geometry, safety_radius) {
         return q;
     }
     let mut last_valid_step = q.clone();
     while step(&mut q, dq, &end) {
         arm.set_joint_positions_clamped(&q);
         
-        if collision_check(arm, robot_geometry, static_geometry,cutoff) {
+        if collision_check(arm, robot_geometry, static_geometry,safety_radius) {
             return last_valid_step;
         }
         last_valid_step.clone_from(&q);

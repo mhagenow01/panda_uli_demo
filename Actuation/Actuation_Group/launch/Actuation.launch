@@ -7,7 +7,7 @@
   <arg name="load_gripper" value="false" />
   <param name="robot_description" command="$(find xacro)/xacro --inorder '$(arg config)/panda.urdf'" />
 
-  <node pkg="collision_free_ik" type="main" name="main" output="screen">
+  <node pkg="collision_free_ik" type="collision_free_ik" name="collision_free_ik" output="screen">
       <param name="urdf_fp" type="string" value="$(arg config)/panda.urdf"/>
       <param name="arm_collider_fp" type="string" value="$(arg config)/ik/panda_collision.json"/>
       <param name="environment_fp" type="string" value="$(arg config)/ik/environment.json"/>

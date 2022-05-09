@@ -22,18 +22,21 @@ use crate::geometry::*;
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct SolverConfig {
     pub max_iter: usize,
-    pub max_time_ms: u64
+    pub max_time_ms: u64,
+    pub local_search_bound: f64
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlannerConfig {
-    pub dq : f64
+    pub dq : f64,
+    pub safety_radius: f64,
+    pub enabled: bool
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct IKSolverConfig {
    pub solver: SolverConfig,
-   pub planner: PlannerConfig
+   pub planner: PlannerConfig,
 }
 
 pub struct IKSolver {
@@ -149,16 +152,29 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
     let x = Vector3::new(trans[0], trans[1], trans[2]);
     let rot = UnitQuaternion::from_quaternion(Quaternion::new(trans[3], trans[4], trans[5], trans[6]));
     iksolver.arm.set_joint_positions_clamped(&current_q);
+    let current_q = iksolver.arm.joint_positions();
+    let mut lb = iksolver.lb.clone();
+    let mut ub = iksolver.ub.clone();
+    for i in 0..lb.len() {
+        lb[i] = lb[i].max(current_q[i] - iksolver.config.solver.local_search_bound);
+        ub[i] = ub[i].min(current_q[i] + iksolver.config.solver.local_search_bound);
+    }
     let res = solver::solve(
         &iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, 
-        &x, &rot, &iksolver.lb, &iksolver.ub,
+        &x, &rot, &lb, &ub,
         iksolver.config.solver.max_iter,
         iksolver.config.solver.max_time_ms, // Yea, this is way too may parameters. Ohh well.
     );
     res.and_then(|q| { 
         iksolver.arm.set_joint_positions_clamped(&current_q);
-        let q = planner::lerp(&iksolver.arm, &q, &iksolver.arm_colliders, &iksolver.environment, iksolver.config.planner.dq);
-        iksolver.arm.set_joint_positions_clamped(&q);
+        if iksolver.config.planner.enabled {
+            let q = planner::lerp(
+                &iksolver.arm, &q, &iksolver.arm_colliders, 
+                &iksolver.environment, iksolver.config.planner.dq,
+                iksolver.config.planner.safety_radius
+            );
+            iksolver.arm.set_joint_positions_clamped(&q);
+        }
         iksolver.arm.update_transforms();
         Some(q)
     })

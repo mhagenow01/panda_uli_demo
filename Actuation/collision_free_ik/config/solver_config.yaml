@@ -1,5 +1,8 @@
 solver:
   max_iter: 1000
-  max_time_ms: 100
+  max_time_ms: 15
+  local_search_bound: 0.1
 planner:
+  enabled: True
   dq: 0.1
+  safety_radius: 0.02
