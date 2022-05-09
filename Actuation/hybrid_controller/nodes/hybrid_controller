@@ -26,6 +26,7 @@ class HybridController:
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.ik_pub = rospy.Publisher('/ik/pose_command', PoseStamped, queue_size=1)
+        self.ik_nohybrid_pub = rospy.Publisher('/panda/pose_nohybrid', PoseStamped, queue_size=1)
 
         time.sleep(0.5)
 
@@ -88,10 +89,24 @@ class HybridController:
                 hyb_torque_cmd = self.sel_vector[3:6]*rvec_des_cf + (np.ones(3,)-self.sel_vector[3:6])*(self.gain_ang*(self.desired_torque-curr_t_cf)+rvec_curr_cf)
                 R_torque_hybrid = ScipyR.from_rotvec(hyb_torque_cmd)
 
-
                 # Convert back to global frame
                 new_pos = R_cf.apply(new_pos_cf)
                 new_quat = (R_cf * R_torque_hybrid).as_quat()
+
+                # Send original pose goal (without hybrid control law) as a posestamped
+                pose_nohybrid = PoseStamped()
+                pos_noh = R_cf.apply(self.desired_pos_cf)
+                quat_noh = (R_cf * R_desired_q_cf).as_quat()
+                pose_nohybrid.header.stamp = rospy.Time.now()
+                pose_nohybrid.header.frame_id = 'map'
+                pose_nohybrid.pose.position.x = pos_noh[0]
+                pose_nohybrid.pose.position.y = pos_noh[1]
+                pose_nohybrid.pose.position.z = pos_noh[2]
+                pose_nohybrid.pose.orientation.x = quat_noh[0]
+                pose_nohybrid.pose.orientation.y = quat_noh[1]
+                pose_nohybrid.pose.orientation.z = quat_noh[2]
+                pose_nohybrid.pose.orientation.w = quat_noh[3]
+                self.ik_nohybrid_pub.publish(pose_nohybrid)
 
                 # Send to IK
                 pose_out = PoseStamped()

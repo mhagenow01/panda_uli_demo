@@ -226,14 +226,40 @@
     <child link="panda_flange"/>
     <origin rpy="0 0 -0.785398163397" xyz="0 0 0"/>
   </joint>
+  <link name="panda_flange_original"/>
+  <joint name="panda_flange_original_joint" type="fixed">
+    <parent link="panda_link8"/>
+    <child link="panda_flange_original"/>
+    <origin rpy="0 0 -0.785398163397" xyz="0 0 0"/>
+  </joint>
+
+<!--  ########################## -->
+  <!--  # Camera         -->
+  <!--  ########################## -->
+
   <link name="camera_base">
   </link>
   <link name="camera_visor">
   </link>
   <joint name="fake_base" type="fixed">
-    <parent link="panda_flange"/>
+    <parent link="panda_flange_original"/>
+    <child link="camera_basenonrotated"/>
+    <!-- z is 11.4808 mm for panda flange to top of camera mount + 15.20653 from flange mount to tripod mount-->
+    <origin rpy="3.14 -1.57 0.0" xyz="0.093997 0.0 0.0266868"/>
+  </joint>
+  <link name="camera_basenonrotated">
+  </link>
+  <joint name="camera_rotation" type="fixed">
+    <parent link="camera_basenonrotated"/>
+    <child link="camera_tripod"/>
+    <origin rpy="0 -0.16069 0" xyz="0.0 0.0 0.0"/>
+  </joint>
+  <link name="camera_tripod">
+  </link>
+  <joint name="camera_tripod_joint" type="fixed">
+    <parent link="camera_tripod"/>
     <child link="camera_base"/>
-    <origin rpy="3.14 -1.57 0.0" xyz="0.08211274 0.0 0.02823"/>
+    <origin rpy="0 0 0" xyz="0.062 0.0 0.0068"/>
   </joint>
   <joint name="camera_base_to_body" type="fixed">
     <parent link="camera_base"/>
@@ -244,6 +270,21 @@
     <parent link="camera_base"/>
     <child link="camera_visor"/>
     <origin rpy="0. 0. 0." xyz="0. 0. 0."/>
+  </joint>
+  <link name="camera_holder">
+    <visual>
+      <origin rpy="0 0 0"  xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="package://panda_sim/meshes/camera_holder_assem.STL"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+  </link>
+  <joint name="camera_holder_joint" type="fixed">
+    <parent link="panda_flange_original"/>
+    <child link="camera_holder"/>
+    <!-- z is 11.4808 mm for panda flange to top of camera mount + 15.20653 from flange mount to tripod mount-->
+    <origin rpy="3.14 0.0 0.0" xyz="0 0 0.0114808"/>
   </joint>
 
 
