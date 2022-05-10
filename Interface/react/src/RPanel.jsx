@@ -5,10 +5,10 @@ import {ParameterModule} from './ParameterModule';
 import { Grommet, List, Stack,Button, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
 
 export const RPanel = (props) => {  
-  const [connect, connection, url,imageTopic,setCanvasOpacity,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.setCanvasOpacity,state.tmpSub])) 
+  const [connect, connection, url,imageTopic,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.tmpSub])) 
   const parameters = useAppStore(state=>state.parameters)
   
-  const [messages, addMessage, sendMessage, sendCoordinates,publishStates] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates,state.publishStates]))
+  const [messages, addMessage, sendMessage, sendCoordinates,publishStates,setCanvasOpacity] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates,state.publishStates,state.setCanvasOpacity]))
     return (
       <Grid
       rows={['10%', '10%','70%']}
@@ -30,8 +30,8 @@ export const RPanel = (props) => {
        <Box gridArea='send'  basis="medium"  alignSelf="center"  direction="row">
         <Button size="large" alignSelf="center" label="Send"
           onClick={() => {
-            // sendCoordinates();
-            tmpSub.displayCloud();
+            sendCoordinates();
+            //tmpSub.displayCloud();
           }}
           />
 

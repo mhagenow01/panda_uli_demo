@@ -93,6 +93,12 @@ const store = (set) => ({
             messageType: 'std_msgs/String'
         });
 
+        const eventTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'interaction_events',
+            messageType: 'std_msgs/String'
+        });
+
         const commandTopic = new ROSLIB.Topic({
             ros: ros,
             name: 'ui/commands',
@@ -125,7 +131,7 @@ const store = (set) => ({
 		const imageTopic = new ROSLIB.Topic({
 			ros: ros,
 			//name: 'camera/image_raw/compressed',
-			name: 'rgb/image_raw/compressed',
+			name: 'k4a/rgb/image_raw/compressed',
 			messageType: 'sensor_msgs/CompressedImage',
 		});
          
@@ -136,6 +142,7 @@ const store = (set) => ({
 		});
 
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
+        eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
         setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
         ros.connect();
 

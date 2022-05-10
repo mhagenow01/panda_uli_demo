@@ -29,6 +29,7 @@ from sensor_msgs.msg import Image, PointCloud2, CameraInfo, JointState, Compress
 from geometry_msgs.msg import TransformStamped, PoseStamped, Point, Pose, PoseArray, Quaternion, Twist, Vector3
 from std_msgs.msg import String
 from nav_msgs.msg import Path
+from scipy.spatial.transform import Slerp
 
 import image_geometry
 from tf.transformations import quaternion_from_euler
@@ -40,12 +41,40 @@ from scipy.spatial.transform import Rotation as ScipyR
 REFERENCE_FRAME='panda_link0'
 CAMERA_FRAME='rgb_camera_link'
 
-def interpMultD(starting_vals,ending_vals,num_pts):
+# starting vals is a list of starting vals
+# ending vals is a list of ending vals
+# num_pts is how many interp values
+# quat_vars is the index of any starts of quaternions so they can be SLERPed instead of LERPed
+# super_pos_vars is the starting index for 2-pairs of variables which should have an added sine wave (e.g., rubbing)
+# super_pos_freq is the frequency for the starting index pairs
+# super_pos_amp is the amplitude for the starting index pairs
+def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[3], super_pos_vars = [], super_pos_freq=[], super_pos_amp = []):
     vals = []
+    # LERP ALL VARIABLES
     for ii in range(0,num_pts):
+        # super is to potentially add a circular motion on top of the LERP motion
+        freq_super = 0.0
+        amp_super = 0.0
+        added_sine = np.zeros((np.shape(starting_vals)))
+        for jj in range(0,len(super_pos_vars)):
+            amp = super_pos_amp[jj]
+            freq = super_pos_freq[jj]
+            added_sine[super_pos_vars[jj]] = np.sin(np.pi*float(ii)/num_pts)*amp*np.sin(freq*float(ii)/2*np.pi)
+            added_sine[super_pos_vars[jj]+1] = np.sin(np.pi*float(ii)/num_pts)*amp*np.cos(freq*float(ii)/2*np.pi)
         c_i = float(ii)/float(num_pts) # interpolation coefficient
-        vals.append(list(c_i*(e-s)+s for s,e in zip(starting_vals,ending_vals)))
-    return np.asarray(vals).T
+        vals.append(list(c_i*(e-s)+s+a for s,e,a in zip(starting_vals,ending_vals,added_sine)))
+    vals = np.asarray(vals) # currently,num_samples x num_vars
+    # SLERP QUATERIONS
+    for jj in range(0,len(quat_vars)):
+        starting_q = np.array(starting_vals[quat_vars[jj]:quat_vars[jj]+4])
+        ending_q = np.array(ending_vals[quat_vars[jj]:quat_vars[jj]+4])
+        key_times = [0,num_pts-1]
+        key_rots = ScipyR.from_quat(np.concatenate((starting_q.reshape((1,4)),ending_q.reshape((1,4))),axis=0))
+        slerper = Slerp(key_times, key_rots)
+        pts = list(range(0,num_pts))
+        slerped = slerper(pts)
+        vals[:,quat_vars[jj]:quat_vars[jj]+4] = np.asarray(slerped.as_quat())
+    return vals.T
 
 
 def get_mid_points(p1,p2,k):
@@ -95,7 +124,8 @@ class Spliner(object):
         self._learnedSegments = None
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
-        self._cam_info_sub = rospy.Subscriber("/depth_to_rgb/camera_info", CameraInfo, self.on_info)
+        self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
+        self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
 
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self._n_passes = 2
@@ -118,7 +148,7 @@ class Spliner(object):
             self._height = msg.height
             self._camera_model = image_geometry.PinholeCameraModel()
             self._camera_model.fromCameraInfo(msg)
-            self._depth_sub = rospy.Subscriber("/depth_to_rgb/image_raw", Image, self.on_depth)
+            self._depth_sub = rospy.Subscriber("/k4a/depth_to_rgb/image_raw", Image, self.on_depth)
             self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
         
     def on_command(self,msg):
@@ -146,6 +176,7 @@ class Spliner(object):
                 t_surface=[t.x,t.y,t.z]
 
                 self._model.executeModel(learnedSegments=self._learnedSegments,R_surface=R_surface,t_surface=t_surface)
+                self._events_pub.publish("motion_finished")
 
             
     def get_xyz_from_pixel(self, x,y,d):
@@ -204,15 +235,35 @@ class Spliner(object):
 
         ps = coord.split(";")
 
-        p1 = [int(float(ps[0].split(',')[0])*self._width),int(float(ps[0].split(',')[1])*self._height)]
-        p2 = [int(float(ps[1].split(',')[0])*self._width),int(float(ps[1].split(',')[1])*self._height)]
-        p3 = [int(float(ps[2].split(',')[0])*self._width),int(float(ps[2].split(',')[1])*self._height)]
-        p4 = [int(float(ps[3].split(',')[0])*self._width),int(float(ps[3].split(',')[1])*self._height)]
-
-        pose1 = self.get_point(p1,CAMERA_FRAME)
-        pose2 = self.get_point(p2,CAMERA_FRAME)
-        pose3 = self.get_point(p3,CAMERA_FRAME)
-        pose4 = self.get_point(p4,CAMERA_FRAME)
+        p1 = np.array([int(float(ps[0].split(',')[0])*self._width),int(float(ps[0].split(',')[1])*self._height)])
+        p2 = np.array([int(float(ps[1].split(',')[0])*self._width),int(float(ps[1].split(',')[1])*self._height)])
+        p3 = np.array([int(float(ps[2].split(',')[0])*self._width),int(float(ps[2].split(',')[1])*self._height)])
+        p4 = np.array([int(float(ps[3].split(',')[0])*self._width),int(float(ps[3].split(',')[1])*self._height)])
+        points = [p1,p2,p3,p4]
+        dp = np.array([np.linalg.norm(p) for p in points])
+        start_index = np.argmin(dp)
+        if points[(start_index + 1)%4][1] > points[start_index-1][1]:
+            pp1 = points[start_index]
+            pp2 = points[(start_index + 1)%4]
+            pp3 = points[(start_index + 2)%4]
+            pp4 = points[(start_index + 3)%4]
+        else:
+            pp1 = points[start_index]
+            pp2 = points[start_index - 1]
+            pp3 = points[start_index - 2]
+            pp4 = points[start_index - 3]
+        print("p1 "+str(p1))
+        print("p2 "+str(p2))
+        print("p3 "+str(p3))
+        print("p4 "+str(p4))
+        print("pp1 "+str(pp1))
+        print("pp2 "+str(pp2))
+        print("pp3 "+str(pp3))
+        print("pp4 "+str(pp4))
+        pose1 = self.get_point(pp1,CAMERA_FRAME)
+        pose2 = self.get_point(pp2,CAMERA_FRAME)
+        pose3 = self.get_point(pp3,CAMERA_FRAME)
+        pose4 = self.get_point(pp4,CAMERA_FRAME)
         
         dt = get_distance(pose1,pose2)
         dr = get_distance(pose2,pose3)
@@ -220,13 +271,13 @@ class Spliner(object):
         dl = get_distance(pose4,pose1)
 
 
-        spline_step = .02
+        # spline_step = .03
         
-        step_x = int(max(dt,db)/spline_step)+1
-        step_y = int(max(dr,dl)/spline_step)+1
+        step_x = 10#int(max(dt,db)/spline_step)+1
+        step_y = 10#int(max(dr,dl)/spline_step)+1
 
-        bot = get_mid_points(p1,p2,step_x)
-        top = get_mid_points(p4,p3,step_x)
+        top = get_mid_points(pp1,pp2,step_x)
+        bot = get_mid_points(pp4,pp3,step_x)
         
         p=[]
         for i in range(step_x):
@@ -243,20 +294,27 @@ class Spliner(object):
     
     def get_approach(self, surfaceBSpline, u0, v0):
         ang_relative_to_surface = 0 # degrees
-        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
         q_ts = R_tool_surf.as_quat()
 
         segment = HybridSegment()
         segment.hybrid = False
         segment.num_samples = 100 # 2 seconds
-        segment.state_names = ['x','y','z','qx','qy','qz','qw']
+        segment.state_names = ['x','y','z','qx','qy','qz','qw','valve']
         approach_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(u0, v0)
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
         q_app = (R_surf * R_tool_surf).as_quat()
 
-        offset =  0.05 * n_hat
-        starting = [approach_pt[0] + offset[0], approach_pt[1] + offset[1], approach_pt[2]  + offset[2], q_app[0], q_app[1], q_app[2], q_app[3]]
-        ending = [approach_pt[0], approach_pt[1], approach_pt[2] + 0.0, q_app[0], q_app[1], q_app[2], q_app[3]]
+        #dot product between robot-approach point
+        trans = self._tfBuffer.lookup_transform(REFERENCE_FRAME,CAMERA_FRAME, rospy.Time()).transform.translation  
+        view_v = np.array(approach_pt - [trans.x, trans.y, trans.z])
+        # if np.dot(view_v,n_hat) < 0:
+        #     n_hat = -n_hat
+
+        offset1 =  0.05 * n_hat
+        offset2 =  0.005 * n_hat
+        starting = [approach_pt[0] + offset1[0], approach_pt[1] + offset1[1], approach_pt[2]  + offset1[2], q_app[0], q_app[1], q_app[2], q_app[3],0]
+        ending = [approach_pt[0] + offset2[0], approach_pt[1] + offset2[1], approach_pt[2]  + offset2[2], q_app[0], q_app[1], q_app[2], q_app[3],1]
         orig_vals = interpMultD(starting,ending,segment.num_samples)
         segment.original_vals = []
         segment.original_vals.append(orig_vals)
@@ -265,42 +323,52 @@ class Spliner(object):
 
     def get_segments(self, surfaceBSpline,us,vs):
         ang_relative_to_surface = 0 # degrees
-        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
         q_ts = R_tool_surf.as_quat()
 
         segment = HybridSegment()
         segment.hybrid = True
         segment.surface = surfaceBSpline
-        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw']
+        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','valve']
         segment.original_vals = []
-        samps = 150
+        samps = 400
         segment.num_samples = samps *  (len(us)-1)
 
         segments = []
         for i in range(len(us)-1):
-            segments.append(interpMultD([us[i], vs[i], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3]],[us[i+1], vs[i+1], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3]],samps))
+            segments.append(interpMultD([us[i], vs[i], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],[us[i+1], vs[i+1], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],samps))
         segment.original_vals.append(np.hstack(segments))
         return segment
 
     def get_return(self,surfaceBSpline,un,vn):
         ang_relative_to_surface = 0 # degrees
-        R_tool_surf = ScipyR.from_euler('y',ang_relative_to_surface,degrees=True)
+        R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
         q_ts = R_tool_surf.as_quat()
 
         segment = HybridSegment()
         segment.hybrid = False
         segment.num_samples = 100 # 2 seconds
-        segment.state_names = ['x','y','z','qx','qy','qz','qw']
+        segment.state_names = ['x','y','z','qx','qy','qz','qw','valve']
         segment.original_vals = []
 
         retract_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(un, vn)
-        offset =  0.05 * n_hat
+
+        #dot product between robot-retract_pt
+        # trans = self._tfBuffer.lookup_transform(REFERENCE_FRAME,CAMERA_FRAME, rospy.Time()).transform.translation  
+        # view_v = np.array(retract_pt - [trans.x, trans.y, trans.z])
+        # if np.dot(view_v,n_hat) < 0:
+        #     n_hat = -n_hat
+
+        trans = self._tfBuffer.lookup_transform(CAMERA_FRAME, "panda_ee", rospy.Time()).transform
+
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
         q_ret = (R_surf * R_tool_surf).as_quat()
         offset1 =  0.005 * n_hat
-        starting = [retract_pt[0]+offset1[0], retract_pt[1]+offset1[1], retract_pt[2]+offset1[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3]]
+        starting = [retract_pt[0]+offset1[0], retract_pt[1]+offset1[1], retract_pt[2]+offset1[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3],1]
+        
         offset2 =  0.05 * n_hat
-        ending = [retract_pt[0]+offset2[0], retract_pt[1]+offset2[1], retract_pt[2]+offset2[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3]]
+        # ending = [retract_pt[0]+offset2[0], retract_pt[1]+offset2[1], retract_pt[2]+offset2[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3],0]
+        ending = [trans.translation.x, trans.translation.y, trans.translation.z, trans.rotation.x, trans.rotation.y, trans.rotation.z, trans.rotation.w, 0]
         orig_vals = interpMultD(starting,ending,segment.num_samples)
         segment.original_vals.append(orig_vals)
         return segment
@@ -316,7 +384,7 @@ class Spliner(object):
             x = margin if i%2 else (1-margin)
             y = margin+length*i/(n_passes-1)
             val = [x,y]
-            if not horizontal:
+            if horizontal:
                 val = [y,x]
             us.append(val[0])
             vs.append(val[1])
@@ -324,7 +392,7 @@ class Spliner(object):
                 x = margin if i%2 else (1-margin)
                 y = margin+length*(i+1)/(n_passes-1)
                 val = [x,y]
-                if not horizontal:
+                if horizontal:
                     val = [y,x]
                 us.append(val[0])
                 vs.append(val[1])
@@ -333,15 +401,20 @@ class Spliner(object):
 
     def get_path(self, coord):
         surfaceBSpline = self.get_surface(coord)
+        print("getting uvs")
         us,vs = self.get_uvs()
         
+        print("getting segments")
         segments = [self.get_approach(surfaceBSpline, us[0],vs[0]), self.get_segments(surfaceBSpline,us,vs), self.get_return(surfaceBSpline,us[-1],vs[-1])]
         segments = np.hstack(segments)
         
+        print("creating model")
         self._model = DMPLWRhardcoded(verbose=False)
+        print("learning")
         self._learnedSegments = self._model.learnModel(segments,'')
+        print("getting traj")
         xs,ys,zs = self._model.getTraj(self._learnedSegments,orig=False)
-        
+        print("done")
         path = Path()
         path.header.frame_id = CAMERA_FRAME
         for x,y,z in zip(xs,ys,zs):
