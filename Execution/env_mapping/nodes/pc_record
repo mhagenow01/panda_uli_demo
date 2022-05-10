@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+
+# Used to store the last mapped point cloud
+import rospy
+from sensor_msgs.msg import PointCloud2, Image
+from std_msgs.msg import String, Float64
+import numpy as np
+import sys
+import rospkg
+
+lastCloud = None
+
+def saveCloud(data):
+    global lastcloud
+    lastcloud = data
+
+def mappingToggle(data):
+    global lastcloud
+    if data.data=="off":
+        if lastcloud is not None:
+            rospack = rospkg.RosPack()
+            path = rospack.get_path('drone_panda')+'/saved_msgs/pc_new.txt'
+            with open(path, 'w') as outfile:
+                lastcloud.serialize(outfile.buffer)
+
+
+def getPC():
+    rospy.init_node('pc_recorder')
+    rospy.Subscriber("/rtabmap/cloud_map", PointCloud2, saveCloud)
+    rospy.Subscriber("rvizToggle", String, mappingToggle)
+    rospy.spin()
+
+
+if __name__ == '__main__':
+    getPC()
+
+
