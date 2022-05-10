@@ -12,7 +12,7 @@ class JointRepublisher:
     def __init__(self):
         self._joint_sub = rospy.Subscriber("/joint_commands", JointCommand, self.newcommand, queue_size=1)
         self._joint_pub = rospy.Publisher("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState, queue_size=5)
-        self.jointpos = rospy.get_param("/main/initial_q")
+        self.jointpos = rospy.get_param("/collision_free_ik/initial_q")
 
         rospy.sleep(0.5)
         self.commandLoop()
