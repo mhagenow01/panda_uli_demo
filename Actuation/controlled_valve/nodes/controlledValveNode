@@ -46,14 +46,22 @@ class ControlledValve():
 
 
     def valve_callback(self,data):
-        if data.data == 1 and self.curr_val !=1 :
-            self.curr_val = 1
-            self.ser.write(bytearray('1', 'ascii'))
-            print("1 sent")
-        elif data.data ==0 and self.curr_val !=0 :
-            self.curr_val = 0
-            self.ser.write(bytearray('0', 'ascii'))
-            print("0 sent")
+        serialsent = False
+        ii = 0
+        while not serialsent and ii < 10:
+            try:
+                if data.data == 1 and self.curr_val !=1 :
+                    self.curr_val = 1
+                    self.ser.write(bytearray('1', 'ascii'))
+                    print("1 sent")
+                elif data.data ==0 and self.curr_val !=0 :
+                    self.curr_val = 0
+                    self.ser.write(bytearray('0', 'ascii'))
+                    print("0 sent")
+                serialsent = True
+            except:
+                ii += 1
+                rospy.sleep(0.2)
 
     def runLoop(self):
         while not rospy.is_shutdown():

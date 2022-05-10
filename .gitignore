@@ -7,3 +7,4 @@ logs/
 *.pyc
 *.ipynb_checkpoints/
 *.html
+*saved_clouds/
