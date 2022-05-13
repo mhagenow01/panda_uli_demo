@@ -13,6 +13,7 @@ from affordance_corrections.affordance_helpers.pcl_helpers import get_cloud_of_i
 from scipy.optimize import minimize
 from scipy.spatial.transform import Rotation as ScipyR
 import time
+import matplotlib.pyplot as plt
 
 class FitInfo:
     ''' used to keep track of the details of a particular model's fit
@@ -120,7 +121,7 @@ def quat_con(x):
     ''' quaternion must have magnitude 1 -- used in NL optimization '''
     return 1.0-np.linalg.norm(x[0:4])
 
-def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((3,)), angles_initial=[], scale_initial =1.0 , diameter = 1.0, artic_svd_initial = False):
+def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((3,)), angles_initial=[], scale_initial =1.0 , diameter = 1.0, artic_svd_initial = False, refitting = False):
     """Take two arrays of points in 3d space and computes the registration."""
     """ source refers to mesh/model to be fit, target refers to scene/point cloud"""
     """ source and target dimensions are ax3 and bx3 """
@@ -144,7 +145,19 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
 
     while not converged and num_iters<n:
         if(num_iters==0):
+            
+
             s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
+            if refitting:
+                print("PYTHON REFITTING")
+                plt.hist(dists, density=True, cumulative=True, label='CDF', histtype='step', alpha=0.8, color='k')
+                plt.show()
+                print("New distance threshold: ")
+                max_distance_threshold = float(input())
+                s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
+                aligned_source = s_vals
+                max_distance_threshold = 999.9
+
             error = np.linalg.norm((R_initial @ s_vals.T).T+t_initial - t_vals)
             # print("Initial error: ",error)
             if len(s_vals)<3: # need 3 points

@@ -126,7 +126,7 @@ def main():
     
     rosaff = ROSDemoAffordances()
     rosaff.toggleSVDforInitialArticulation(True)
-    rosaff.setCppFitting(True)
+    rosaff.setCppFitting(False)
     rosaff.setFitting(True)
     models_str = rospy.get_param("/ros_uli_wrapper/models")
     model_dir = rospy.get_param("/ros_uli_wrapper/model_dir")
@@ -134,6 +134,7 @@ def main():
     for model in models_str.split(";"):
         models.append(package_dir+'ULIConfig/registration_models/'+model)
     rosaff.setModels(models)
+    rosaff.setVisualModels(models)
     rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
     
 

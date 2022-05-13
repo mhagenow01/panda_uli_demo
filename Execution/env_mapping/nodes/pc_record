@@ -19,7 +19,7 @@ def mappingToggle(data):
     if data.data=="off":
         if lastcloud is not None:
             rospack = rospkg.RosPack()
-            path = rospack.get_path('drone_panda')+'/saved_msgs/pc_new.txt'
+            path = rospack.get_path('env_mapping')+'/saved_clouds/pc_new.txt'
             with open(path, 'w') as outfile:
                 lastcloud.serialize(outfile.buffer)
 
@@ -27,7 +27,7 @@ def mappingToggle(data):
 def getPC():
     rospy.init_node('pc_recorder')
     rospy.Subscriber("/rtabmap/cloud_map", PointCloud2, saveCloud)
-    rospy.Subscriber("rvizToggle", String, mappingToggle)
+    rospy.Subscriber("mappingToggle", String, mappingToggle)
     rospy.spin()
 
 

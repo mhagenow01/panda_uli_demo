@@ -112,7 +112,7 @@ class ObjOfInterest:
             else: # Python
                 cloud_trimmed = get_cloud_of_interest(scene,self.ref_point,self.models[self.active_id].diameter)
                 R_new, t_new, angles_new, scale_new, error_new = icp(self.models[self.active_id],cloud_trimmed,KDTree(cloud_trimmed),100, R_initial=R_temp,
-                t_initial=t_temp,angles_initial=angles_temp,scale_initial = scale_temp, diameter=self.models[self.active_id].diameter, artic_svd_initial=False)
+                t_initial=t_temp,angles_initial=angles_temp,scale_initial = scale_temp, diameter=self.models[self.active_id].diameter, artic_svd_initial=False, refitting=True)
                 
                 self.fits[self.active_id].rot = R_new
                 self.fits[self.active_id].pos = t_new
