@@ -24,7 +24,9 @@ const store = (set) => ({
             divID : 'urdf',
             width : 800,
             height : 600,
-            antialias : true
+            antialias : true,
+            background : "#f8f8f8"
+
         });
 
         viewer.addObject(new Grid());

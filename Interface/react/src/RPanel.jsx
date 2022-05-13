@@ -27,24 +27,24 @@ export const RPanel = (props) => {
         }}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
 
        <CheckBox gridArea="tr" disabled={true} checked={connection==='connected'}/>
-       <Box gridArea='send'  basis="medium"  alignSelf="center"  direction="row">
-        <Button size="large" alignSelf="center" label="Send"
+       <Box gridArea='send' basis="medium"  alignSelf="center"  direction="row">
+        <Button primary  size="large" alignSelf="center" label="Send" 
           onClick={() => {
             sendCoordinates();
             //tmpSub.displayCloud();
           }}
           />
 
-        <Button size="large" alignSelf="center" label="Execute"
+        <Button primary size="large" alignSelf="center" label="Execute" 
           onClick={() => {
             sendMessage("execute");
             setCanvasOpacity(0);
           }} />
-          </Box> 
+        </Box> 
           <Box gridArea='main'>
             <Card background="light-1">
               <CardHeader pad="small" background="light-2">
-                  <Text alignSelf="center" color="brand" size="large">Properties</Text>
+                  <Text alignSelf="center" color="#9b0000" size="large">Properties</Text>
               </CardHeader>
               <CardBody pad="small">
               {parameters.map((button,idx) => (

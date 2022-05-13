@@ -1,8 +1,15 @@
 <?xml version="1.0"?>
 <launch>
+    <arg name="sim" default="true"/>
+
+     <group if="$(arg sim)">
+        <include file="$(find panda_sim)/launch/sim.launch"/>
+    </group>
+
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
-    <include file="$(find panda_sim)/launch/sim.launch"/>
     <node pkg="uli_interface" type="spliner" name="spliner" output="screen"/>
     <node pkg="uli_interface" type="param_handler" name="param_handler" output="screen"/>
     <node pkg="tf2_web_republisher" type="tf2_web_republisher" name="tf2_web_republisher" output="screen"/>
+    <!-- <node pkg="uli_interface" type="pc_publish" name="pc_publish" output="screen"/> -->
+    <node pkg="tf" type="static_transform_publisher" name="kinect" args="0 0 0 0 0 0 1 /panda_link0 /map 1"/>
 </launch>

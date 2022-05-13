@@ -23,6 +23,7 @@ export const ParameterModule = (props) => {
       {parameterInfo.type === 'slider' && (
         <Box direction="row" gap="medium">
             <RangeInput 
+            color="#9b0000"
             value= {parameterInfo.value}
             min = {parameterInfo.min}
             max = {parameterInfo.max}

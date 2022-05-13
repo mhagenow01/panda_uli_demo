@@ -194,11 +194,11 @@ def parallelSurfPt(surface,u_temp,v_temp):
 
 
 class DMPLWRhardcoded:
-    def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1])):
+    def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1]),dt = 0.1):
         # DMP parameters
         self.k = 50
         self.b = 2*np.sqrt(self.k)
-        self.dt = 0.01
+        self.dt = dt
 
         self.surface_file = surfacefile
 

@@ -18,13 +18,14 @@ const store = (set,get) => ({
                   {type: "select", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
                   {type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
                   {type: "slider", label:"Force (N)", value:1,min:0,max:10},
+                  {type: "slider", label:"Feed Rate (cm/s)", value:1,min:0,max:10},
                   {type: "select", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
                 ],
     configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
-      x: Math.random() * 500,
-      y: Math.random() * 500,
+      x: 100 + (i%4)* 100,
+      y: 100 + (i+1)%4* 100,
       isDragging: false,
     })),
     addMessage: (message) => set(state=>{

@@ -131,16 +131,37 @@ class Spliner(object):
         self._n_passes = 2
         self._horizontal = True
 
+
+    def get_param(self, label):
+        idx = next((i for i, item in enumerate(self._param) if item["label"] == label), None)
+        if idx is not None:
+            return self._param[idx]["value"]
+        else:
+            return None
+
     def on_param(self,msg):
         self._param = json.loads(msg.data)
         print(self._param)
-        passes_idx = next((i for i, item in enumerate(self._param) if item["label"] == "Number of passes"), None)
-        if passes_idx is not None:
-            self._n_passes = int(self._param[passes_idx]["value"])
+        
+        passes = self.get_param("Number of passes")
+        if passes is not None:
+            self._n_passes = int(passes)
+        else:
+            self._n_passes = 2
 
-        orientation_idx = next((i for i, item in enumerate(self._param) if item["label"] == "Orientation"), None)
-        if orientation_idx is not None:
-            self._horizontal = self._param[orientation_idx]["value"] == "horizontal"
+        force = self.get_param("Force (N)")
+        if force is not None:
+            self._force = -int(force)
+        else:
+            self._force = -5.
+
+        velocity = self.get_param("Feed Rate (cm/s)")
+        if velocity is not None:
+            self._velocity = int(velocity)/100.
+        else:
+            self._velocity = .01
+
+        self._horizontal = self.get_param("Orientation") == "horizontal"
 
     def on_info(self,msg):
         if self._camera_model is None:
@@ -299,7 +320,7 @@ class Spliner(object):
 
         segment = HybridSegment()
         segment.hybrid = False
-        segment.num_samples = 100 # 2 seconds
+        segment.num_samples = 10 # 2 seconds
         segment.state_names = ['x','y','z','qx','qy','qz','qw','valve']
         approach_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(u0, v0)
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
@@ -331,12 +352,16 @@ class Spliner(object):
         segment.surface = surfaceBSpline
         segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','valve']
         segment.original_vals = []
-        samps = 400
-        segment.num_samples = samps *  (len(us)-1)
+        segment.num_samples = 0
 
         segments = []
         for i in range(len(us)-1):
-            segments.append(interpMultD([us[i], vs[i], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],[us[i+1], vs[i+1], -5.0, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],samps))
+            start, _, _, _ = surfaceBSpline.calculate_surface_point(us[i], vs[i])
+            end, _, _, _ = surfaceBSpline.calculate_surface_point(us[i+1], vs[i+1])
+            distance = np.linalg.norm(start-end)
+            samps = int(10 * distance / self._velocity)
+            segment.num_samples+=samps
+            segments.append(interpMultD([us[i], vs[i], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],[us[i+1], vs[i+1], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],samps))
         segment.original_vals.append(np.hstack(segments))
         return segment
 
@@ -347,7 +372,7 @@ class Spliner(object):
 
         segment = HybridSegment()
         segment.hybrid = False
-        segment.num_samples = 100 # 2 seconds
+        segment.num_samples = 10 # 2 seconds
         segment.state_names = ['x','y','z','qx','qy','qz','qw','valve']
         segment.original_vals = []
 
