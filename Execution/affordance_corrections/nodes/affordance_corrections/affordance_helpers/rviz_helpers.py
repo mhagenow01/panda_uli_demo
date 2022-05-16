@@ -291,9 +291,10 @@ def circ_marker(index, pos, size, color=[0.0, 1.0, 0.0], frame="map"):
     marker.color.b = color[2]
     return marker
 
-def modeltoMarkers(model,fit,curr_iter,color):
+def modeltoMarkers(model,fit,curr_iter,color,usevisualmodels=False):
     ''' takes a model class instance (likely multiple meshes) and creates
         the appropriate markers for visualization '''
+    ''' if using visual models, look for stls that postpend _visual to the name'''
     markers = []
     for ii in range(0,len(model.links)):
         R = np.eye(3)
@@ -335,7 +336,10 @@ def modeltoMarkers(model,fit,curr_iter,color):
         # mesh needs quaterion instead of rotation matrix
         quat = ScipyR.from_matrix(R).as_quat()
         mesh_stl = model.links[ii].meshfile
-        
+
+        # add visual to file name
+        if usevisualmodels:
+            mesh_stl = ".".join(mesh_stl.split(".")[0:-1]) + '_visual.' + mesh_stl.split(".")[-1]
         marker_temp = mesh_to_marker(mesh_stl,curr_iter,t,quat,color,scale=scale)
         markers.append(copy.deepcopy(marker_temp))
         curr_iter+=1

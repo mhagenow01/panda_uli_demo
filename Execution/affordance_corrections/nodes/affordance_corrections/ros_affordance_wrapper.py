@@ -51,6 +51,8 @@ class ROSAffordances:
         self.timeBeforeUpdate = 1.25 # time before ICP refits after changes
         self.timestep = 0.01 # main loop rate
 
+        self.usevisualmodels = False
+
         # Rostopics: publishers and subscribers
         self.objspub = rospy.Publisher('meshes', MarkerArray, queue_size=1)
         self.pointsclickedpub = rospy.Publisher('points_clicked', MarkerArray, queue_size=10)
@@ -223,6 +225,10 @@ class ROSAffordances:
     def setFitting(self,fitting):
         ''' Tells engine whether or not to do fitting or just set/update poses'''
         self.engine.setFitting(fitting)
+
+    def useVisualModels(self,usevisual):
+        ''' Tells engine whether or not visual models are used '''
+        self.usevisualmodels = usevisual
 
     def setCameraQ(self, data):
         ''' Takes ros Quaternion msg and updates known camera orientation for camera-centric controls'''
@@ -426,7 +432,7 @@ class ROSAffordances:
                 else:
                     color = np.array([0.2, 0.8, 0.2]) # green for active
 
-            markers_temp, count = modeltoMarkers(model,fit,count,color)
+            markers_temp, count = modeltoMarkers(model,fit,count,color,self.usevisualmodels)
             for marker in markers_temp:
                 meshes.markers.append(marker)
 

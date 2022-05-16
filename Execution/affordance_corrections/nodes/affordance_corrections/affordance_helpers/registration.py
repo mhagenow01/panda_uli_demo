@@ -15,6 +15,10 @@ from scipy.spatial.transform import Rotation as ScipyR
 import time
 import matplotlib.pyplot as plt
 
+from affordance_corrections.affordance_helpers.rviz_helpers import pcd_to_pc2
+import rospy
+from sensor_msgs.msg import PointCloud2
+
 class FitInfo:
     ''' used to keep track of the details of a particular model's fit
         also used when pose, etc get corrections to store updates '''
@@ -155,6 +159,22 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
                 print("New distance threshold: ")
                 max_distance_threshold = float(input())
                 s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
+                
+                # Show point cloud of s_vals
+                n_pcd_pts = len(s_vals)
+                pcd = o3d.data.PLYPointCloud()
+                pcd.colors = o3d.utility.Vector3dVector(np.repeat([0.8, 0.1, 0.1],n_pcd_pts,axis=0))
+                pcd.points = s_vals
+                pc = pcd_to_pc2(pcd)
+
+                pub = rospy.Publisher('/pcCulled', PointCloud2, queue_size=1)
+                time.sleep(1)
+                pub.publish(pc)
+
+
+                print("pause for point cloud")
+                temp = input()
+                
                 aligned_source = s_vals
                 max_distance_threshold = 999.9
 

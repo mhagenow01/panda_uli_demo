@@ -22,7 +22,6 @@ class AffordanceEngine:
     def __init__(self):
         self.objectsOfInterest = []
         self.models = []
-        self.visualmodels = []
         self.active_obj = 0
         self.scene = None
         self.artic_svd_initial = False # whether to fit the initial articulation models closed form (performance)
@@ -87,11 +86,6 @@ class AffordanceEngine:
         ''' List of files (stl or urdf) for the model objects that should be fit '''
         for file in model_files:
             self.models.append(Model(file))
-    def setVisualModels(self,model_files):
-        ''' List of files (stl or urdf) for the corresponding models that should be used for visualization
-            --- this is so surfaces can be infinitely thin, but visualized in a reasonable way '''
-        for file in model_files:
-            self.visualmodels.append(Model(file))
 
     def toggleSVDforInitialArticulation(self,toggle):
         ''' Toggles whether the initial fit of objects with articulations uses

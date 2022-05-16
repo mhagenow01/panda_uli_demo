@@ -134,7 +134,8 @@ def main():
     for model in models_str.split(";"):
         models.append(package_dir+'ULIConfig/registration_models/'+model)
     rosaff.setModels(models)
-    rosaff.setVisualModels(models)
+
+    rosaff.useVisualModels(True)
     rospy.Subscriber("/filtered_cloud", PointCloud2, receivedScene, queue_size=1)
     
 
