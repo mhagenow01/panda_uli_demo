@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from affordance_corrections.affordance_helpers.rviz_helpers import pcd_to_pc2
 import rospy
 from sensor_msgs.msg import PointCloud2
+import open3d as o3d
 
 class FitInfo:
     ''' used to keep track of the details of a particular model's fit
@@ -162,9 +163,9 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
                 
                 # Show point cloud of s_vals
                 n_pcd_pts = len(s_vals)
-                pcd = o3d.data.PLYPointCloud()
-                pcd.colors = o3d.utility.Vector3dVector(np.repeat([0.8, 0.1, 0.1],n_pcd_pts,axis=0))
-                pcd.points = s_vals
+                pcd = o3d.geometry.PointCloud()
+                pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.8, 0.1, 0.1]).reshape((1,3)),[n_pcd_pts,1]))
+                pcd.points = o3d.utility.Vector3dVector(s_vals)
                 pc = pcd_to_pc2(pcd)
 
                 pub = rospy.Publisher('/pcCulled', PointCloud2, queue_size=1)
