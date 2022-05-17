@@ -7,7 +7,6 @@ SET(CMAKE_INSTALL_RPATH ..)
 
 find_package(catkin REQUIRED COMPONENTS roscpp rospy roslib tf2_ros geometry_msgs sensor_msgs std_msgs genmsg)
 catkin_package()
-catkin_python_setup()
 find_package(Eigen3 REQUIRED)
 find_library(DHDC libdhd.so.3.8.0 REQUIRED)
 
@@ -19,3 +18,7 @@ target_link_libraries(fdonedzdcontroller ${catkin_LIBRARIES} ${DHDC})
 install(TARGETS fdonedzdcontroller
   RUNTIME DESTINATION lib/fdonedzdcontroller
 )
+
+catkin_install_python(PROGRAMS
+    nodes/joy_correction_driver
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

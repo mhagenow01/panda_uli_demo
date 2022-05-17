@@ -630,6 +630,8 @@ class DMPLWRhardcoded:
             while np.ceil(s) < segment.num_samples:
                 input_vals, input_button = rosExecution.getZDInput()
 
+                print("segid: ",segID," samp:",s)
+
                 # Quit if the robot isn't active anymore
                 if not rosExecution.robotActive():
                     return

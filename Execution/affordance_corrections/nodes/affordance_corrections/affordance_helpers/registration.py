@@ -160,7 +160,8 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
                 print("New distance threshold: ")
                 max_distance_threshold = float(input())
                 s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
-                
+                close_enough_inds_perm = close_enough_inds
+
                 # Show point cloud of s_vals
                 n_pcd_pts = len(s_vals)
                 pcd = o3d.geometry.PointCloud()
@@ -255,6 +256,8 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
             
         # Transform source points
         aligned_source = getPointsWithAngles(model,angles_final,R_final,trans_final,scale_final)
+        if refitting:
+            aligned_source = aligned_source[close_enough_inds_perm]
 
         #########################################################################
         # Check if done - calculate residual based on next set of pt alignments #
@@ -277,5 +280,16 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
         num_iters+=1
 
         # print("end error: ",error)
+    
+
+    if refitting:
+        n_pcd_pts = len(s_vals)
+        pcd = o3d.geometry.PointCloud()
+        pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.1, 0.1, 0.7]).reshape((1,3)),[n_pcd_pts,1]))
+        pcd.points = o3d.utility.Vector3dVector(s_vals)
+        pc = pcd_to_pc2(pcd)
+        pub3 = rospy.Publisher('/pcCulled2', PointCloud2, queue_size=1)
+        time.sleep(1)
+        pub3.publish(pc)
 
     return R_final,trans_final, angles_final, scale_final, error

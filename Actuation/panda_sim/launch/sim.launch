@@ -35,4 +35,8 @@
         <remap from="out" to="/joint_commands"/>
         <remap from="in" to="/commanded_pose"/>
     </node>
+
+    <!-- Corrections-->
+    <include file="$(find teleop_twist_joy)/launch/teleop.launch"/>  
+    <node pkg="input_corrections" type="joy_correction_driver" name="joy_correction_driver" output="screen"/>
 </launch>

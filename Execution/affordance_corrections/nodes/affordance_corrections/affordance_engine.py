@@ -16,6 +16,7 @@ from affordance_corrections.affordance_helpers.ObjOfInterest import ObjOfInteres
 from affordance_corrections.affordance_helpers.Model import Model
 from affordance_corrections.affordance_helpers.urdf_helpers import getPointsWithAngles
 from affordance_corrections.affordance_helpers.pcl_helpers import pt_near_cloud
+from threading import Lock
 
 class AffordanceEngine:
     """ Keeps track of objects of interest, fits, etc."""
@@ -27,6 +28,7 @@ class AffordanceEngine:
         self.artic_svd_initial = False # whether to fit the initial articulation models closed form (performance)
         self.fitting = True
         self.cppfitting = False
+        self.lock = Lock()
         
     
     def setScene(self,file, scene_rot = np.array([0.0, 0.0, 0.0, 1.0]),scene_trans = np.zeros((3,))):
@@ -144,6 +146,7 @@ class AffordanceEngine:
 
     def twist_active_object(self,twist_array):
         ''' Applies a twist to the active object'''
+        self.lock.acquire()
         R_temp = ScipyR.from_euler('xyz',twist_array[3:6], degrees=True).as_matrix()
         if(len(self.objectsOfInterest)>0):
             active_id = self.objectsOfInterest[self.active_obj].active_id
@@ -152,6 +155,7 @@ class AffordanceEngine:
             #need to compensate for any translation induced by the rotation
             centroid_shift = self.centroid_shift(R_old,R_temp @ R_old,self.objectsOfInterest[self.active_obj])
             self.objectsOfInterest[self.active_obj].fits[active_id].pos += (twist_array[0:3]-centroid_shift)
+        self.lock.release()
 
     def cycle_active_articulation(self):
         ''' Used to choose what articulation/scaling the user can provide corrections to (in addition to pose)
