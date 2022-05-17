@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+from typing import Callable
+import rospy
+import actionlib
+import control_msgs.msg 
+from geometry_msgs.msg import Twist, PoseStamped, Vector3
+from franka_gripper.msg import GraspAction, MoveAction, GraspGoal, MoveGoal
+from sensor_msgs.msg import Joy
+from std_msgs.msg import String, Float64
+import tf2_geometry_msgs
+import tf
+from tf.transformations import *
+import tf2_ros
+import signal
+import sys
+import numpy as np
+
+class JoyCorrectionDriver(object):
+    def __init__(self):
+        self._button_pub = rospy.Publisher("/zdinput/button", Float64, queue_size=1)
+        self._correction_pub = rospy.Publisher("/zdinput/input", Vector3, queue_size=1)
+
+        self._joy_sub = rospy.Subscriber('/joy', Joy, self.on_joy)
+
+        self._ax2_init = False
+        self._ax5_init = False
+
+    def mapping(self,x,low=0.005,high=1.0):
+        a = (np.log(high)-np.log(low))/0.9
+        b = np.exp(np.log(low)-.1*a)
+        return np.sign(x)*b*((np.exp(a*np.abs(x))-1))
+        
+    def on_joy(self, msg):
+        ax = np.array(msg.axes)
+        if ax[2] != 0:
+            self._ax2_init = True
+        if not self._ax2_init:
+            ax[2]=1
+        if ax[5] != 0:
+            self._ax5_init = True
+        if not self._ax5_init:
+            ax[5]=1
+        vecTemp = Vector3()
+        vecTemp.x = self.mapping((ax[2]-ax[5])/2)
+        self._correction_pub.publish(vecTemp)
+       
+        button = float(msg.buttons[1])
+        tempF = Float64()
+        tempF.data = button
+        self._button_pub.publish(tempF)
+    
+    def run(self):
+        rospy.spin()
+
+    def signal_handler(self, signal, frame):
+        sys.exit()
+
+if __name__ == "__main__":
+    rospy.init_node('joy_driver')
+    mouse_driver = JoyCorrectionDriver()
+    signal.signal(signal.SIGINT, mouse_driver.signal_handler)
+    mouse_driver.run()
