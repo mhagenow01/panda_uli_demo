@@ -83,9 +83,8 @@ class ObjOfInterest:
         # get sorted likelihoods for model cycling
         self.sorted = np.argsort(np.array(min_errors_temp))
 
-    def refit_obj(self,scene,cpp_fitting):
+    def refit_obj(self,scene,cpp_refitting):
         ''' After the user finishes a correction, perform a more basic ICP to further refine the pose '''
-        print("SF REFIT: ",self.refitting)
         if self.refitting:
             R_temp = self.fits[self.active_id].rot
             t_temp = self.fits[self.active_id].pos
@@ -94,7 +93,7 @@ class ObjOfInterest:
 
             startt = time.time()
 
-            if cpp_fitting:
+            if cpp_refitting:
                 rospack = rospkg.RosPack()
                 root_dir = rospack.get_path('affordance_corrections')
                 cppreglibpath = os.path.join(root_dir, "nodes", "affordance_corrections", "affordance_helpers", "cppfitting", "build", "libcppregistration.so")

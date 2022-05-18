@@ -154,29 +154,37 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
 
             s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
             if refitting:
-                print("PYTHON REFITTING")
-                plt.hist(dists, density=True, cumulative=True, label='CDF', histtype='step', alpha=0.8, color='k')
-                plt.show()
-                print("New distance threshold: ")
-                max_distance_threshold = float(input())
+                # print("PYTHON REFITTING")
+                # plt.plot(np.sort(dists))
+                # plt.show()
+                diffed_orig = np.diff(np.sort(dists))
+                diffed_filt = np.copy(diffed_orig)
+                filt_coeff = 0.1
+                for ii in range(1,len(diffed_filt)):
+                    diffed_filt[ii] = filt_coeff*diffed_orig[ii]+(1.0-filt_coeff)*diffed_filt[ii-1]
+                # plt.plot(diffed_orig)
+                # plt.plot(diffed_filt)
+                maxdiff = np.max(diffed_filt)
+                diffed_filt[0:50] = 0.0
+                samp = np.min(np.argwhere(diffed_filt>(0.1*maxdiff)))
+                # print("samp:",samp)
+                # print(np.sort(dists)[samp])
+                # plt.show()
+                max_distance_threshold = np.sort(dists)[samp]
                 s_vals, t_vals, dists, close_enough_inds = get_closest_alignment(aligned_source,target,target_kdtree,max_distance_threshold)
                 close_enough_inds_perm = close_enough_inds
 
-                # Show point cloud of s_vals
-                n_pcd_pts = len(s_vals)
-                pcd = o3d.geometry.PointCloud()
-                pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.8, 0.1, 0.1]).reshape((1,3)),[n_pcd_pts,1]))
-                pcd.points = o3d.utility.Vector3dVector(s_vals)
-                pc = pcd_to_pc2(pcd)
+                # # Show point cloud of s_vals
+                # n_pcd_pts = len(s_vals)
+                # pcd = o3d.geometry.PointCloud()
+                # pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.8, 0.1, 0.1]).reshape((1,3)),[n_pcd_pts,1]))
+                # pcd.points = o3d.utility.Vector3dVector(s_vals)
+                # pc = pcd_to_pc2(pcd)
 
-                pub = rospy.Publisher('/pcCulled', PointCloud2, queue_size=1)
-                time.sleep(1)
-                pub.publish(pc)
+                # pub = rospy.Publisher('/pcCulled', PointCloud2, queue_size=1)
+                # time.sleep(1)
+                # pub.publish(pc)
 
-
-                print("pause for point cloud")
-                temp = input()
-                
                 aligned_source = s_vals
                 max_distance_threshold = 999.9
 
@@ -282,14 +290,14 @@ def icp(model,target,target_kdtree,n, R_initial=np.eye(3),t_initial = np.zeros((
         # print("end error: ",error)
     
 
-    if refitting:
-        n_pcd_pts = len(s_vals)
-        pcd = o3d.geometry.PointCloud()
-        pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.1, 0.1, 0.7]).reshape((1,3)),[n_pcd_pts,1]))
-        pcd.points = o3d.utility.Vector3dVector(s_vals)
-        pc = pcd_to_pc2(pcd)
-        pub3 = rospy.Publisher('/pcCulled2', PointCloud2, queue_size=1)
-        time.sleep(1)
-        pub3.publish(pc)
+    # if refitting:
+    #     n_pcd_pts = len(s_vals)
+    #     pcd = o3d.geometry.PointCloud()
+    #     pcd.colors = o3d.utility.Vector3dVector(np.tile(np.array([0.1, 0.1, 0.7]).reshape((1,3)),[n_pcd_pts,1]))
+    #     pcd.points = o3d.utility.Vector3dVector(s_vals)
+    #     pc = pcd_to_pc2(pcd)
+    #     pub3 = rospy.Publisher('/pcCulled2', PointCloud2, queue_size=1)
+    #     time.sleep(1)
+    #     pub3.publish(pc)
 
     return R_final,trans_final, angles_final, scale_final, error

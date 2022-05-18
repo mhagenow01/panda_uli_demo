@@ -28,6 +28,7 @@ class AffordanceEngine:
         self.artic_svd_initial = False # whether to fit the initial articulation models closed form (performance)
         self.fitting = True
         self.cppfitting = False
+        self.cpprefitting = False
         self.lock = Lock()
         
     
@@ -103,6 +104,11 @@ class AffordanceEngine:
         ''' Toggles whether the cpp fitting is used instead of python
             requires that the library has been built -- see repo readme '''
         self.cppfitting = cppfitting
+
+    def setCppRefitting(self,recppfitting):
+        ''' Toggles whether the cpp refitting is used instead of python
+            requires that the library has been built -- see repo readme '''
+        self.recppfitting = recppfitting
 
     def setActiveObject(self,obj_id):
         ''' Used to set which object the corrections are currently being applied to'''
@@ -251,12 +257,12 @@ class AffordanceEngine:
     def refit_active_object(self):
         ''' Once corrections are applied, this routine refits using the slimmed ICP'''
         if(len(self.objectsOfInterest)>0 and self.fitting):
-            self.objectsOfInterest[self.active_obj].refit_obj(self.scene, self.cppfitting)
+            self.objectsOfInterest[self.active_obj].refit_obj(self.scene, self.cpprefitting)
     
     def refit_all_objects(self):
         ''' Fits all objects in scene, for example, when scene is updated '''
         for ii in range(0,len(self.objectsOfInterest) and self.fitting):
-            self.objectsOfInterest[self.active_obj].refit_obj(self.scene, self.cppfitting)
+            self.objectsOfInterest[self.active_obj].refit_obj(self.scene, self.cpprefitting)
 
     def getUpdatedWorld(self):
         ''' Creates a dictionary with all properties of the scene, including the fit objects'''

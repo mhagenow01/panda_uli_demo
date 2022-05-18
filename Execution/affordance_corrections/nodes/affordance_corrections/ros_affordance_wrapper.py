@@ -222,6 +222,10 @@ class ROSAffordances:
         ''' Tells affordance engine whether or not to use CPP fitting'''
         self.engine.setCppFitting(cppfitting)
 
+    def setCppRefitting(self,cpprefitting):
+        ''' Tells affordance engine whether or not to use CPP fitting'''
+        self.engine.setCppRefitting(cpprefitting)
+
     def setFitting(self,fitting):
         ''' Tells engine whether or not to do fitting or just set/update poses'''
         self.engine.setFitting(fitting)

@@ -126,7 +126,8 @@ def main():
     
     rosaff = ROSDemoAffordances()
     rosaff.toggleSVDforInitialArticulation(True)
-    rosaff.setCppFitting(False)
+    rosaff.setCppFitting(True)
+    rosaff.setCppRefitting(False)
     rosaff.setFitting(True)
     models_str = rospy.get_param("/ros_uli_wrapper/models")
     model_dir = rospy.get_param("/ros_uli_wrapper/model_dir")
