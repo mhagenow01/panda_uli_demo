@@ -8,3 +8,4 @@ logs/
 *.ipynb_checkpoints/
 *.html
 *saved_clouds/
+*.pkl
