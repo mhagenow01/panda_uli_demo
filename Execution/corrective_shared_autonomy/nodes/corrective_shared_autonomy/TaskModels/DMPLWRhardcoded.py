@@ -174,7 +174,6 @@ def learnDMP(segmentTemp,jj,num_demos,k,b,dt):
         data_temp_r.append(np.flip(segmentTemp.original_vals[kk][jj, :]))
 
     dmptemp = DMP(k,b,dt)
-
     start,end,forcing = dmptemp.getForcing(data_temp)
     _,_,reverse_forcing = dmptemp.getForcing(data_temp_r)
 
@@ -183,6 +182,7 @@ def learnDMP(segmentTemp,jj,num_demos,k,b,dt):
     # for oo in range(0,num_demos):
     #     plt.plot(data_temp[oo],color='gray')
     # plt.plot(dmptemp.getPath(start, end, forcing),color='red')
+    # plt.plot(dmptempr.getPath(end,start,reverse_forcing),color='blue')
     # plt.show()
 
     return start, end, forcing, reverse_forcing
@@ -326,7 +326,6 @@ class DMPLWRhardcoded:
             segmentTemp.forcing_vals = np.zeros((len(segmentTemp.state_names),segmentTemp.num_samples))
             segmentTemp.rev_forcing_vals = np.zeros((len(segmentTemp.state_names), segmentTemp.num_samples))
             
-
             backend = 'loky'
             num_states = len(segmentTemp.state_names)
             behaviors = Parallel(n_jobs=8, backend=backend)(delayed(
@@ -346,6 +345,7 @@ class DMPLWRhardcoded:
             #     segmentTemp.end_vals[jj] = end
             #     segmentTemp.forcing_vals[jj,:] = forcing
             #     segmentTemp.rev_forcing_vals[jj,:] = reverse_forcing
+
 
 
         # rospack = rospkg.RosPack()
@@ -381,8 +381,8 @@ class DMPLWRhardcoded:
 
 
     def getNewState(self,segment,ddX,dX,X,delta_s,s):
-        length_s = len(segment.forcing_vals)
-        if delta_s>=0: # forwards
+        length_s = np.shape(segment.forcing_vals)[1]-1
+        if delta_s>0: # forwards
             ddX = segment.k * (segment.end_vals - X) - segment.b * dX + interp_matrx(segment.forcing_vals,s)
         else: # backwards
             ddX = segment.k * (segment.start_vals - X) - segment.b * dX + interp_matrx(segment.rev_forcing_vals,length_s-s)
@@ -391,25 +391,58 @@ class DMPLWRhardcoded:
         return ddX, dX, X
 
     def getSaturatedZ(self,X,Y,state_names):
+        ''' combine the state and correction and saturate values if required'''
         Z = X+Y
-        if 'u' in state_names:
-            if Z[state_names.index('u')]>0.99:
-                Z[state_names.index('u')] = 0.99
-            if Z[state_names.index('u')]<0.01:
-                Z[state_names.index('u')] = 0.01
-        if 'v' in state_names:
-            if Z[state_names.index('v')]>0.99:
-                Z[state_names.index('v')] = 0.99
-            if Z[state_names.index('v')]<0.01:
-                Z[state_names.index('v')] = 0.01
+
+        for var in ['qx','theta_qx']:
+            if var in state_names:
+                rot_orig = R.from_quat(X[state_names.index(var):state_names.index(var)+4])
+
+                corr = np.copy(Y[state_names.index(var):state_names.index(var)+4])
+                if np.linalg.norm(corr)==0.0:
+                    corr[3] = 1.0
+                corr = corr/np.linalg.norm(corr)
+
+                rot_corr = R.from_quat(corr)
+                rot_combined = rot_corr * rot_orig
+                quat_combined = rot_combined.as_quat()
+                Z[state_names.index(var):state_names.index(var)+4] = quat_combined
+        for var in ['u','v']:
+            if var in state_names:
+                if Z[state_names.index(var)]>0.99:
+                    Z[state_names.index(var)] = 0.99
+                if Z[state_names.index(var)]<0.01:
+                    Z[state_names.index(var)] = 0.01
         return Z
 
-    def getFilteredCorrection(self,ddY, dY, Y, correction, delta_s):
+    def getFilteredCorrection(self,ddY, dY, Y, correction, delta_s, statenames):
         k = 50
-        b = 50*np.sqrt(2)
+        b = 2.0*np.sqrt(k)
+
+        for var in ['theta_qx','qx']:
+            if var in statenames:
+                # convert Y and correction to filter in rotvec space
+                Y_R = R.from_quat(Y[statenames.index(var):statenames.index(var)+4])
+                Y[statenames.index(var):statenames.index(var)+3] = Y_R.as_rotvec()
+                corr_R = R.from_quat(correction[statenames.index(var):statenames.index(var)+4])
+                correction[statenames.index(var):statenames.index(var)+3] = corr_R.as_rotvec()
+
         ddY = - k * Y - b * dY + correction * k
         dY = dY + ddY * self.dt * abs(delta_s)
         Y = Y + dY * self.dt * abs(delta_s)
+
+        # Separate filter for delta_s to preserve stability of system under delta_s > 1.0
+        if 'delta_s' in statenames:
+            var = statenames.index('delta_s')
+            dY[var] = dY[var] + ddY[var] * self.dt
+            Y[var] = Y[var] + dY[var] * self.dt
+
+        for var in ['theta_qx','qx']:
+            if var in statenames:
+                # convert Y back to quaternion
+                Y_R = R.from_rotvec(Y[statenames.index(var):statenames.index(var)+3])
+                Y[statenames.index(var):statenames.index(var)+4] = Y_R.as_quat()
+
         return ddY, dY, Y
 
     def setupSegment(self,learnedSegments,segID,from_back=False):
@@ -427,6 +460,10 @@ class DMPLWRhardcoded:
         ddY = np.zeros((num_states,))
         dY = np.zeros((num_states,))
         Y = np.zeros((num_states,))
+
+        for var in ['theta_qx','qx']:
+            if var in segment.state_names:
+                Y[segment.state_names.index(var)+3] = 1.0 #initialize quaternions to 0,0,0,1 x,y,z,w
 
         s = 0.0  # canonical variable
         if from_back:
@@ -517,6 +554,21 @@ class DMPLWRhardcoded:
         elif input_type=="1dof":
             # simply multiply the input by the first eigenvalue
             correction = np.multiply(eigen_scaling[0][:,int(round(s))],input[0])
+
+            # account for orientation
+            for var in ['theta_qx','qx']:
+                if var in state_names:
+                    # convert eigen scaling to rot vector and apply scaling to that -- back to quat
+                    eigscale = eigen_scaling[0][:,int(round(s))]
+
+                    # If correction for orientation is set to zero! (shouldn't happen once upstream is reliable)
+                    if np.linalg.norm(eigscale[state_names.index(var):state_names.index(var)+4])==0.0:
+                        eigscale[state_names.index(var)+3] = 1.0
+
+                    eig_quat = R.from_quat(eigscale[state_names.index(var):state_names.index(var)+4])
+                    eig_rotvec = eig_quat.as_rotvec()
+                    eig_quat_scaled = R.from_rotvec(eig_rotvec*input[0])
+                    correction[state_names.index(var):state_names.index(var)+4] = eig_quat_scaled.as_quat()
 
         else: # otherwise, don't allow any corrections
             correction = np.zeros((len(state_names),))
@@ -630,37 +682,26 @@ class DMPLWRhardcoded:
             while np.ceil(s) < segment.num_samples:
                 input_vals, input_button = rosExecution.getZDInput()
 
-                print("segid: ",segID," samp:",s)
-
                 # Quit if the robot isn't active anymore
                 if not rosExecution.robotActive():
                     return
 
                 correction = self.getCorrection(segment.corrections,input_type,input_vals,segment.state_names,s,surface,Z,dX)
                 # correction = np.zeros(np.shape(correction))
-
                 # Get new state value
                 ddX, dX, X = self.getNewState(segment, ddX, dX, X, delta_s, s)
-                ddY, dY, Y = self.getFilteredCorrection(ddY, dY, Y, correction, delta_s)
+                ddY, dY, Y = self.getFilteredCorrection(ddY, dY, Y, correction, delta_s,segment.state_names)
                 Z = self.getSaturatedZ(X,Y,segment.state_names)
-
-                # print(segment.state_names)
-                # print("C:", correction)
-                # print("Y:", Y)
-                # print(input_vals)
-                # if segment.hybrid:
-                #     print("Fc: ",Y[3]," ",Z[3])
-
-                # print("X:",X[0],X[1],X[2])
-                # print("start:",segment.start_vals[0],segment.start_vals[1],segment.start_vals[2])
-                # print("end:",segment.end_vals[0],segment.end_vals[1],segment.end_vals[2])
-
+            
                 # Send to robot (converting if necessary)
 
                 rosExecution.execute_states(segment.state_names, Z, surface,correction)
 
                 # print("s: ", s, " ", segID)
-
+                if 'theta_qx' in segment.state_names:
+                    indtempmh = segment.state_names.index('theta_qx')
+                    # print("or:",correction[indtempmh:indtempmh+4],Y[indtempmh:indtempmh+4],Z[indtempmh:indtempmh+4])
+                
                 delta_s = 1.0
                 if 'delta_s' in segment.state_names:
                     delta_s = Z[segment.state_names.index('delta_s')]
@@ -672,6 +713,7 @@ class DMPLWRhardcoded:
                 # Increment demonstration
                 # print("deltas:", delta_s," ",Y[segment.state_names.index('delta_s')])
                 s += delta_s
+
 
                 # If backwards, check for segment change
                 if(s < 0 and segID > 0): # revert to previous segment
