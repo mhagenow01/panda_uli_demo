@@ -196,7 +196,7 @@ class Spliner(object):
                 R_surface=[q.x,q.y,q.z,q.w]
                 t_surface=[t.x,t.y,t.z]
 
-                self._model.executeModel(learnedSegments=self._learnedSegments,R_surface=R_surface,t_surface=t_surface)
+                self._model.executeModel(learnedSegments=self._learnedSegments,R_surface=R_surface,t_surface=t_surface,input_type="1dof")
                 self._events_pub.publish("motion_finished")
 
             
@@ -337,6 +337,8 @@ class Spliner(object):
         starting = [approach_pt[0] + offset1[0], approach_pt[1] + offset1[1], approach_pt[2]  + offset1[2], q_app[0], q_app[1], q_app[2], q_app[3],0]
         ending = [approach_pt[0] + offset2[0], approach_pt[1] + offset2[1], approach_pt[2]  + offset2[2], q_app[0], q_app[1], q_app[2], q_app[3],1]
         orig_vals = interpMultD(starting,ending,segment.num_samples)
+        
+        segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
         segment.original_vals = []
         segment.original_vals.append(orig_vals)
         #segments.append(segment)
@@ -350,7 +352,7 @@ class Spliner(object):
         segment = HybridSegment()
         segment.hybrid = True
         segment.surface = surfaceBSpline
-        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','valve']
+        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','delta_s','valve']
         segment.original_vals = []
         segment.num_samples = 0
 
@@ -359,9 +361,13 @@ class Spliner(object):
             start, _, _, _ = surfaceBSpline.calculate_surface_point(us[i], vs[i])
             end, _, _, _ = surfaceBSpline.calculate_surface_point(us[i+1], vs[i+1])
             distance = np.linalg.norm(start-end)
-            samps = int(10 * distance / self._velocity)
+            samps = int(20 * distance / self._velocity)
             segment.num_samples+=samps
-            segments.append(interpMultD([us[i], vs[i], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],[us[i+1], vs[i+1], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1],samps))
+            segments.append(interpMultD([us[i], vs[i], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1,1],[us[i+1], vs[i+1], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1,1],samps))
+        R_extra_tool = ScipyR.from_euler('y',-10,degrees=True)
+        q_extra = R_extra_tool.as_quat()
+        corrections = [0.0, 0.0, -5.0, q_extra[0], q_extra[1], q_extra[2], q_extra[3], -0.5, 0.0]
+        segment.corrections.append(interpMultD(corrections,corrections,segment.num_samples,quat_vars=[3]))
         segment.original_vals.append(np.hstack(segments))
         return segment
 
@@ -395,6 +401,7 @@ class Spliner(object):
         # ending = [retract_pt[0]+offset2[0], retract_pt[1]+offset2[1], retract_pt[2]+offset2[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3],0]
         ending = [trans.translation.x, trans.translation.y, trans.translation.z, trans.rotation.x, trans.rotation.y, trans.rotation.z, trans.rotation.w, 0]
         orig_vals = interpMultD(starting,ending,segment.num_samples)
+        segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
         segment.original_vals.append(orig_vals)
         return segment
 
@@ -434,7 +441,7 @@ class Spliner(object):
         segments = np.hstack(segments)
         
         print("creating model")
-        self._model = DMPLWRhardcoded(verbose=False)
+        self._model = DMPLWRhardcoded(verbose=False,dt=0.05)
         print("learning")
         self._learnedSegments = self._model.learnModel(segments,'')
         print("getting traj")
