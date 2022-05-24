@@ -10,8 +10,8 @@ const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
     path: [{x:0,y:0}],
-    imageWidth: 1200,
-    imageHeight: 900,
+    imageWidth: 1073,//1200
+    imageHeight: 805,//900
     imagedata: "",
     canvasOpacity: 1.,
     parameters: [ {type: "select", label:"Number of passes", value:"2", options:["2","3","4","5"]},

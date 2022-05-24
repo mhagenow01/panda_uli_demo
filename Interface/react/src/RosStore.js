@@ -6,7 +6,8 @@ import * as ROS3D from 'ros3d';
 import useAppStore from './AppStore';
 
 const store = (set) => ({
-    url: 'ws://localhost:9090',
+    //url: 'ws://localhost:9090',
+    url: 'ws://192.168.3.5:9090',
     // SetURL resets ROS
     setUrl: (url) => set((_)=>({url:url,connection:'disconnected'})),
     ros: null,
@@ -162,6 +163,6 @@ const store = (set) => ({
 
 const useRosStore = create(store);
 
-useRosStore.getState().setUrl('ws://localhost:9090');
-
+//useRosStore.getState().setUrl('ws://localhost:9090');
+useRosStore.getState().setUrl('ws://192.168.3.5:9090');
 export default useRosStore;

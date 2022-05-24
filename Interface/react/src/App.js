@@ -17,7 +17,7 @@ function App() {
   const [show3D] = useRosStore(state=>([state.show3D])) 
   const primaryColor="#9b0000"
   const theme = {
-    name: 'CoFrame',
+    name: 'UW-sanding',
     rounding: 4,
     defaultMode: 'dark',
     global: {
@@ -44,6 +44,10 @@ function App() {
         border: {
             radius: "4px"
         }
+    },
+    text: {
+      textAlign:"center",
+      alignSelf:"center"
     },
     radioButton: {
         size: "16px",
@@ -109,14 +113,14 @@ function App() {
     <Box height='100vh' width='100vw' background='light-1'>
       <Grid
         rows={['10vh', '80vh','10vh']}
-        columns={['80vw', '20vw']}
+        columns={['70vw', '30vw']}
         gap="none"
         height='100vh' 
         width='100vw'
         areas={[
           {name: 'top', start:[0,0], end: [1,0]},
           {name: 'video', start:[0,1], end: [0,1]},
-          { name: 'rpanel', start: [1, 1], end: [1, 1] },
+          {name: 'rpanel', start: [1, 1], end: [1, 1] },
           {name: 'bot', start:[0,2], end: [1,2]},
         ]}
       >
@@ -143,7 +147,7 @@ function App() {
         </Tabs>
         </Stack>
         <RPanel gridArea='rpanel'/>
-        <Box gridArea="bot" background="#9b0000">
+        <Box gridArea="bot" background="#9b0000" zIndex='10'>
           <BotBar/>
         </Box>
       </Grid>
