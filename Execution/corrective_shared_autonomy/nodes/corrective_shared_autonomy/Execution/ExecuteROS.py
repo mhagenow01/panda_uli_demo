@@ -15,6 +15,7 @@ from hybrid_controller.msg import HybridPose
 from geometry_msgs.msg import Quaternion, Pose, Vector3
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Float64, Float64MultiArray
+from franka_core_msgs.msg import RobotState
 from std_msgs.msg import Int32
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
@@ -37,7 +38,7 @@ class ExecuteROS:
 
         rospy.Subscriber("/zdinput/input", Vector3, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
-        rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState, self.storePandaStateTime)
+        rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.storePandaStateTime)
         time.sleep(0.5)
 
     def storeZDInput(self, data):
@@ -55,7 +56,9 @@ class ExecuteROS:
             return True
 
     def storePandaStateTime(self,data):
-        self.last_robot_state = rospy.get_time()
+        print("DRM:",data.robot_mode)
+        if data.robot_mode == 1 or data.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
+            self.last_robot_state = rospy.get_time()
 
     def getZDInput(self):
         return self.input, self.input_button
@@ -180,6 +183,12 @@ class ExecuteROS:
 
     def linearInterpolation(self,start,end,val):
         return start + (end-start)*val
+
+    def shutdown(self):
+        # if panda crashes, appropriately exit other states
+        int_temp = Int32()
+        int_temp.data = 0
+        self.valve_pub.publish(int_temp)
 
     def goToReplayStart(self,state_names,start,tfBuffer,listener):
         # TODO: make this more robust (amount of time based on distance -- check that it got there)

@@ -347,7 +347,6 @@ class DMPLWRhardcoded:
             #     segmentTemp.rev_forcing_vals[jj,:] = reverse_forcing
 
 
-
         # rospack = rospkg.RosPack()
         # root_dir = rospack.get_path(
         #     'corrective_shared_autonomy') + '/nodes/corrective_shared_autonomy/TaskModels/learnedmodels/'
@@ -572,7 +571,10 @@ class DMPLWRhardcoded:
 
         else: # otherwise, don't allow any corrections
             correction = np.zeros((len(state_names),))
-
+            for var in ['theta_qx','qx']:
+                # If correction for orientation is set to zero! (shouldn't happen once upstream is reliable)
+                    if np.linalg.norm(correction[state_names.index(var):state_names.index(var)+4])==0.0:
+                        correction[state_names.index(var)+3] = 1.0
         return correction
 
 
@@ -684,6 +686,7 @@ class DMPLWRhardcoded:
 
                 # Quit if the robot isn't active anymore
                 if not rosExecution.robotActive():
+                    rosExecution.shutdown()
                     return
 
                 correction = self.getCorrection(segment.corrections,input_type,input_vals,segment.state_names,s,surface,Z,dX)

@@ -36,7 +36,7 @@ class ModelRunner():
             R_surface = np.array([quat.x, quat.y, quat.z, quat.w])
             t_surface = np.array([pos.x, pos.y, pos.z])
 
-            model = DMPLWRhardcoded(verbose=True)
+            model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
 
             rospack = rospkg.RosPack()
             config_dir = rospack.get_path('corrective_shared_autonomy')+'/../../ULIConfig/registration_models/'
