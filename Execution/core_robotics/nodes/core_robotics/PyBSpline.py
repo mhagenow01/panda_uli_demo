@@ -239,17 +239,17 @@ class BSplineSurface:
 
         approx_u = int(u*self.m+1)
         approx_v = int(v*self.n+1)
-        lower_u = approx_u - int(math.ceil(self.k/2.0))
-        upper_u = approx_u + int(math.ceil(self.k/2.0))
+        lower_u = approx_u - self.k
+        upper_u = approx_u + self.k
         if lower_u < 0: lower_u = 0
         if upper_u > self.m+1: upper_u = self.m+1
-        lower_v = approx_v - int(math.ceil(self.k/2.0))
-        upper_v = approx_v + int(math.ceil(self.k/2.0))
+        lower_v = approx_v - self.k
+        upper_v = approx_v + self.k
         if lower_v < 0: lower_v = 0
         if upper_v > self.n+1: upper_v = self.n+1
 
-        print(int(math.ceil(self.k/2.0)))
-        print(lower_u,upper_u,lower_v,upper_v)
+        # print(int(math.ceil(self.k/2.0)))
+        # print(lower_u,upper_u,lower_v,upper_v)
 
         ########################################
         # Calculate the interpolated point     #
@@ -283,8 +283,8 @@ class BSplineSurface:
 
         # Partial in the U-direction
         r_u = np.array([0.0, 0.0, 0.0])
-        for ii in range(0,upper_u_partial):
-            for jj in range(0,upper_v):
+        for ii in range(lower_u,upper_u_partial):
+            for jj in range(lower_v,upper_v):
                 scaling_temp =0.0
                 if (self.knots_u[ii+self.k+1]-self.knots_u[ii+1]) != 0:
                     scaling_temp = self.k/(self.knots_u[ii+self.k+1]-self.knots_u[ii+1])
@@ -292,9 +292,9 @@ class BSplineSurface:
 
         # Partial in the V-direction
         r_v = np.array([0.0, 0.0, 0.0])
-        for ii in range(0, upper_u):
+        for ii in range(lower_u, upper_u):
             uu = self.getN(ii, self.k, u, self.knots_u)
-            for jj in range(0, upper_v_partial):
+            for jj in range(lower_v, upper_v_partial):
                 scaling_temp = 0.0
                 if (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1]) != 0:
                     scaling_temp = self.k / (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1])
@@ -447,7 +447,7 @@ def createFastenerSurface():
 
 
 def testSubset():
-    surf_path = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/IRC_piece1.csv'
+    surf_path = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/anna_study1.csv'
     test = BSplineSurface()
     test.loadSurface(surf_path)
     startt = time.time()
