@@ -18,6 +18,8 @@ import rospkg
 from core_robotics.quaternion import qtoA
 from core_robotics.filters import butter_lowpass_filter
 from scipy.spatial.transform import Rotation as R
+import time
+import math
 
 def convertToUV(surface_file, num_samples, x, y, z, fx, fy, fz, qx, qy, qz, qw):
     surfaceModel = BSplineSurface()
@@ -169,7 +171,7 @@ class BSplineSurface:
 
         return wx_best, wy_best, d_best
 
-    def calculate_surface_point(self,u,v):
+    def calculate_surface_point_old(self,u,v):
         # Calculate all of the basis functions for the given u,v
         # using recursive formulation
         r = np.array([0.0, 0.0, 0.0])
@@ -192,8 +194,10 @@ class BSplineSurface:
 
         # Calculate the sum of basis functions for the point interpolation
         for ii in range(0,self.m+1):
+            # print("\n")
             for jj in range(0,self.n+1):
                 r += uu_cache[ii]*vv_cache[jj]*self.controls_pts[ii,jj,:]
+                # print(str(uu_cache[ii]*vv_cache[jj])+",",end='')
 
         ########################################
         # Calculate the normal                 #
@@ -213,6 +217,84 @@ class BSplineSurface:
         for ii in range(0, self.m+1):
             uu = self.getN(ii, self.k, u, self.knots_u)
             for jj in range(0, self.n):
+                scaling_temp = 0.0
+                if (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1]) != 0:
+                    scaling_temp = self.k / (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1])
+                r_v += uu_cache[ii] * vv_partial_cache[jj] * scaling_temp * (self.controls_pts[ii, jj + 1, :] - self.controls_pts[ii, jj, :])
+
+
+        # Get the surface normal from the cross-product
+        r_u_norm = np.divide(r_u,np.linalg.norm(r_u))
+        r_v_norm = np.divide(r_v,np.linalg.norm(r_v))
+        n_hat = np.cross(r_u_norm,r_v_norm)
+
+        # return the calculated point
+        return r, n_hat, r_u_norm, r_v_norm
+
+
+    def calculate_surface_point(self,u,v):
+        # Calculate all of the basis functions for the given u,v
+        # using recursive formulation
+        r = np.array([0.0, 0.0, 0.0])
+
+        approx_u = int(u*self.m+1)
+        approx_v = int(v*self.n+1)
+        lower_u = approx_u - int(math.ceil(self.k/2.0))
+        upper_u = approx_u + int(math.ceil(self.k/2.0))
+        if lower_u < 0: lower_u = 0
+        if upper_u > self.m+1: upper_u = self.m+1
+        lower_v = approx_v - int(math.ceil(self.k/2.0))
+        upper_v = approx_v + int(math.ceil(self.k/2.0))
+        if lower_v < 0: lower_v = 0
+        if upper_v > self.n+1: upper_v = self.n+1
+
+        print(int(math.ceil(self.k/2.0)))
+        print(lower_u,upper_u,lower_v,upper_v)
+
+        ########################################
+        # Calculate the interpolated point     #
+        ########################################
+        uu_cache = np.zeros((self.m+1,))
+        uu_partial_cache = np.zeros((self.m,))
+        vv_cache = np.zeros((self.n+1,))
+        vv_partial_cache = np.zeros((self.n + 1,))
+        for ii in range(lower_u,upper_u):
+            uu_cache[ii] = self.getN(ii,self.k,u,self.knots_u)
+            if ii!=self.m:
+                uu_partial_cache[ii] = self.getN(ii, self.k - 1, u, self.knots_u[1:-1])
+        for jj in range(lower_v,upper_v):
+            vv_cache[jj] = self.getN(jj,self.k,v,self.knots_v)
+            if jj != self.n:
+                vv_partial_cache[jj] = self.getN(jj, self.k-1, v,self.knots_v[1:-1])
+
+        # Calculate the sum of basis functions for the point interpolation
+        for ii in range(lower_u,upper_u):
+            for jj in range(lower_v,upper_v):
+                r += uu_cache[ii]*vv_cache[jj]*self.controls_pts[ii,jj,:]
+
+        ########################################
+        # Calculate the normal                 #
+        ########################################
+
+        upper_u_partial = upper_u
+        if upper_u_partial == self.m+1: upper_u_partial = self.m
+        upper_v_partial = upper_v
+        if upper_v_partial == self.n+1: upper_v_partial = self.n
+
+        # Partial in the U-direction
+        r_u = np.array([0.0, 0.0, 0.0])
+        for ii in range(0,upper_u_partial):
+            for jj in range(0,upper_v):
+                scaling_temp =0.0
+                if (self.knots_u[ii+self.k+1]-self.knots_u[ii+1]) != 0:
+                    scaling_temp = self.k/(self.knots_u[ii+self.k+1]-self.knots_u[ii+1])
+                r_u+= uu_partial_cache[ii]*vv_cache[jj]*scaling_temp*(self.controls_pts[ii+1,jj,:]-self.controls_pts[ii,jj,:])
+
+        # Partial in the V-direction
+        r_v = np.array([0.0, 0.0, 0.0])
+        for ii in range(0, upper_u):
+            uu = self.getN(ii, self.k, u, self.knots_u)
+            for jj in range(0, upper_v_partial):
                 scaling_temp = 0.0
                 if (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1]) != 0:
                     scaling_temp = self.k / (self.knots_v[jj + self.k + 1] - self.knots_v[jj + 1])
@@ -314,140 +396,6 @@ class BSplineSurface:
             self.initialize(k=k,control_pts=control_pts)
 
 
-def createCurved():
-    x = np.linspace(0.15, -0.35, 25)
-    y = np.linspace(0.05, -0.25, 25)
-    xv, yv = np.meshgrid(x, y)
-    z = 0.865+0.05*np.sin(15*(0.15-xv))+0.06*np.sin((np.pi/0.3)*(0.05-yv)-np.pi/2)
-
-    control_pts = np.transpose([xv, yv, z])
-    # control_pts = np.ones((5,5,3))
-    print("Control Points:")
-    print(np.shape(control_pts))
-    print(control_pts[0,24,:])
-
-    # Create a B-Spline instance
-    test_curve = BSplineSurface()
-    test_curve.initialize(k=3, control_pts=control_pts)
-
-    a,b,c,d = test_curve.calculate_surface_point(0.2, 0.8)
-    print("PT:",a)
-
-    # Evaluate a new point
-    # eval_pt, n_hat = test_curve.calculate_surface_point(0.5, 0.25)
-    # print "NHAT: ", n_hat
-
-    # 3D plotting code
-    ax = plt.gca(projection='3d')
-    ax.scatter(xv.flatten(), yv.flatten(), z.flatten(), color='blue')
-    ax.scatter(a[0],a[1],a[2],color='red')
-    # ax.scatter(eval_pt[0], eval_pt[1], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[1], eval_pt[2], n_hat[0], n_hat[1], n_hat[2], length=0.1, normalize=True)
-    # ax.set_xlim3d(0, 1)
-    # ax.set_ylim3d(0, 1)
-    # ax.set_zlim3d(0, 1)
-
-    # # 2D plotting code
-    # ax = plt.gca()
-    # ax.scatter(xv.flatten(), z.flatten(), color='blue')
-    # ax.scatter(eval_pt[0], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[2],n_hat[0], n_hat[2])
-
-    plt.show()
-
-    test_curve.writeSurface('curved')
-
-def createAngledPlane():
-    a = np.linspace(-0.4, 0.4, 25)
-    b = np.linspace(-0.4, 0.4, 25)
-    control_pts = np.zeros((25,25,3))
-    for aa in range(len(a)):
-        for bb in range(len(b)):
-            control_pts[aa,bb,:]=np.matmul(exp_map_np([1.37542454, 0.37261167, 0.0]),np.array([a[aa],b[bb],-0.2968528]))
-
-    # control_pts = np.ones((5,5,3))
-    print("Control Points:")
-    print(np.shape(control_pts))
-    print(control_pts[0, 24, :])
-
-    # Create a B-Spline instance
-    test_curve = BSplineSurface()
-    test_curve.initialize(k=3, control_pts=control_pts)
-
-    a, b, c, d = test_curve.calculate_surface_point(0.3, 0.6)
-    print("PT:", a)
-
-    # Evaluate a new point
-    # eval_pt, n_hat = test_curve.calculate_surface_point(0.5, 0.25)
-    # print "NHAT: ", n_hat
-
-    # 3D plotting code
-    ax = plt.gca(projection='3d')
-    ax.scatter(control_pts[:,:,0], control_pts[:,:,1], control_pts[:,:,2], color='blue')
-    ax.scatter(.0080, .34688, .215, color='red')
-
-    ut,vt = test_curve.getClosestParams(.0080, .34688, .215,0.5,0.5)
-    print("UV:",ut," ",vt)
-
-    # ax.scatter(eval_pt[0], eval_pt[1], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[1], eval_pt[2], n_hat[0], n_hat[1], n_hat[2], length=0.1, normalize=True)
-    # ax.set_xlim3d(0, 1)
-    # ax.set_ylim3d(0, 1)
-    # ax.set_zlim3d(0, 1)
-
-    # # 2D plotting code
-    # ax = plt.gca()
-    # ax.scatter(xv.flatten(), z.flatten(), color='blue')
-    # ax.scatter(eval_pt[0], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[2],n_hat[0], n_hat[2])
-
-    plt.show()
-
-    test_curve.writeSurface('plane')
-
-def createTable():
-    x = np.linspace(0.32, -0.68, 25)
-    y = np.linspace(0.18, -0.32, 25)
-    xv, yv = np.meshgrid(x, y)
-    z = 0.795+0.0*xv+0.0*yv
-
-    control_pts = np.transpose([xv, yv, z])
-    # control_pts = np.ones((5,5,3))
-    print("Control Points:")
-    print(np.shape(control_pts))
-    print(control_pts[0,24,:])
-
-    # Create a B-Spline instance
-    test_curve = BSplineSurface()
-    test_curve.initialize(k=3, control_pts=control_pts)
-
-    a,b,c,d = test_curve.calculate_surface_point(0.3, 0.6)
-    print("PT:",a)
-
-    # Evaluate a new point
-    # eval_pt, n_hat = test_curve.calculate_surface_point(0.5, 0.25)
-    # print "NHAT: ", n_hat
-
-    # 3D plotting code
-    ax = plt.gca(projection='3d')
-    ax.scatter(xv.flatten(), yv.flatten(), z.flatten(), color='blue')
-    ax.scatter(a[0],a[1],a[2],color='red')
-    # ax.scatter(eval_pt[0], eval_pt[1], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[1], eval_pt[2], n_hat[0], n_hat[1], n_hat[2], length=0.1, normalize=True)
-    # ax.set_xlim3d(0, 1)
-    # ax.set_ylim3d(0, 1)
-    # ax.set_zlim3d(0, 1)
-
-    # # 2D plotting code
-    # ax = plt.gca()
-    # ax.scatter(xv.flatten(), z.flatten(), color='blue')
-    # ax.scatter(eval_pt[0], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[2],n_hat[0], n_hat[2])
-
-    plt.show()
-
-    test_curve.writeSurface('table')
-
 def createFastenerSurface():
     num_ctrl_pts = 30
     theta = np.linspace(279,251,num_ctrl_pts)
@@ -498,101 +446,25 @@ def createFastenerSurface():
     curve.writeSurface('fastener1')
 
 
-
-def createBoeing():
-    x = np.linspace(0.0, 0.2032, 30)
-    y = np.linspace(0.0, 0.2032, 30)
-    xv, yv = np.meshgrid(x, y)
-    z = 0.0762+0.0*xv+0.0*yv
-    z[14:,14:]=0.0762/2
-
-    control_pts = np.transpose([xv, yv, z])
-    # control_pts = np.ones((5,5,3))
-    print("Control Points:")
-    print(np.shape(control_pts))
-    print(control_pts[0,24,:])
-
-    # Create a B-Spline instance
-    test_curve = BSplineSurface()
-    test_curve.initialize(k=3, control_pts=control_pts)
-
-    a,b,c,d = test_curve.calculate_surface_point(0.3, 0.6)
-    print("PT:",a)
-
-    # Evaluate a new point
-    # eval_pt, n_hat = test_curve.calculate_surface_point(0.5, 0.25)
-    # print "NHAT: ", n_hat
-
-    # 3D plotting code
-    ax = plt.gca(projection='3d')
-    ax.scatter(xv.flatten(), yv.flatten(), z.flatten(), color='blue')
-    ax.scatter(a[0],a[1],a[2],color='red')
-    # ax.scatter(eval_pt[0], eval_pt[1], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[1], eval_pt[2], n_hat[0], n_hat[1], n_hat[2], length=0.1, normalize=True)
-    # ax.set_xlim3d(0, 1)
-    # ax.set_ylim3d(0, 1)
-    # ax.set_zlim3d(0, 1)
-
-    # # 2D plotting code
-    # ax = plt.gca()
-    # ax.scatter(xv.flatten(), z.flatten(), color='blue')
-    # ax.scatter(eval_pt[0], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[2],n_hat[0], n_hat[2])
-
-    plt.show()
-
-    test_curve.writeSurface('boeinglayup')
-
-def testing():
-    # Create surface test data
-    x = np.linspace(0, 1, 25)
-    y = np.linspace(0, 1, 25)
-    xv, yv = np.meshgrid(x, y)
-    z = 0.1 * np.abs(np.sin(xv * np.pi*1)) + 0.2 * np.sin(yv * np.pi*2)+0.2
-
-    control_pts = np.transpose([xv, yv, z])
-    # control_pts = np.ones((5,5,3))
-    print("Control Points:")
-    print(np.shape(control_pts))
-
-    # Create a B-Spline instance
-    test_curve = BSplineSurface()
-    test_curve.initialize(k=3, control_pts=control_pts)
-
-    # Evaluate a new point
-    eval_pt, n_hat = test_curve.calculate_surface_point(0.5, 0.25)
-    print("NHAT: ",n_hat)
-
-    # 3D plotting code
-    ax = plt.gca(projection='3d')
-    ax.scatter(xv.flatten(), yv.flatten(), z.flatten(), color='blue')
-    ax.scatter(eval_pt[0], eval_pt[1], eval_pt[2], color='red', s=50)
-    ax.quiver(eval_pt[0], eval_pt[1], eval_pt[2],n_hat[0], n_hat[1], n_hat[2], length=0.1, normalize=True)
-    ax.set_xlim3d(0,1)
-    ax.set_ylim3d(0,1)
-    ax.set_zlim3d(0,1)
-
-    # # 2D plotting code
-    # ax = plt.gca()
-    # ax.scatter(xv.flatten(), z.flatten(), color='blue')
-    # ax.scatter(eval_pt[0], eval_pt[2], color='red', s=50)
-    # ax.quiver(eval_pt[0], eval_pt[2],n_hat[0], n_hat[2])
-
-    plt.show()
-
-    test_curve.writeSurface('test')
-
-def unit_testing():
-    test_curve = BSplineSurface()
-    print(test_curve.getN(0,2,0.25,np.array([0.0, 0.0, 0.0, float(1.0/3), float(2.0/3), 1.0, 1.0, 1.0])))
-
-def curvedLoad():
+def testSubset():
+    surf_path = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/IRC_piece1.csv'
     test = BSplineSurface()
-    test.loadSurface("curved")
-    print(test.calculate_surface_point(0.1,0.1))
+    test.loadSurface(surf_path)
+    startt = time.time()
+    u = 0.2
+    v = 0.8
+    x = test.calculate_surface_point_old(u,v)
+    t1 = time.time()-startt
+    startt = time.time()
+    y = test.calculate_surface_point(u,v)
+    t2 = time.time()-startt
+    print("before: ",t1,x)
+    print("after: ",t2,y)
+    print("Speedup BsplineSurface: ",t1/t2)
+
 
 if __name__ == "__main__":
-    createFastenerSurface()
+    testSubset()
 
 
 
