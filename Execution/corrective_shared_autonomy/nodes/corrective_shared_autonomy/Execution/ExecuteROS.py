@@ -31,6 +31,8 @@ class ExecuteROS:
         self.input_button = 0.0
         self.input_tx = input_tx # if the transform should be further rotated
 
+        self.robot_active = True
+
         self.task_R = task_R
         self.task_t = task_t
 
@@ -50,15 +52,13 @@ class ExecuteROS:
 
     def robotActive(self):
         # checks whether the robot has sent the state recently. used by task model to know whether to continue
-        if rospy.get_time()-self.last_robot_state > 1.0:
-            return False
-        else:
-            return True
+        return self.robot_active
 
     def storePandaStateTime(self,data):
-        print("DRM:",data.robot_mode)
         if data.robot_mode == 1 or data.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
-            self.last_robot_state = rospy.get_time()
+            self.robot_active = True
+        else:
+            self.robot_active = False
 
     def getZDInput(self):
         return self.input, self.input_button
@@ -105,6 +105,15 @@ class ExecuteROS:
                 R_orientation = R.from_quat(norm_q)
                 rotated_orientation = (R_temp * R_orientation).as_quat()
 
+                # If tool point offset, apply to position
+                if("tool_offset_x" in state_names):
+                    to_ind = state_names.index("tool_offset_x")
+                    tool_offset = np.array([state_vals[to_ind], state_vals[to_ind+1], state_vals[to_ind+2]])
+                    tool_offset_global = (R_temp * R_orientation).apply(tool_offset)
+                    hpose.pose.position.x -= tool_offset_global[0]
+                    hpose.pose.position.y -= tool_offset_global[1]
+                    hpose.pose.position.z -= tool_offset_global[2]
+
                 hpose.pose.orientation.x = rotated_orientation[0]
                 hpose.pose.orientation.y = rotated_orientation[1]
                 hpose.pose.orientation.z = rotated_orientation[2]
@@ -144,10 +153,19 @@ class ExecuteROS:
             r_u_norm = R_temp.apply(r_u_norm)
             r_v_norm = R_temp.apply(r_v_norm)
 
-
             # get constraint frame
             constraint_frame_matrx = R.from_matrix(np.hstack([r_u_norm.reshape((3,1)),r_v_norm.reshape((3,1)),n_hat.reshape((3,1))]))
             constraint_frame = constraint_frame_matrx.as_quat()
+
+            # If tool point offset, apply to position
+            if("tool_offset_x" in state_names):
+                R_theta = R.from_quat(norm_q)
+                to_ind = state_names.index("tool_offset_x")
+                tool_offset = np.array([state_vals[to_ind], state_vals[to_ind+1], state_vals[to_ind+2]])
+                tool_offset_global = (constraint_frame_matrx * R_theta).apply(tool_offset)
+                r[0] -= tool_offset_global[0]
+                r[1] -= tool_offset_global[1]
+                r[2] -= tool_offset_global[2]
 
             # rotate position into constraint frame
             xyz_cf = constraint_frame_matrx.inv().apply(np.array(r))

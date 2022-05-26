@@ -61,7 +61,7 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file= '',breadboard_offset=[0,0])
     mesh = trimesh.load(stl_file)
 
     # Turn STL into a point cloud of the desired surface using even sampling
-    points, something = sample.sample_surface_even(mesh,200)
+    points, something = sample.sample_surface_even(mesh,10000)
 
     # # convert properly for mm to m issue (from solidworks models)
     # points = points/1000
@@ -313,7 +313,7 @@ def surfaceFromSTL(surface_file,stl_file,rigid_file= '',breadboard_offset=[0,0])
 
 
 if __name__ == "__main__":
-    stl_file = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/anna_study1_visual.STL'
+    stl_file = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/anna_study1.STL'
     rigid_file = ''
     surface_file = '/home/mike/Documents/demo/src/panda_uli_demo/ULIConfig/registration_models/anna_study1.csv'
     surfaceFromSTL(surface_file,stl_file,rigid_file,breadboard_offset=[0,0])
