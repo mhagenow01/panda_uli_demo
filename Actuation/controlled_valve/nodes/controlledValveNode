@@ -61,6 +61,7 @@ class ControlledValve():
                 serialsent = True
             except:
                 ii += 1
+                print("Failed Serial: ",ii)
                 rospy.sleep(0.2)
 
     def runLoop(self):

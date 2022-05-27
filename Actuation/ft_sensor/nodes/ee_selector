@@ -15,9 +15,15 @@ import numpy as np
 import rospkg
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy import signal as scisignal
+import signal
+import sys
 
 from tf2_ros import TransformBroadcaster
 from geometry_msgs.msg import TransformStamped
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    sys.exit(0)
 
 class EEProcessor:
     def __init__(self):
@@ -75,6 +81,7 @@ class EEProcessor:
 
        
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
     ee_proc = EEProcessor()
 
 

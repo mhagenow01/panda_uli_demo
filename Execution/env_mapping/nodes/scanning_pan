@@ -44,8 +44,6 @@ class PandaReg:
         strDone.data = "start"
         pub_done.publish(strDone)
 
-        rospy.sleep(2.0) # give a second for kinect driver to start
-
         hpose = HybridPose()
         hpose.sel_vector = [1,1,1,1,1,1]
         hpose.wrench.force.x = 0.0
@@ -80,7 +78,7 @@ class PandaReg:
         #############################
         # Sleep for Driver to Start #
         #############################
-        rospy.sleep(3.0)
+        rospy.sleep(3.5)
 
         ###################################
         # Run the registration sequence 
@@ -91,7 +89,7 @@ class PandaReg:
 
         # Up Down
         max_theta = 2 * np.pi
-        for theta in np.arange(0, max_theta, 0.005):
+        for theta in np.arange(0, max_theta, 0.015):
             
             if not rospy.is_shutdown():
                 R_cam = ScipyR.from_euler('XYZ', [0.0, -0.2*np.sin(theta), 0.0])
@@ -114,7 +112,7 @@ class PandaReg:
         
         # Left Right
         max_theta = 2 * np.pi
-        for theta in np.arange(0, max_theta, 0.005):
+        for theta in np.arange(0, max_theta, 0.015):
             
             if not rospy.is_shutdown():
                 R_cam = ScipyR.from_euler('XYZ', [-0.2*np.sin(theta), 0.0, 0.0])
