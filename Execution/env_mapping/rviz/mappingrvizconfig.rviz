@@ -42,6 +42,7 @@ Panels:
         - /Pose1
         - /PointCloud24
         - /PointCloud25
+        - /Pose2
       Splitter Ratio: 0.5162393450737
     Tree Height: 96
   - Class: corrections_panel/CorrectionsPanel
@@ -149,7 +150,7 @@ Visualization Manager:
       Marker Topic: /points_clicked
       Name: MarkerArray
       Namespaces:
-        {}
+        pts: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -157,7 +158,7 @@ Visualization Manager:
       Marker Topic: /meshes
       Name: MarkerArray
       Namespaces:
-        {}
+        meshes: true
       Queue Size: 100
       Value: true
     - Alpha: 1
@@ -260,6 +261,22 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Axes Length: 0.10000000149011612
+      Axes Radius: 0.019999999552965164
+      Class: rviz/Pose
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.30000001192092896
+      Head Radius: 0.10000000149011612
+      Name: Pose
+      Queue Size: 10
+      Shaft Length: 1
+      Shaft Radius: 0.05000000074505806
+      Shape: Axes
+      Topic: /panda/pose_nohybrid
+      Unreliable: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -288,7 +305,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.2325139045715332
+      Distance: 1.3254995346069336
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -296,17 +313,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.6833123564720154
-        Y: -0.031135236844420433
-        Z: 0.4831139147281647
+        X: 0.4530028700828552
+        Y: -0.3206256031990051
+        Z: 0.5905581712722778
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.30979791283607483
+      Pitch: 0.19479791820049286
       Target Frame: <Fixed Frame>
-      Yaw: 1.1903468370437622
+      Yaw: 2.210340976715088
     Saved: ~
 Window Geometry:
   Camera:
