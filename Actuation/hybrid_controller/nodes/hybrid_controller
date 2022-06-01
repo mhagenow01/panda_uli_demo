@@ -78,7 +78,8 @@ class HybridController:
                 curr_q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
 
                 # store ee velocity for admittance law
-                
+                twist = self.tfBuffer.lookup_twist('panda_link0', 'panda_ee', rospy.Time())
+                print(twist)
 
                 # convert current state into constraint frame
                 R_cf = ScipyR.from_quat(self.cf)
