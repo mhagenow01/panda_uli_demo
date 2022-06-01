@@ -10,7 +10,7 @@ from enum import Enum
 import rospy
 import time
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Wrench, PoseStamped
+from geometry_msgs.msg import Wrench, PoseStamped, Vector3
 from hybrid_controller.msg import HybridPose
 import numpy as np
 from scipy.spatial.transform import Rotation as ScipyR
@@ -40,10 +40,22 @@ class HybridController:
 
         self.cf = np.array((0,0,0,1))
 
+
+        self.admittance = False
+        self.lin_stiffness = np.array([500.0, 500.0, 500.0])
+        self.ang_stiffness = np.array([10.0, 10.0, 10.0])
+
+        self.lin_damping  = 2.0 * np.sqrt(self.lin_stiffness)
+        self.ang_damping  = 2.0 * np.sqrt(self.ang_stiffness)
+
+        self.vel = np.zeros((6,))
+
         rospy.Subscriber("/panda/pose_command", PoseStamped, self.commandPose)
         rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
         rospy.Subscriber("/panda/set_hybrid_gain_linear", Float64, self.setGainLinear)
         rospy.Subscriber("/panda/set_hybrid_gain_angular", Float64, self.setGainAngular)
+        rospy.Subscriber("/panda/set_stiffness_linear", Vector3, self.setStiffnessLinear)
+        rospy.Subscriber("/panda/set_stiffness_angular", Vector3, self.setStiffnessAngular)
         rospy.Subscriber("/ft/wrench", Wrench, self.recordFT, queue_size=1)
 
         self.runHybrid()
@@ -60,10 +72,13 @@ class HybridController:
 
             # Compute Hybrid Control Law
             try:
-                # check for new FT location (from panda movement)
+                # check for new ee location
                 trans = self.tfBuffer.lookup_transform('panda_link0', 'panda_ee', rospy.Time())
                 curr_pos = np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
                 curr_q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
+
+                # store ee velocity for admittance law
+                
 
                 # convert current state into constraint frame
                 R_cf = ScipyR.from_quat(self.cf)
@@ -79,7 +94,12 @@ class HybridController:
                 #############################
 
                 ########## force law ##########
-                new_pos_cf = self.sel_vector[0:3]*self.desired_pos_cf + (np.ones(3,)-self.sel_vector[0:3])*(self.gain_lin*(self.desired_force_cf-curr_f_cf)+curr_pos_cf)
+                if not self.admittance:                
+                    admit_pos = self.sel_vector[0:3]*self.desired_pos_cf
+                else:
+                    admit_pos = self.sel_vector[0:3]*(self.desired_pos_cf + (curr_f_cf + self.lin_damping*self.vel[0:3])/self.lin_stiffness)
+                force_pos = (np.ones(3,)-self.sel_vector[0:3])*(self.gain_lin*(self.desired_force_cf-curr_f_cf)+curr_pos_cf)
+                new_pos_cf = admit_pos + force_pos
                 
                 ########## torque law ##########
                 R_desired_q_cf = ScipyR.from_quat(self.desired_q_cf)
@@ -130,6 +150,14 @@ class HybridController:
 
     def setGainLinear(self,data):
         self.gain_lin = data.data
+
+    def setStiffnessLinear(self,data):
+        self.lin_stiffness = np.array([data.x, data.y, data.z])
+        self.lin_damping = np.sqrt(self.lin_stiffness)
+
+    def setStiffnessAngular(self,data):
+        self.ang_stiffness = np.array([data.x, data.y, data.z])
+        self.ang_damping = np.sqrt(self.ang_stiffness)
 
     def setGainAngular(self,data):
         self.gain_ang = data.data
