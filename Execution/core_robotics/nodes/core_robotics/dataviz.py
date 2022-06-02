@@ -73,7 +73,7 @@ def threedplot(x,y,z):
     plotly.offline.iplot(plot_figure)
 
 
-def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray):
+def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray, marker_size = 1.0):
     # plot x,y,z using plotly
     # one set in red, others in gray
 
@@ -87,7 +87,7 @@ def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray):
         z=z,  # <-- Put your data instead
         mode='markers',
         marker={
-            'size': 1.0,
+            'size': marker_size,
             'opacity': 0.8,
             'color': 'red'
         }
@@ -100,7 +100,7 @@ def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray):
         z=[z[0]],  # <-- Put your data instead
         mode='markers',
         marker={
-            'size': 5.0,
+            'size': 5.0*marker_size,
             'opacity': 0.8,
             'color': 'red'
         }
@@ -131,7 +131,7 @@ def highlightedthreedplot(x,y,z,xs_gray,ys_gray,zs_gray):
             z=zs_gray[ii],  # <-- Put your data instead
             mode='markers',
             marker={
-                'size': 1.0,
+                'size': marker_size,
                 'opacity': 0.8,
                 'color': 'gray'
             }

@@ -1,0 +1,8 @@
+std_msgs/String urdf
+std_msgs/String base
+std_msgs/String ee
+geometry_msgs/Pose desired_pose
+std_msgs/String[] joint_names
+---
+geometry_msgs/Pose soln_pose
+std_msgs/Float64MultiArray soln_joints
