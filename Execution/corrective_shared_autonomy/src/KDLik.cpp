@@ -40,7 +40,7 @@ bool solveIK(corrective_shared_autonomy::IK::Request &req,
   KDL::ChainFkSolverPos_recursive fk_solver(chain);
   KDL::ChainIkSolverVel_pinv ik_solver_vel(chain);
   KDL::ChainIkSolverPos_NR_JL ik_solver(chain, fk_solver,
-            ik_solver_vel, 100000, 1e-6); //max 1000 iterations and stop by an accuracy of 1e-6
+            ik_solver_vel, 1000, 1e-6); //max 1000 iterations and stop by an accuracy of 1e-6
   
   // Set up the joint limits
   int num_joints = chain.getNrOfJoints();
@@ -48,8 +48,6 @@ bool solveIK(corrective_shared_autonomy::IK::Request &req,
     cout << "Found no joints" << endl;
     return 0;
   }
-
-  cout << "NJS " << num_joints << endl;
 
   KDL::JntArray q_init(chain.getNrOfJoints());
   KDL::JntArray q_out(chain.getNrOfJoints());
@@ -61,7 +59,6 @@ bool solveIK(corrective_shared_autonomy::IK::Request &req,
     q_min(i) = my_model.joints_[req.joint_names[i].data.c_str()]->limits->lower;
     q_max(i) = my_model.joints_[req.joint_names[i].data.c_str()]->limits->upper;
     q_init(i) = (q_min(i)+q_max(i))/2.0;
-    cout << q_min(i) << " " << q_max(i) << endl;
   }
 
   ik_solver.setJointLimits(q_min,q_max);
@@ -71,11 +68,9 @@ bool solveIK(corrective_shared_autonomy::IK::Request &req,
   geometry_msgs::Pose pose_in = req.desired_pose;
   KDL::Frame F_dest = KDL::Frame(KDL::Rotation::Quaternion(pose_in.orientation.x, pose_in.orientation.y,
    pose_in.orientation.z, pose_in.orientation.w), KDL::Vector(pose_in.position.x, pose_in.position.y, pose_in.position.z));
-  if (ik_solver.CartToJnt(q_init, F_dest, q_out) < 0) {
-    cout << "I HAVE FAILED: " << ik_solver.CartToJnt(q_init, F_dest, q_out) << " "<< q_out(0) << " " << q_out(1) << " " << q_out(2) << endl;
-    return 0;
-  } 
-  else {
+  
+  int ikresult = ik_solver.CartToJnt(q_init, F_dest, q_out);
+  if (ikresult==0 || ikresult==-5) {
     std_msgs::Float64MultiArray array_msg;
     array_msg.data.resize(q_out.rows());
     // parse output of ik_solver to the robot
@@ -104,6 +99,9 @@ bool solveIK(corrective_shared_autonomy::IK::Request &req,
     res.soln_pose = pose_out;
     res.soln_joints = array_msg;
     return 1;
+  } 
+  else {
+    return 0;
   }
 }
 
