@@ -7,11 +7,12 @@ import {Canvas} from './Canvas';
 import {TopBar} from './TopBar';
 import {BotBar} from './BotBar';
 import {View} from './3Dview';
+import {GamepadHandle} from './Gamepad';
+import Gamepad from 'react-gamepad'
 import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box,CheckBox,Tabs, Tab } from 'grommet';
 import styled from "styled-components";
 import useAppStore from './AppStore';
-import useRosStore from './RosStore';
-
+import useRosStore from './RosStore'; 
 
 function App() {
   const [show3D] = useRosStore(state=>([state.show3D])) 
@@ -106,11 +107,13 @@ function App() {
         extend: {padding: 10}
     }
 }
+
   return (
     <Grommet
       full theme={theme}
       >
     <Box height='100vh' width='100vw' background='light-1'>
+    <GamepadHandle/>
       <Grid
         rows={['10vh', '80vh','10vh']}
         columns={['70vw', '30vw']}

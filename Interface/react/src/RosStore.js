@@ -108,6 +108,12 @@ const store = (set) => ({
             messageType: 'std_msgs/String'
         });
 
+        const joyTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'ui/joy',
+            messageType: 'sensor_msgs/Joy'
+        });
+
         const paramTopic = new ROSLIB.Topic({
             ros: ros,
             name: 'ui/parameters',
@@ -157,6 +163,7 @@ const store = (set) => ({
             commandTopic:commandTopic,
             imageTopic:imageTopic,
             paramTopic:paramTopic,
+            joyTopic:joyTopic,
         };
     })
 });

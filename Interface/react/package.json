@@ -13,6 +13,8 @@
     "konva": "^8.3.5",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-gamepad": "^1.0.3",
+    "react-gamepads": "^1.0.0",
     "react-konva": "^17.0.2-6",
     "react-scripts": "4.0.3",
     "ros3d": "^1.0.1",

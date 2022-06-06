@@ -1,5 +1,6 @@
 import create from "zustand";
 import produce from 'immer';
+import ROSLIB from 'roslib';
 
 import useRosStore from './RosStore';
 
@@ -9,6 +10,7 @@ const immer = (config) => (set, get, api) =>
 const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
+    gamepads: [],
     path: [{x:0,y:0}],
     imageWidth: 1073,//1200
     imageHeight: 805,//900
@@ -28,6 +30,36 @@ const store = (set,get) => ({
       y: 100 + (i+1)%4* 100,
       isDragging: false,
     })),
+    setGamepads: (msg) => set(state=>{
+      // https://answers.ros.org/question/284741/seq-or-time-stamp-for-publishing-a-message/
+      try {
+        var currentTime = new Date();
+        var secs = Math.floor(currentTime.getTime()/1000);
+        var nsecs = Math.round(1000000000*(currentTime.getTime()/1000-secs));
+        var buttons = []
+        msg[0].buttons.map((button) => {
+          buttons.push(button.value)  
+        })
+        var joy_msg = new ROSLIB.Message({
+          header : {
+            seq : 0,
+            stamp : {
+              secs: Math.floor(currentTime.getTime()/1000),
+              nsecs: Math.round(1000000000*(currentTime.getTime()/1000-secs))
+            },
+            frame_id: "/dev/input/js0"
+          },
+          axes: msg[0].axes,
+          buttons: buttons
+        });
+
+        useRosStore.getState().joyTopic.publish(joy_msg)
+      }
+      catch (err){
+        console.log(err)
+      }
+      state.gamepads = msg
+    }),
     addMessage: (message) => set(state=>{
         state.messages = [message,...state.messages]
     }),
