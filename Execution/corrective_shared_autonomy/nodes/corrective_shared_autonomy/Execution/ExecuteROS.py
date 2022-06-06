@@ -128,7 +128,7 @@ class ExecuteROS:
             u = state_vals[state_names.index("u")]
             v = state_vals[state_names.index("v")]
             f = state_vals[state_names.index("f")]
-            theta_qx = state_vals[state_names.index("theta_qx")]
+            theta_qx = state_vals[state_names.index("theta_qx")] #TODO: perhaps this should be conditional if "theta_qx" in state_names
             theta_qy = state_vals[state_names.index("theta_qy")]
             theta_qz = state_vals[state_names.index("theta_qz")]
             theta_qw = state_vals[state_names.index("theta_qw")]
