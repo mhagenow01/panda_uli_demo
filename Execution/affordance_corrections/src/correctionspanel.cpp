@@ -10,7 +10,6 @@
 
 #include <QWidget>
 #include <QPainter>
-#include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -39,15 +38,17 @@ namespace corrections_panel{
         int screenWidth = QGuiApplication::primaryScreen()->geometry().size().width();
         int screenRatio = screenWidth/1920;
 
-        cf = 0; //control frame is originally global robot
         mapping = false;
+        fragmentid = 0; // 0 - ready to compute, 1 - ready to execute
 
         // Initialize publishers
         cam_pos_pub = n.advertise<geometry_msgs::Point>("rviz_camera_p", 1);
         quat_pub = n.advertise<geometry_msgs::Quaternion>("rviz_camera_q", 1);
         trigger_pub = n.advertise<std_msgs::String>("rviz_triggers", 1);
         obj_pub = n.advertise<std_msgs::String>("getObjPose", 1);
+        exec_pub = n.advertise<std_msgs::String>("executeModel", 1);
         refit_sub = n.subscribe("objRefittingUpdate", 1, &CorrectionsPanel::refitCallback, this);
+        rviz_sub = n.subscribe("rviz_triggers", 1, &CorrectionsPanel::rvizCallback, this);
 
         static tf2_ros::TransformBroadcaster br;
 
@@ -56,7 +57,7 @@ namespace corrections_panel{
         cfBox->setStyleSheet("background-color: #dae3e3; border-radius: 10pt; border-color: #b6b8b8");
         cfBox->setFixedHeight(150*screenRatio);
 
-        QPushButton* scanButton = new QPushButton("Run Scan");
+        scanButton = new QPushButton("Run Scan");
         scanButton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
         cfLayout->addWidget(scanButton);
 
@@ -64,7 +65,7 @@ namespace corrections_panel{
         deletebutton->setStyleSheet("background-color: #FF968A; border-style: solid; border-width: 2px; border-radius: 10px; border-color: #FF968A; font: bold 22px; min-width: 10em; padding: 6px;");
         cfLayout->addWidget(deletebutton);
 
-        QPushButton* toggleBehaviorbutton = new QPushButton("Run Behavior");
+        toggleBehaviorbutton = new QPushButton("Compute Trajectory");
         toggleBehaviorbutton->setStyleSheet("background-color: #B6D5E7; border-style: solid; border-width: 2pt; border-radius: 10pt; border-color: #B6D5E7; font: bold 18pt; min-width: 10em; padding: 6pt;");
         cfLayout->addWidget(toggleBehaviorbutton);
 
@@ -79,14 +80,29 @@ namespace corrections_panel{
 
         // Run Scan
         connect(scanButton, &QPushButton::clicked, [this](){
-           s_out.data = "scan";
-           trigger_pub.publish(s_out);
+           if(!mapping){
+               mapping = true;
+               s_out.data = "scan";
+               trigger_pub.publish(s_out);
+               scanButton->setEnabled(false);
+               scanButton->setText("Scanning");
+           }  
         });
 
         // Run Behavior
         connect(toggleBehaviorbutton, &QPushButton::clicked, [this](){
-           s_out.data = "on";
-           obj_pub.publish(s_out);
+           if(fragmentid==0){ // ready to compute
+                s_out.data = "on";
+                obj_pub.publish(s_out);
+                toggleBehaviorbutton->setEnabled(false);
+                toggleBehaviorbutton->setText("Computing");
+           }
+           else if(fragmentid==1){ //ready to execute
+                s_out.data = "execute";
+                exec_pub.publish(s_out);
+                toggleBehaviorbutton->setEnabled(false);
+                toggleBehaviorbutton->setText("Executing");
+           }
         });
 
         // Delete Object
@@ -148,6 +164,24 @@ namespace corrections_panel{
             // Update the refitting checkbox for the active object
             refitting->setChecked(data.data);
     }
+
+    void CorrectionsPanel::rvizCallback(std_msgs::String data){
+            if(data.data=="scanningdone"){
+                scanButton->setEnabled(true);
+                scanButton->setText("Run Scan");
+            }
+            if(data.data=="computetrajdone"){
+                toggleBehaviorbutton->setEnabled(true);
+                toggleBehaviorbutton->setText("Execute Trajectory");
+                fragmentid = 1; // ready to execute
+            }
+            if(data.data=="execdone"){
+                toggleBehaviorbutton->setEnabled(true);
+                toggleBehaviorbutton->setText("Compute Trajectory");
+                fragmentid = 0; // ready to compute
+            }
+    }
+
 
 
 } // end namespace

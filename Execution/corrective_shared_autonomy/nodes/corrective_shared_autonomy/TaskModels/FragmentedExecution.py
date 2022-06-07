@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ Take a set of surface trajectories and determine
     the subset that can be executed given the current
     robot pose
@@ -9,15 +11,18 @@ __author__ = "Mike Hagenow"
 
 import rospy
 import rospkg
+import copy
 import numpy as np
 import time
+import pickle
 from core_robotics.PyBSpline import BSplineSurface
 from corrective_shared_autonomy.srv import IK
-from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment
+from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment, DMPLWRhardcoded
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy.spatial.transform import Slerp
 from std_msgs.msg import String
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
+from visualization_msgs.msg import Marker, MarkerArray
 
 #########################################################################
 # RELATED TO REACHABILITY CHECKS                                        #
@@ -84,7 +89,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 
 #
 # NOTE: this presumes that the kdlik service is running
-def getReachable(trajectories):
+def getReachable(trajectories, curr_mask):
     # TODO: based on config
     # TODO: speed -- parallel type stuff http://wiki.ros.org/roscpp/Overview/Callbacks%20and%20Spinning#Multi-threaded_Spinning
     rospack = rospkg.RosPack()
@@ -107,9 +112,10 @@ def getReachable(trajectories):
         for jj in range(0,np.shape(trajectories[ii])[1]):
             pos = trajectories[ii][0:3,jj].flatten()
             quat = trajectories[ii][3:7,jj].flatten()
-            success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-            if success:
-                taskmask[ii][jj]=1
+            if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
+                success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+                if success: # found soln
+                    taskmask[ii][jj]=1
 
     return taskmask
 
@@ -161,7 +167,7 @@ def getPoseFromState(surface,state_names,state_vals,q_surf = np.array([0, 0, 0, 
 # Takes in a rotation (q_surf) and translation (t_surf) of the surface model
 # Returns a mask of the trajectories that are reachable (list of booleans) [num_samps]
 # TODO: min number of continuous samples
-def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length):
+def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask= None):
     
     num_trajs = len(trajs)
 
@@ -177,12 +183,12 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length):
             pose_traj[:,jj] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf) 
         pose_trajs.append(pose_traj)
 
-    # TODO: downsample if required
+    # TODO: downsample if required (also, stride based on culling path length)
 
     ##########################################
     # Step 1: cull based on reachability     #
     ##########################################
-    mask = getReachable(pose_trajs)
+    mask = getReachable(pose_trajs,curr_mask)
 
     ##########################################
     # Step 2: cull based on min length       #
@@ -404,9 +410,155 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             last_uv = [ending_u, ending_v] # store previous end of path
             last_R_tool_surf = R_tool_surf_ret
 
-    return segments
+    model = DMPLWRhardcoded(verbose=False, dt=1./samps_per_sec)
+    learnedSegments = model.learnModel(segments) # second argument is the outfile
+    return learnedSegments
 
-    class FragmentedExecutionManager():
-        def __init__(self):
-            print("hi")
+    #############
 
+def circ_marker(index, pos, size, color=[0.0, 1.0, 0.0], frame="map"):
+    """ Creates circular markers on points of interest """
+    marker = Marker()
+    marker.header.frame_id = frame
+    marker.header.stamp = rospy.Time.now()
+    marker.ns = "pts"
+    marker.id = index
+    marker.type = 2 # sphere
+    marker.action = 0 # Add/Modify
+    marker.pose.position.x = pos[0]
+    marker.pose.position.y = pos[1]
+    marker.pose.position.z = pos[2]
+    marker.pose.orientation.x = 0
+    marker.pose.orientation.y = 0
+    marker.pose.orientation.z = 0
+    marker.pose.orientation.w = 1
+    marker.scale.x = size
+    marker.scale.y = size
+    marker.scale.z = size
+    marker.color.a = 0.9
+    marker.color.r = color[0]
+    marker.color.g = color[1]
+    marker.color.b = color[2]
+    return marker
+
+class FragmentedExecutionManager():
+    def __init__(self):
+        self.taskmask = None
+        self.registrationsub = rospy.Subscriber("/registeredObject", PoseStamped, self.computeTask)
+        self.executesub = rospy.Subscriber("/executeModel", String, self.executeModel)
+        self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
+        # TODO: plan -> execute
+        self.model_name = ''
+        self.min_length = 5
+        self.plotting_size = 0.01
+        self.max_num_traj_pts = 0
+        self.fragmentedBehavior = None
+        
+        time.sleep(0.5)
+        rospy.spin()
+        
+    def resetExecution(self):
+        self.taskmask = None
+
+    def executeModel(self,data):
+        # UI: grayed out execution
+        if self.fragmentedBehavior is not None:
+            model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
+            model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
+            new_taskmask = []
+
+            # first time, need to create taskmask
+            if self.taskmask is None:
+                self.taskmask = []
+                for ii in range(0,len(self.tempmask)):
+                    self.taskmask.append(np.zeros((np.shape(self.tempmask[ii]))))
+
+            for ii in range(0,len(self.taskmask)):
+                new_taskmask.append(np.add(self.taskmask[ii],2*self.tempmask[ii])) # makes 2 for completed
+            self.taskmask = new_taskmask
+            self.fragmentedBehavior = None
+        # UI: disbabled compute (until moved again?)
+
+    def clearReachability(self):
+        # TODO: clear reachability when the object is moved using spacemouse and enable compute
+        # need to clear max possible traj length before plotting
+        markers = MarkerArray()
+        for ii in range(0,self.max_num_traj_pts):
+            marker = Marker()
+            marker.header.frame_id = 'map'
+            marker.action = marker.DELETEALL # for some reason, DELETE doesn't work
+            markers.markers.append(marker)
+        self.pathmarkerarraypub.publish(markers)
+
+    def displayReachability(self,trajs):
+        self.clearReachability()
+        markerarr = MarkerArray()
+        mark_id = 0
+
+        # on first run, taskmask hasn't yet been populated (use tempmask)
+        if self.taskmask is None:
+            mask_tmp = copy.deepcopy(self.tempmask)
+        else:
+            mask_tmp = []
+            for ii in range(0,len(self.taskmask)):
+                mask_tmp.append(np.add(self.taskmask[ii],self.tempmask[ii]))
+
+        for ii in range(0,len(trajs)):
+            tmp_num_samps = np.shape(trajs[ii])[1]
+            for jj in range(0,tmp_num_samps):
+                pos = trajs[ii][0:3,jj]
+                if mask_tmp[ii][jj]==0: # not possible
+                    markerarr.markers.append(circ_marker(mark_id, pos, self.plotting_size, color=[1.0, 150./255, 138./255], frame="map"))
+                elif mask_tmp[ii][jj]==1: # possible
+                    markerarr.markers.append(circ_marker(mark_id, pos, self.plotting_size, color=[85./255, 203./255, 205./255], frame="map"))
+                elif mask_tmp[ii][jj]==2: # already completed
+                    markerarr.markers.append(circ_marker(mark_id, pos, self.plotting_size, color=[128./255, 128./255, 128./255], frame="map"))
+                mark_id +=1
+        if mark_id > self.max_num_traj_pts:
+            self.max_num_traj_pts = mark_id
+        
+        # publish marker array representing path
+        self.pathmarkerarraypub.publish(markerarr)
+
+    def computeTask(self,data):
+        # UI: gray out 'compute button'
+        model_name = data.header.frame_id
+        if model_name != self.model_name:
+            self.resetExecution()
+            self.model_name = model_name
+            rospack = rospkg.RosPack()
+            config_dir = rospack.get_path('uli_config')+'/registration_models/'
+            self.surfacefile = config_dir + self.model_name + ".csv"
+            self.surface = BSplineSurface()
+            self.surface.loadSurface(self.surfacefile)
+            self.behaviorfile = config_dir + self.model_name + "_frag.pkl"
+            self.state_names, self.state_vals, self.corrections = pickle.load(open(self.behaviorfile, "rb"))
+
+        # Current surface location in robot coordinate frame
+        quat = data.pose.orientation
+        pos = data.pose.position
+        self.q_surf = np.array([quat.x, quat.y, quat.z, quat.w])
+        self.t_surf = np.array([pos.x, pos.y, pos.z])
+
+        # Compute and display current reachability
+        print("getting frag")
+        if self.taskmask is not None:
+            print("-----------------------------")
+            print("TASKMASK")
+            print(self.taskmask)
+        self.tempmask, trajs = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask)
+        print("-----------------------------")
+        print("TEMPMASK")
+        print(np.shape(self.tempmask))
+        print(self.tempmask)
+        print("-----------------------------")
+        print("disp reach")
+        self.displayReachability(trajs)
+        print("learning behav")
+        self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
+        print("done")
+        # UI: enabled 'execution' button
+            
+if __name__ == "__main__":
+    rospy.init_node('fragmented_exec', anonymous=True)
+    fem = FragmentedExecutionManager()

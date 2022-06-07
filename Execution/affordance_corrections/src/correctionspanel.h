@@ -18,7 +18,7 @@
 #include "std_msgs/Int16.h"
 #include "std_msgs/Bool.h"
 #include <QLabel>
-
+#include <QPushButton>
 #include <QCheckBox>
 
 namespace corrections_panel
@@ -30,6 +30,7 @@ namespace corrections_panel
         public:
             CorrectionsPanel( QWidget* parent = 0);
             void refitCallback(std_msgs::Bool data);
+            void rvizCallback(std_msgs::String data);
         protected:
             DriveWidget* drive_widget_;
         private:
@@ -38,18 +39,22 @@ namespace corrections_panel
             ros::Publisher cam_pos_pub;
             ros::Publisher trigger_pub;
             ros::Subscriber refit_sub;
+            ros::Subscriber rviz_sub;
             geometry_msgs::Quaternion q_out;
             geometry_msgs::Point pos_out;
             ros::Subscriber battery_sub;
             ros::Publisher cf_pub;
             ros::Publisher obj_pub;
             ros::Publisher altview_pub;
-            int cf; // int corresponding to which control frame
+            ros::Publisher exec_pub;
             bool mapping;
+            int fragmentid;
             QLabel* bat;
             std_msgs::String s_out;
 
             QCheckBox* refitting;
+            QPushButton* scanButton;
+            QPushButton* toggleBehaviorbutton;
 
             std_msgs::Int8 artic_out;
             ros::Publisher artic_pub;

@@ -27,9 +27,9 @@ class PandaReg:
         return start + (end-start)*val
 
     def runRR(self):
-
         pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
         pub_mapping = rospy.Publisher('/mappingToggle', String, queue_size=1)
+        pub_rviz = rospy.Publisher('rviz_triggers', String, queue_size=1)
         pub_done = rospy.Publisher('/panda/pan', String, queue_size=1)
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
@@ -138,6 +138,8 @@ class PandaReg:
         strDone = String()
         strDone.data = "end"
         pub_done.publish(strDone)
+        strDone.data = "scanningdone"
+        pub_rviz.publish(strDone)
 
         time.sleep(0.5)
         strMapping.data = "off"
