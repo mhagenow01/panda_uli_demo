@@ -23,6 +23,8 @@ from scipy.spatial.transform import Slerp
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose, PoseStamped, Twist
 from visualization_msgs.msg import Marker, MarkerArray
+from joblib import Parallel, delayed
+
 
 #########################################################################
 # RELATED TO REACHABILITY CHECKS                                        #
@@ -101,15 +103,15 @@ def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
     num_samps = np.shape(poses)[1]
 
     reachable = np.zeros((num_samps,))
-
-    for jj in range(0,num_samps):
-            pos = poses[0:3,jj].flatten()
-            quat = poses[3:7,jj].flatten()
-            success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-            if success: # found soln
-                reachable[jj]=1
     
-    return reachable
+    return Parallel(n_jobs=10, backend='loky')(delayed(checkReachabilityOfPose)(poses[:,i].flatten(),urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames) for i in range(num_samps))
+
+
+def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames):
+    pos = p[0:3]
+    quat = p[3:7]
+    success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+    return success
     
 #
 # NOTE: this assumes that the kdlik service is running
