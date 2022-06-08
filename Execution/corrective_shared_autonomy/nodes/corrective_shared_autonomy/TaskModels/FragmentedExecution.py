@@ -446,6 +446,8 @@ class FragmentedExecutionManager():
         self.taskmask = None
         self.registrationsub = rospy.Subscriber("/registeredObject", PoseStamped, self.computeTask)
         self.executesub = rospy.Subscriber("/executeModel", String, self.executeModel)
+        self.correctionsub = rospy.Subscriber("/correction", Twist, self.modelMoved)
+        self.rvizpub = rospy.Publisher("rviz_triggers", String, queue_size =1, latch = True)
         self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
         # TODO: plan -> execute
         self.model_name = ''
@@ -460,11 +462,17 @@ class FragmentedExecutionManager():
     def resetExecution(self):
         self.taskmask = None
 
+    def modelMoved(self,data):
+        # when the model is moved, clear reachability and make sure the "compute trajectory" button is renabled
+        self.clearReachability()
+        self.rvizpub.publish(String("execdone"))
+
     def executeModel(self,data):
         # UI: grayed out execution
         if self.fragmentedBehavior is not None:
             model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
             model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
+            self.rvizpub.publish(String("execdone"))
             new_taskmask = []
 
             # first time, need to create taskmask
@@ -557,6 +565,7 @@ class FragmentedExecutionManager():
         print("learning behav")
         self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
         print("done")
+        self.rvizpub.publish(String("computetrajdone"))
         # UI: enabled 'execution' button
             
 if __name__ == "__main__":
