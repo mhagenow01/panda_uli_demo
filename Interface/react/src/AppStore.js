@@ -10,7 +10,7 @@ const immer = (config) => (set, get, api) =>
 const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
-    gamepads: [],
+    gamepads: [1,1],
     path: [{x:0,y:0}],
     imageWidth: 1073,//1200
     imageHeight: 805,//900
@@ -27,9 +27,21 @@ const store = (set,get) => ({
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
       x: 100 + (i%4)* 100,
-      y: 100 + (i+1)%4* 100,
+      y: 100,
       isDragging: false,
     })),
+    resizeWindow: () => set(state=>{
+      console.log('resized to: ', window.innerWidth, 'x', window.innerHeight)
+      var w = window.innerWidth*.68
+      var h = window.innerHeight*.80-75
+      var k=16./9.
+      if( w > k*h)
+        w = k*h
+      else
+        h = w/k
+      state.imageWidth = w
+      state.imageHeight = h
+    }),
     setGamepads: (msg) => set(state=>{
       // https://answers.ros.org/question/284741/seq-or-time-stamp-for-publishing-a-message/
       try {

@@ -2,6 +2,7 @@ import React from 'react';
 import useAppStore from './AppStore';
 import { Stage, Layer, Circle, Shape, Text } from 'react-konva';
 import { Stack } from 'grommet';
+import useRosStore from './RosStore';
 
 export const Canvas = (props) => {
     var [corners,path,canvasOpacity] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity]);

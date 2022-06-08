@@ -9,42 +9,46 @@ export const RPanel = (props) => {
   const parameters = useAppStore(state=>state.parameters)
   
   const [messages, addMessage, sendMessage, sendCoordinates,publishStates,setCanvasOpacity] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates,state.publishStates,state.setCanvasOpacity]))
+
     return (
       <Grid
-      rows={['10%', '10%','70%']}
-      columns={['90%', '10%']}
+      rows={['10%','70%','10%']}
+      columns={['95%']}
       gap={{row: "5%", column: "none"}}
       areas={[
-        {name: 'tl', start:[0,0], end: [0,0]},
-        {name: 'tr', start:[1,0], end: [1,0]},
-        {name: 'send', start:[0,1], end: [1,1]},
-        {name: 'main', start:[0,2], end: [1,2]},
+        {name: 'top', start:[0,0], end: [0,0]},
+        {name: 'main', start:[0,1], end: [0,1]},
+        {name: 'bottom', start:[0,2], end: [0,2]},
       ]}
     > 
-        <Button gridArea='tl' onClick={()=>{
-          connect();
-          publishStates();
-        }}>{connection==='connected'?"Connected":"Connect"} to {url}</Button>
+      <Box gridArea='top' basis="medium"  alignSelf="center" align={"end"} justify="center" direction="row" gap="medium">
+          <Button onClick={()=>{
+            connect();
+            publishStates();
+          }}><Box><Text size="2vh">{connection==='connected'?"Connected":"Connect"} to {url}</Text></Box></Button>
 
-       <CheckBox gridArea="tr" disabled={true} checked={connection==='connected'}/>
-       <Box gridArea='send' basis="medium"  alignSelf="center"  direction="row">
-        <Button primary  size="large" alignSelf="center" label="Send" 
+          <CheckBox disabled={true} checked={connection==='connected'}/>
+       </Box>
+
+       <Box gridArea='bottom' basis="medium" alignSelf="center" align={"end"} justify="center" direction="row" gap="medium">
+        <Button size="xsmall" alignSelf="center" label=<Box><Text size="3vh">Send</Text></Box> 
           onClick={() => {
             sendCoordinates();
             //tmpSub.displayCloud();
           }}
           />
 
-        <Button primary size="large" alignSelf="center" label="Execute" 
+          <Button size="xsmall" alignSelf="center" label=<Box><Text size="3vh">Execute</Text></Box> 
           onClick={() => {
             sendMessage("execute");
             setCanvasOpacity(0);
           }} />
+   
         </Box> 
           <Box gridArea='main'>
             <Card background="light-1">
               <CardHeader pad="small" background="light-2">
-                  <Text alignSelf="center" color="#9b0000" size="large">Properties</Text>
+                  <Text alignSelf="center" color="#9b0000" size="3vh">Properties</Text>
               </CardHeader>
               <CardBody pad="small">
               {parameters.map((button,idx) => (

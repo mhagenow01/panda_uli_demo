@@ -1,9 +1,17 @@
 import React from 'react';
 import useAppStore from './AppStore';
+import { Grommet, List, Stack,Button, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
+
 
 export const Stream = (props) => {
     var imagedata = useAppStore(state=>state.imagedata);
-    const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
+    const [maxWidth,maxHeight,resizeWindow] = useAppStore(state=>[state.imageWidth, state.imageHeight,state.resizeWindow])
+    React.useEffect(() => {
+        function handleResize() {
+          resizeWindow()
+        }
+        window.addEventListener('resize', handleResize)
+      })
     return (
         <img
             id='livestream'

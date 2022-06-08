@@ -9,7 +9,7 @@ import {BotBar} from './BotBar';
 import {View} from './3Dview';
 import {GamepadHandle} from './Gamepad';
 import Gamepad from 'react-gamepad'
-import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box,CheckBox,Tabs, Tab } from 'grommet';
+import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box, Text, CheckBox,Tabs, Tab } from 'grommet';
 import styled from "styled-components";
 import useAppStore from './AppStore';
 import useRosStore from './RosStore'; 
@@ -43,12 +43,12 @@ function App() {
     },
     button: {
         border: {
-            radius: "4px"
+          width: "4px"
         }
     },
     text: {
       textAlign:"center",
-      alignSelf:"center"
+      alignSelf:"center",
     },
     radioButton: {
         size: "16px",
@@ -101,13 +101,12 @@ function App() {
     tabs: {
         gap: 'medium',
         header: {
-            extend: {padding: 10}
+            extend: {padding: 4}
         },
-        panel: { padding: 10 },
-        extend: {padding: 10}
+        panel: { padding: 0},
+        extend: {padding: 3}
     }
-}
-
+  }
   return (
     <Grommet
       full theme={theme}
@@ -115,7 +114,7 @@ function App() {
     <Box height='100vh' width='100vw' background='light-1'>
     <GamepadHandle/>
       <Grid
-        rows={['10vh', '80vh','10vh']}
+        rows={['5vh', '85vh','10vh']}
         columns={['70vw', '30vw']}
         gap="none"
         height='100vh' 
@@ -138,13 +137,13 @@ function App() {
             }.bind(this), 10)
           
           }}>
-          <Tab title="Camera View">
+          <Tab title=<Box><Text size="2vh">Camera View</Text></Box>>
             <Stack>
               <Stream />
               <Canvas />
             </Stack>
           </Tab>
-          <Tab title="3D View">
+          <Tab title=<Box><Text size="2vh">3D View</Text></Box>>
             <View/>
           </Tab>
         </Tabs>
