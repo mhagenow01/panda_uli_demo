@@ -21,7 +21,7 @@ from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment,
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy.spatial.transform import Slerp
 from std_msgs.msg import String
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, Twist
 from visualization_msgs.msg import Marker, MarkerArray
 
 #########################################################################
@@ -87,8 +87,32 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 #         print("Service call failed: %s"%e)
         return False, None
 
+# assumes kdlik service in corrective_shared_autonomy is running
+# takes in a 7x num_pts array of poses
+# output a num_pts array of 0-not reachable, 1-reachable
+def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
+    rospack = rospkg.RosPack()
+    configpath = rospack.get_path('uli_config') + '/../Actuation/config/'
+    urdf_file = configpath + 'panda.urdf'
+    jointnames = ['panda_joint1','panda_joint2', 'panda_joint3', 'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7']
+    baselink = 'panda_link0'
+    eelink = 'panda_orbital'
+
+    num_samps = np.shape(poses)[1]
+
+    reachable = np.zeros((num_samps,))
+
+    for jj in range(0,num_samps):
+            pos = poses[0:3,jj].flatten()
+            quat = poses[ii][3:7,jj].flatten()
+            success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+            if success: # found soln
+                reachable[jj]=1
+    
+    return reachable
+    
 #
-# NOTE: this presumes that the kdlik service is running
+# NOTE: this assumes that the kdlik service is running
 def getReachable(trajectories, curr_mask):
     # TODO: based on config
     # TODO: speed -- parallel type stuff http://wiki.ros.org/roscpp/Overview/Callbacks%20and%20Spinning#Multi-threaded_Spinning
@@ -206,8 +230,12 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
                 if (jj - start_ind) <= min_length:
                     mask[ii][start_ind:jj] = 0
 
+    new_pts = False
+    for ii in range(0,len(mask)):
+        if len(np.where(mask==1)) > 0:
+            new_pts = True
 
-    return mask, pose_trajs
+    return mask, pose_trajs, new_pts
 
 #########################################################################
 # RELATED TO TRAJECTORY CONSTRUCTION                                    #
@@ -468,7 +496,6 @@ class FragmentedExecutionManager():
         self.rvizpub.publish(String("execdone"))
 
     def executeModel(self,data):
-        # UI: grayed out execution
         if self.fragmentedBehavior is not None:
             model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
             model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
@@ -483,12 +510,21 @@ class FragmentedExecutionManager():
 
             for ii in range(0,len(self.taskmask)):
                 new_taskmask.append(np.add(self.taskmask[ii],2*self.tempmask[ii])) # makes 2 for completed
+
+            # zero out tempmask
+            newtempmask = []
+            for ii in range(0,len(self.tempmask)):
+                newtempmask.append(np.zeros((np.shape(self.tempmask[ii]))))
+            self.tempmask = newtempmask
+
             self.taskmask = new_taskmask
             self.fragmentedBehavior = None
-        # UI: disbabled compute (until moved again?)
+
+            # update visualization
+            self.displayReachability(self.trajs)
+
 
     def clearReachability(self):
-        # TODO: clear reachability when the object is moved using spacemouse and enable compute
         # need to clear max possible traj length before plotting
         markers = MarkerArray()
         for ii in range(0,self.max_num_traj_pts):
@@ -554,18 +590,21 @@ class FragmentedExecutionManager():
             print("-----------------------------")
             print("TASKMASK")
             print(self.taskmask)
-        self.tempmask, trajs = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask)
+        self.tempmask, self.trajs, self.new_pts = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask)
         print("-----------------------------")
         print("TEMPMASK")
         print(np.shape(self.tempmask))
         print(self.tempmask)
         print("-----------------------------")
         print("disp reach")
-        self.displayReachability(trajs)
+        self.displayReachability(self.trajs)
         print("learning behav")
-        self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
-        print("done")
-        self.rvizpub.publish(String("computetrajdone"))
+        if self.new_pts:
+            self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
+            print("done")
+            self.rvizpub.publish(String("computetrajdone"))
+        else:
+            self.rvizpub.publish(String("execdone"))
         # UI: enabled 'execution' button
             
 if __name__ == "__main__":

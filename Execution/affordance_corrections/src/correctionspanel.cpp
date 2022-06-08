@@ -168,6 +168,7 @@ namespace corrections_panel{
     void CorrectionsPanel::rvizCallback(std_msgs::String data){
             if(data.data=="scanningdone"){
                 scanButton->setEnabled(true);
+                mapping = false;
                 scanButton->setText("Run Scan");
             }
             if(data.data=="computetrajdone"){
