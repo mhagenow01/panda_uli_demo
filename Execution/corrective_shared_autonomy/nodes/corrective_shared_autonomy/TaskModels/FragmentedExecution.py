@@ -88,7 +88,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
         return False, None
 
 # assumes kdlik service in corrective_shared_autonomy is running
-# takes in a 7x num_pts array of poses
+# takes in a (7xnum_poses) array of poses
 # output a num_pts array of 0-not reachable, 1-reachable
 def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
     rospack = rospkg.RosPack()
@@ -104,7 +104,7 @@ def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
 
     for jj in range(0,num_samps):
             pos = poses[0:3,jj].flatten()
-            quat = poses[ii][3:7,jj].flatten()
+            quat = poses[3:7,jj].flatten()
             success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
             if success: # found soln
                 reachable[jj]=1
