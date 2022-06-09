@@ -1,0 +1,5 @@
+geometry_msgs/Pose desired_pose
+std_msgs/Float64MultiArray starting_joints
+---
+geometry_msgs/Pose soln_pose
+std_msgs/Float64MultiArray soln_joints

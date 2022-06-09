@@ -6,7 +6,23 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3")
 
 find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg franka_core_msgs)
-catkin_package()
+
+add_service_files(
+  FILES
+  CFIK.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS
+    message_runtime
+  LIBRARIES 
+)
 
 # Begin rust compile stuff
 
