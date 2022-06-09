@@ -7,7 +7,7 @@ use serde_yaml;
 use serde::{Serialize, Deserialize};
 use rapier3d_f64::geometry::*;
 use rapier3d_f64::na;
-use na::{Vector3, UnitQuaternion, Quaternion};
+use na::{Vector3, UnitQuaternion, Quaternion,Isometry3};
 use solver::{k_to_r, r_to_k};
 use optimization_engine::panoc::*;
 extern crate k;
@@ -139,7 +139,7 @@ pub extern "C" fn new_solver(urdf_ptr: *const c_char, ee_frame_ptr: *const c_cha
     }
 }
 
-fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7]) -> Option<Vec<f64>> {
+fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7]) -> Option<(Vec<f64>,[f64; 7])> {
     let iksolver = unsafe { iksolver.as_mut()? };
     let current_q;
     let trans;
@@ -176,20 +176,31 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
             iksolver.arm.set_joint_positions_clamped(&q);
         }
         iksolver.arm.update_transforms();
-        Some(q)
+        let iso = iksolver.arm.end_transform();
+        let trans = iso.translation.vector;
+        let rot = iso.rotation;
+        let pose_return: [f64; 7]=[trans[0],trans[1],trans[2],rot[0],rot[1],rot[2],rot[3]];
+        Some((q,pose_return))
     })
 }
 
 #[no_mangle]
-pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64) -> bool {
+pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64,t_ptr: *mut f64) -> bool {
     match try_solve(iksolver, current_q_ptr, trans_ptr) {
-        Some(q) => {
+        Some((q,t)) => {
             let q_array;
             unsafe {
                 q_array = std::slice::from_raw_parts_mut(q_ptr, q.len());
             };
             for i in 0..q_array.len() {
                 q_array[i] = q[i];
+            }
+            let t_array;
+            unsafe {
+                t_array = std::slice::from_raw_parts_mut(t_ptr, t.len());
+            };
+            for i in 0..t_array.len() {
+                t_array[i] = t[i];
             }
             true
         },

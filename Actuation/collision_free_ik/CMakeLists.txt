@@ -5,7 +5,7 @@ project(collision_free_ik)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3")
 
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg franka_core_msgs)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs genmsg franka_core_msgs tf2_ros)
 
 add_service_files(
   FILES

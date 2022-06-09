@@ -1,6 +1,8 @@
 #include "ros/ros.h"
 #include "std_msgs/Float64MultiArray.h"
 #include "geometry_msgs/Pose.h"
+#include <tf2_ros/transform_broadcaster.h>
+#include <geometry_msgs/TransformStamped.h>
 #include "geometry_msgs/PoseStamped.h"
 #include "sensor_msgs/JointState.h"
 #include "std_msgs/String.h"
@@ -48,7 +50,7 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
              collision_free_ik::CFIK::Response &res){
 
         geometry_msgs::Pose desired_pose = req.desired_pose;
-        std_msgs::Float64MultiArray joints_in; req.starting_joints;
+        std_msgs::Float64MultiArray joints_in = req.starting_joints;
 
         vector<double> current_q = vector<double>();
         for (unsigned int j = 0; j < joints_in.data.size(); j++) {
@@ -66,6 +68,7 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
         }
 
         array<double, 7> trans = array<double, 7>();
+        array<double, 7> trans_return = array<double, 7>();
         poseToArray(desired_pose, trans);
 
         vector<double> q = vector<double>();
@@ -73,7 +76,7 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
             q.push_back(0);
         }
 
-        if (iksolver->solve(current_q.data(), trans, q.data())) {
+        if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data())) {
             geometry_msgs::Pose pose_out;
             
             // Store joint angles in array message
@@ -85,13 +88,13 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
             res.soln_joints = joints_out;
 
             // ES: TODO put in FK from IK
-            pose_out.orientation.x = 0.0;
-            pose_out.orientation.y = 0.0;
-            pose_out.orientation.z = 0.0;
-            pose_out.orientation.w = 1.0;
-            pose_out.position.x = 0.0;
-            pose_out.position.y = 0.0;
-            pose_out.position.z = 0.0;
+            pose_out.orientation.x = trans_return[3];
+            pose_out.orientation.y = trans_return[4];
+            pose_out.orientation.z = trans_return[5];
+            pose_out.orientation.w = trans_return[6];
+            pose_out.position.x = trans_return[0];
+            pose_out.position.y = trans_return[1];
+            pose_out.position.z = trans_return[2];
             res.soln_pose = pose_out;
             
             return true;
@@ -106,6 +109,7 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
 int main(int argc, char** argv) {
     ros::init(argc, argv, "collision_free_ik");
     ros::NodeHandle n;
+    tf2_ros::TransformBroadcaster br;
 
     string urdf, ee_frame, arm_colliders, environment, solver_config;
     string urdf_fp, arm_collider_fp, environment_fp, solver_config_fp;
@@ -179,18 +183,32 @@ int main(int argc, char** argv) {
         poseToArray(pose, trans);
 
         vector<double> q = vector<double>();
+        vector<double> trans_return = vector<double>(7,0);
         for (size_t i = 0; i < iksolver->dof(); i++) {
             q.push_back(0);
         }
 
-        if (iksolver->solve(current_q.data(), trans, q.data())) {
+        if (iksolver->solve(current_q.data(), trans, q.data(), trans_return.data())) {
             auto out_msg = franka_core_msgs::JointCommand();
             out_msg.names = joint_names;
             out_msg.position = q;
             out_msg.mode = franka_core_msgs::JointCommand::POSITION_MODE;
 
             pub.publish(out_msg);
-            
+
+            geometry_msgs::TransformStamped transformStamped;  
+            transformStamped.header.stamp = ros::Time::now();
+            transformStamped.header.frame_id = "panda_link0";
+            transformStamped.child_frame_id = "ik_output";
+            transformStamped.transform.translation.x = trans_return[0];
+            transformStamped.transform.translation.y = trans_return[1];
+            transformStamped.transform.translation.z = trans_return[2];
+            transformStamped.transform.rotation.x = trans_return[3];
+            transformStamped.transform.rotation.y = trans_return[4];
+            transformStamped.transform.rotation.z = trans_return[5];
+            transformStamped.transform.rotation.w = trans_return[6];
+
+            br.sendTransform(transformStamped);
         } else {
             ROS_WARN("Couldn't do some IK");
         }
