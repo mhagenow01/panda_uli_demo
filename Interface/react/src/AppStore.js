@@ -12,6 +12,8 @@ const store = (set,get) => ({
     messages: ['default message 2','default message 1'],
     gamepads: [1,1],
     path: [{x:0,y:0}],
+    good: [{x:0,y:0}],
+    bad: [{x:0,y:0}],
     imageWidth: 1073,//1200
     imageHeight: 805,//900
     imagedata: "",
@@ -75,9 +77,12 @@ const store = (set,get) => ({
     addMessage: (message) => set(state=>{
         state.messages = [message,...state.messages]
     }),
-    sendCoordinates: () => set(state =>{
+    spline: () => set(state =>{
       useRosStore.getState().commandTopic.publish({data:"spline:"+state.corners.map((item) => (String(item.x/state.imageWidth)+','+String(item.y/state.imageHeight))).join(';')})
       //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
+    }),
+    get_path: () => set(state =>{
+      useRosStore.getState().commandTopic.publish({data:"get_path"})
     }),
     sendMessage: (msg) => set(state =>{
       useRosStore.getState().commandTopic.publish({data:msg})
@@ -101,6 +106,27 @@ const store = (set,get) => ({
       coords.map((coord) => {
         coord = coord.split(',')
         state.path.push({
+          x: parseFloat(coord[0])*state.imageWidth,
+          y: parseFloat(coord[1])*state.imageHeight
+        });   
+      })
+    }),
+    setGood: (coords) => set(state=>{
+      state.good = []
+      coords.map((coord) => {
+        coord = coord.split(',')
+        state.good.push({
+          x: parseFloat(coord[0])*state.imageWidth,
+          y: parseFloat(coord[1])*state.imageHeight
+        });   
+      })
+      console.log(state.good)
+    }),
+    setBad: (coords) => set(state=>{
+      state.bad = []
+      coords.map((coord) => {
+        coord = coord.split(',')
+        state.bad.push({
           x: parseFloat(coord[0])*state.imageWidth,
           y: parseFloat(coord[1])*state.imageHeight
         });   

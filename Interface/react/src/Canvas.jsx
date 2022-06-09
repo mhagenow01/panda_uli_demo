@@ -5,7 +5,7 @@ import { Stack } from 'grommet';
 import useRosStore from './RosStore';
 
 export const Canvas = (props) => {
-    var [corners,path,canvasOpacity] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity]);
+    var [corners,path,canvasOpacity,spline,good,bad,imageWidth] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
     const handleDragEnd = (e) => {
@@ -17,6 +17,7 @@ export const Canvas = (props) => {
           };
         }
       );
+      spline()
     };
     const handleMove = (e) => {
         e.target.attrs["x"]=Math.min(Math.max(e.target.attrs["x"],0),maxWidth)
@@ -70,7 +71,7 @@ export const Canvas = (props) => {
                 cornerId={corner.id}
                 x={corner.x}
                 y={corner.y}
-                Radius={20}
+                Radius={imageWidth/40}
                 fill="#0000ff"
                 opacity={0.8*canvasOpacity}
                 draggable
@@ -84,6 +85,32 @@ export const Canvas = (props) => {
                 // onDragStart={handleDragStart}
                 onDragMove={handleMove}
                 onDragEnd={handleDragEnd} />
+          ))
+          }
+          {good.map((point) => (
+            <Circle
+                x={point.x}
+                y={point.y}
+                Radius={4}
+                fill="#00ff00"
+                opacity={0.8*canvasOpacity}
+                draggable
+                shadowColor="black"
+                shadowBlur={10}
+                shadowOpacity={0.6} />
+          ))
+          }
+          {bad.map((point) => (
+            <Circle
+                x={point.x}
+                y={point.y}
+                Radius={4}
+                fill="#ff0000"
+                opacity={0.8*canvasOpacity}
+                draggable
+                shadowColor="black"
+                shadowBlur={10}
+                shadowOpacity={0.6} />
           ))
           }
         </Layer>

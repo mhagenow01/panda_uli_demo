@@ -8,7 +8,7 @@ export const RPanel = (props) => {
   const [connect, connection, url,imageTopic,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.tmpSub])) 
   const parameters = useAppStore(state=>state.parameters)
   
-  const [messages, addMessage, sendMessage, sendCoordinates,publishStates,setCanvasOpacity] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.sendCoordinates,state.publishStates,state.setCanvasOpacity]))
+  const [messages, addMessage, sendMessage, get_path,publishStates,setCanvasOpacity] = useAppStore(state=>([state.messages,state.addMessage,state.sendMessage,state.get_path,state.publishStates,state.setCanvasOpacity]))
 
     return (
       <Grid
@@ -33,7 +33,7 @@ export const RPanel = (props) => {
        <Box gridArea='bottom' basis="medium" alignSelf="center" align={"end"} justify="center" direction="row" gap="medium">
         <Button size="xsmall" alignSelf="center" label=<Box><Text size="3vh">Send</Text></Box> 
           onClick={() => {
-            sendCoordinates();
+            get_path();
             //tmpSub.displayCloud();
           }}
           />

@@ -133,8 +133,22 @@ const store = (set) => ({
 			messageType: 'std_msgs/String',
 		});
 
+		const reachTopic = new ROSLIB.Topic({
+			ros: ros,
+			//name: 'camera/image_raw/compressed',
+			name: '/ui/reach',
+			messageType: 'std_msgs/String',
+		});
+
         pathTopic.subscribe(function (message) {
 			useAppStore.getState().setPath(message.data.split(';'));
+		});
+        reachTopic.subscribe(function (message) {
+            var pointType = message.data.split(':')[0]
+            if(pointType === "good")
+			    useAppStore.getState().setGood(message.data.split(':')[1].split(';'));
+            if(pointType === "bad")
+                useAppStore.getState().setBad(message.data.split(':')[1].split(';'));
 		});
 
 		const imageTopic = new ROSLIB.Topic({
@@ -154,6 +168,7 @@ const store = (set) => ({
         eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
         setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
         ros.connect();
+        useAppStore.getState().resizeWindow();
 
         return {
             url:state.url,
