@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+
+""" Runs and restarts actuation group after e-stop through subprocess
+ Created: 6/9/2022
+"""
+
+__author__ = "Mike Hagenow"
+
+import rospy
+import time
+import signal
+from std_msgs.msg import String, Float64
+from sensor_msgs.msg import PointCloud2
+from franka_core_msgs.msg import RobotState
+import numpy as np
+import rospkg
+import subprocess32
+
+class ActuationLauncher:
+    def __init__(self):
+        rospy.init_node('tello_launcher')
+        self._p = None
+        signal.signal(signal.SIGINT, self.signal_handler)
+
+        # Subscribe to start/stop mapping
+        rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.getRobotState)
+
+        self.relaunch_state = 0
+
+        self.startActuation()
+
+    def shutdown(self):
+        if self._p is not None:
+            self._p.terminate()  
+
+    def signal_handler(self, sig, frame):
+        if self._p is not None:
+            self._p.terminate() 
+        sys.exit(0)
+
+    def getRobotState(self,data):
+        if self.relaunch_state ==0 and (data.robot_mode == 4 or data.robot_mode ==5): # e-stopped or # errored
+            self.relaunch_state = 1 # pending reset of e-stop
+        if self.relaunch_state == 1 and data.robot_mode == 1:
+            self.relaunch_state = 0
+            self.startActuation()
+        if data.data == "tello":
+            self.startTello()
+
+    def startActuation(self):
+        if self._p is not None:
+            self._p.terminate() 
+        self._p = subprocess32.Popen(["roslaunch", "actuation_group", "Actuation.launch"])
+        
+
+       
+if __name__ == "__main__":
+    act = ActuationLauncher()
+    rospy.spin()
+    act.shutdown()
+
+
+
+
+
+
