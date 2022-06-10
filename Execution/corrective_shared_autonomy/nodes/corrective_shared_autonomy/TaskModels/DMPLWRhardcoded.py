@@ -341,7 +341,7 @@ class DMPLWRhardcoded:
         for ii in range(0,len(learnedSegments)): # note: this is (segments-1) for the real thing from some segmentation-related issue
             segmentTemp = learnedSegments[ii]
             if self.verbose:
-                print("DMP for segment ", ii, " of ",(len(learnedSegments) - 1))
+                print("DMP for segment ", ii, " of ",(len(learnedSegments) - 1)," with ",segmentTemp.num_samples," samples")
 
             segmentTemp.start_vals = np.zeros((len(segmentTemp.state_names,)))
             segmentTemp.end_vals = np.zeros((len(segmentTemp.state_names, )))

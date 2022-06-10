@@ -297,14 +297,16 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     segment = HybridSegment()
     segment.hybrid = False
     segment.num_samples = int(time*samps_per_sec) # 2 seconds
+    segment.num_samples = max(5,segment.num_samples) # at least 5 samples to avoid crashing dmp
     segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve','tool_offset_x','tool_offset_y','tool_offset_z']
     segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
 
     approach_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
     q_app = (R_surf * R_tool_surf).as_quat()
+    q_app2 = R_surf.as_quat()
 
-    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app2[0], q_app2[1], q_app2[2], q_app2[3], 1.0, 0.0, 0.0, 0.0, 0.0]
     ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     starting[0:3] = starting[0:3] + approach_dists[0] * n_hat
     ending[0:3] = ending[0:3] + approach_dists[1] * n_hat
@@ -322,7 +324,8 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
 
     segment = HybridSegment()
     segment.hybrid = False
-    segment.num_samples = int(time*samps_per_sec) # 2 seconds
+    segment.num_samples = int(time*samps_per_sec) 
+    segment.num_samples = max(5,segment.num_samples) # at least 5 samples to avoid crashing dmp
     segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve','tool_offset_x','tool_offset_y','tool_offset_z']
     segment.original_vals = []
     segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
@@ -330,10 +333,11 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     retract_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(ending_coords[0], ending_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
     q_ret = (R_surf * R_tool_surf).as_quat()
+    q_ret2 = (R_surf).as_quat()
     
 
     starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
-    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret2[0], q_ret2[1], q_ret2[2], q_ret2[3], 1.0, 0.0, 0.0, 0.0, 0.0]
     starting[0:3] = starting[0:3] + retraction_dists[0] * n_hat
     ending[0:3] = ending[0:3] + retraction_dists[1] * n_hat
     orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
@@ -356,16 +360,26 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
 
     segment = HybridSegment()
     segment.hybrid = False
-    segment.num_samples = int(time*samps_per_sec) # 4 seconds
+    segment.num_samples = int(time*samps_per_sec) 
+    segment.num_samples = max(5,segment.num_samples) # at least 5 samples to avoid crashing dmp
     segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve']
     segment.original_vals = []
     segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
 
-    starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0]
-    starting[0:3] = starting[0:3] + 0.05 * n_hat1
-    ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0]
-    ending[0:3] = ending[0:3] + 0.05 * n_hat2
-    orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
+    uvs = interpMultD(starting_coords,ending_coords,segment.num_samples)
+    orig_vals = np.zeros((len(segment.state_names),segment.num_samples))
+    orig_vals[7,:] = 1.0
+    for ii in range(segment.num_samples):
+        r, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(uvs[0,ii],uvs[1,ii])
+        orig_vals[0:3,ii] = r + 0.05 * n_hat 
+        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
+        orig_vals[3:7,ii] = R_surf.as_quat()
+
+    # starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0]
+    # starting[0:3] = starting[0:3] + 0.05 * n_hat1
+    # ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0]
+    # ending[0:3] = ending[0:3] + 0.05 * n_hat2
+    # orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
     segment.original_vals.append(orig_vals)
     
     return segment
@@ -460,7 +474,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             last_uv = [ending_u, ending_v] # store previous end of path
             last_R_tool_surf = R_tool_surf_ret
 
-    model = DMPLWRhardcoded(verbose=False, dt=1./samps_per_sec)
+    model = DMPLWRhardcoded(verbose=True, dt=1./samps_per_sec)
     learnedSegments = model.learnModel(segments) # second argument is the outfile
     return learnedSegments
 
@@ -498,17 +512,27 @@ class FragmentedExecutionManager():
         self.executesub = rospy.Subscriber("/executeModel", String, self.executeModel)
         self.correctionsub = rospy.Subscriber("/correction", Twist, self.modelMoved)
         self.rvizpub = rospy.Publisher("rviz_triggers", String, queue_size =1, latch = True)
+        self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
         self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
+        self.restartexec = rospy.Subscriber("delete_active", String, self.deleteActive)
         # TODO: plan -> execute
         self.model_name = ''
         self.min_length = 5
         self.plotting_size = 0.01
         self.max_num_traj_pts = 0
         self.fragmentedBehavior = None
+        self.resume = False # resume execution after paused
         
         time.sleep(0.5)
         rospy.spin()
         
+    def checkResume(self,data):
+        if data.data=='resume':
+            self.resume = True
+
+    def deleteActive(self,data):
+        self.resetExecution()
+
     def resetExecution(self):
         self.taskmask = None
 
@@ -520,7 +544,16 @@ class FragmentedExecutionManager():
     def executeModel(self,data):
         if self.fragmentedBehavior is not None:
             model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
-            model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
+            doneExecution = False
+            segID=0; s=0
+            while not doneExecution:
+                segID, s = model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
+                if segID==-1 and s==-1:
+                    doneExecution = True
+                else:
+                    while not self.resume:
+                        time.sleep(0.5)
+                    self.resume = False
             self.rvizpub.publish(String("execdone"))
             new_taskmask = []
 
@@ -608,7 +641,7 @@ class FragmentedExecutionManager():
 
         # Compute and display current reachability
         print("getting frag")
-        if self.taskmask is not None:
+        # if self.taskmask is not None:
             # print("-----------------------------")
             # print("TASKMASK")
             # print(self.taskmask)
