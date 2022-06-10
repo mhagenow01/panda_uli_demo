@@ -290,7 +290,10 @@ def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[], super_pos_vars =
     
     return vals.T # num vars x num_samples
 
-def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,time,tool_offset):
+def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,tool_offset):
+    approach_dists = [0.05, 0.005]
+    time = np.abs(approach_dists[0]-approach_dists[1]) / vel
+    
     segment = HybridSegment()
     segment.hybrid = False
     segment.num_samples = int(time*samps_per_sec) # 2 seconds
@@ -303,8 +306,8 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,time,t
 
     starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0, 0.0, 0.0, 0.0]
     ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
-    starting[0:3] = starting[0:3] + 0.05 * n_hat
-    ending[0:3] = ending[0:3] + 0.005 * n_hat
+    starting[0:3] = starting[0:3] + approach_dists[0] * n_hat
+    ending[0:3] = ending[0:3] + approach_dists[1] * n_hat
     
     orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
 
@@ -313,7 +316,10 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,time,t
     
     return segment
 
-def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,time, tool_offset):
+def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool_offset):
+    retraction_dists = [0.005, 0.05]
+    time = np.abs(retraction_dists[0]-retraction_dists[1]) / vel
+
     segment = HybridSegment()
     segment.hybrid = False
     segment.num_samples = int(time*samps_per_sec) # 2 seconds
@@ -328,21 +334,15 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,time, too
 
     starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0, 0.0, 0.0, 0.0]
-    starting[0:3] = starting[0:3] + 0.005 * n_hat
-    ending[0:3] = ending[0:3] + 0.05 * n_hat
+    starting[0:3] = starting[0:3] + retraction_dists[0] * n_hat
+    ending[0:3] = ending[0:3] + retraction_dists[1] * n_hat
     orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
     segment.original_vals.append(orig_vals)
     
     return segment
 
-def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,time):
+def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel):
     # TODO: switch this to follow the surface
-    segment = HybridSegment()
-    segment.hybrid = False
-    segment.num_samples = int(time*samps_per_sec) # 4 seconds
-    segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve']
-    segment.original_vals = []
-    segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
 
     retract_pt, n_hat1, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
@@ -351,7 +351,16 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     approach_pt, n_hat2, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(ending_coords[0], ending_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat2.reshape((3,1))]))
     q_app = (R_surf * R_tool_surf_end).as_quat()
-    
+
+    time = np.linalg.norm(approach_pt-retract_pt) / vel
+
+    segment = HybridSegment()
+    segment.hybrid = False
+    segment.num_samples = int(time*samps_per_sec) # 4 seconds
+    segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve']
+    segment.original_vals = []
+    segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
+
     starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0]
     starting[0:3] = starting[0:3] + 0.05 * n_hat1
     ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0]
@@ -364,9 +373,8 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
 def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per_sec):
     # TODO: this should actually also consider reachability
     segments = []
-    # TODO: parameterize in some better way
-    time_appret = 1.0
-    time_between = 2.0
+    vel_between = 0.05
+    vel_appret = 0.05
 
     # build a new list of trajectories based on reachable subsets
     trajs_inds = []
@@ -426,11 +434,11 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
 
             # Generate in between passes if this is not the first overall pass
             if last_uv is not None:
-                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], time_between)
+                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], vel_between)
                 segments.append(segmentTemp)
 
             # Generate approach
-            segmentTemp = gen_approach(surface,samps_per_sec,R_tool_surf_app,[starting_u, starting_v], time_appret, tool_offset_app)
+            segmentTemp = gen_approach(surface,samps_per_sec,R_tool_surf_app,[starting_u, starting_v], vel_appret, tool_offset_app)
             segments.append(segmentTemp)
 
             # Generate pass
@@ -446,7 +454,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             segments.append(segment)
 
             # Generate retract
-            segmentTemp = gen_retract(surface,samps_per_sec,R_tool_surf_ret,[ending_u, ending_v], time_appret, tool_offset_ret)
+            segmentTemp = gen_retract(surface,samps_per_sec,R_tool_surf_ret,[ending_u, ending_v], vel_appret, tool_offset_ret)
             segments.append(segmentTemp)
 
             last_uv = [ending_u, ending_v] # store previous end of path
