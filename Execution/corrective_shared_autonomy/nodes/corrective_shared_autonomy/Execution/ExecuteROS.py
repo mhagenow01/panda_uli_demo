@@ -14,7 +14,7 @@ import numpy as np
 from hybrid_controller.msg import HybridPose
 from geometry_msgs.msg import Quaternion, Pose, Vector3
 from sensor_msgs.msg import JointState
-from std_msgs.msg import Float64, Float64MultiArray
+from std_msgs.msg import Float64, Float64MultiArray, String
 from franka_core_msgs.msg import RobotState
 from std_msgs.msg import Int32
 from scipy.spatial.transform import Rotation as R
@@ -32,6 +32,7 @@ class ExecuteROS:
         self.input_tx = input_tx # if the transform should be further rotated
 
         self.robot_active = True
+        self.interrupt = False
 
         self.task_R = task_R
         self.task_t = task_t
@@ -41,6 +42,7 @@ class ExecuteROS:
         rospy.Subscriber("/zdinput/input", Vector3, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
         rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.storePandaStateTime)
+        rospy.Subscriber("/execution/interrupt", String, self.checkInterrupt)
         time.sleep(0.5)
 
     def storeZDInput(self, data):
@@ -53,6 +55,19 @@ class ExecuteROS:
     def robotActive(self):
         # checks whether the robot has sent the state recently. used by task model to know whether to continue
         return self.robot_active
+
+    def isInterrupted(self):
+        # checks whether the interrupt has been flagged
+        if self.interrupt:
+            self.interrupt = False # reset flag
+            return True
+        else:
+            return False
+
+    def checkInterrupt(self,data):
+        # check whether to pause the current execution on the next loop
+        if data.data=="pause":
+            self.interrupt = True
 
     def storePandaStateTime(self,data):
         if data.robot_mode == 1 or data.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
@@ -71,11 +86,7 @@ class ExecuteROS:
         # print("CF: ",hpose.constraint_frame.x,hpose.constraint_frame.y,hpose.constraint_frame.z, hpose.constraint_frame.w)
         self.hybrid_pub.publish(hpose)
 
-    def execute_states(self,state_names,state_vals,surface,correction):
-        cor = Float64MultiArray()
-        cor.data = correction
-        self.correction_pub.publish(cor)
-
+    def getRobotStateToExecute(self,state_names,state_vals,surface):
         # Robot command (either there is a constraint frame -- hybrid) or there isn't
         if ("qx" in state_names):
             # add rest of stuff
@@ -119,21 +130,25 @@ class ExecuteROS:
                 hpose.pose.orientation.z = rotated_orientation[2]
                 hpose.pose.orientation.w = rotated_orientation[3]
 
-                self.publishToRobot(hpose)
+                return hpose
 
             except:
-                return
+                return None
 
         elif ("u" in state_names):
             u = state_vals[state_names.index("u")]
             v = state_vals[state_names.index("v")]
             f = state_vals[state_names.index("f")]
-            theta_qx = state_vals[state_names.index("theta_qx")] #TODO: perhaps this should be conditional if "theta_qx" in state_names
-            theta_qy = state_vals[state_names.index("theta_qy")]
-            theta_qz = state_vals[state_names.index("theta_qz")]
-            theta_qw = state_vals[state_names.index("theta_qw")]
 
-            norm_q = np.array([theta_qx, theta_qy, theta_qz, theta_qw])/np.linalg.norm(np.array([theta_qx, theta_qy, theta_qz, theta_qw]))
+            if "theta_qx" in state_names:
+                theta_qx = state_vals[state_names.index("theta_qx")]
+                theta_qy = state_vals[state_names.index("theta_qy")]
+                theta_qz = state_vals[state_names.index("theta_qz")]
+                theta_qw = state_vals[state_names.index("theta_qw")]
+
+                norm_q = np.array([theta_qx, theta_qy, theta_qz, theta_qw])/np.linalg.norm(np.array([theta_qx, theta_qy, theta_qz, theta_qw]))
+            else:
+                norm_q = np.array([0., 0., 0., 1.0])
 
             # Saturate surface values
             if u > 0.99: u = 0.99
@@ -190,9 +205,22 @@ class ExecuteROS:
             constraint_frame_ros.w = constraint_frame[3]
             hpose.constraint_frame = constraint_frame_ros
 
+            return hpose
+
+    def execute_states(self,state_names,state_vals,surface,correction):
+        # Publish Correction
+        cor = Float64MultiArray()
+        cor.data = correction
+        self.correction_pub.publish(cor)
+
+        # Execute Robot State
+        hpose = self.getRobotStateToExecute(state_names,state_vals,surface)
+        if hpose is None:
+            return
+        else:
             self.publishToRobot(hpose)
 
-
+        # Valve
         if ("valve" in state_names):
             valve_id = state_names.index("valve")
             int_temp = Int32()
@@ -208,45 +236,36 @@ class ExecuteROS:
         int_temp.data = 0
         self.valve_pub.publish(int_temp)
 
-    def goToReplayStart(self,state_names,start,tfBuffer,listener):
-        # TODO: make this more robust (amount of time based on distance -- check that it got there)
-        # get desired pose
-        hpose = HybridPose()
-        hpose.sel_vector = [1, 1, 1, 1, 1, 1]
-        constraint_frame = Quaternion()
-        constraint_frame.x = 0.0
-        constraint_frame.y = 0.0
-        constraint_frame.z = 0.0
-        constraint_frame.w = 1.0
-        hpose.constraint_frame = constraint_frame
-
+    def goToReplayStart(self,s,state_names,start,surface,tfBuffer,listener):
+        # TODO: make this more robust (check that it got there)
         try:
-            pos_ind = state_names.index("x")
-            quat_ind = state_names.index("qx")
-
-            desired_x = start[pos_ind]; desired_y = start[pos_ind + 1]; desired_z = start[pos_ind + 2]
-            desired_qx = start[quat_ind]; desired_qy = start[quat_ind + 1]
-            desired_qz = start[quat_ind + 2]; desired_qw = start[quat_ind + 3]
-
-            # convert desired from task frame into robot frame
-                        
-            R_temp = R.from_quat(self.task_R)
-            rotated_pos = R_temp.apply(np.array([desired_x, desired_y, desired_z])) + self.task_t
-
-            desired_x = rotated_pos[0]
-            desired_y = rotated_pos[1]
-            desired_z = rotated_pos[2]
+            # get desired pose
+            hpose = self.getRobotStateToExecute(state_names,start,surface)
             
-            # Rotate rotation from task frame into robot frame
-            norm_q = np.array([desired_qx, desired_qy, desired_qz, desired_qw])/np.linalg.norm(np.array([desired_qx, desired_qy, desired_qz, desired_qw]))
-            R_orientation = R.from_quat(norm_q)
-            rotated_orientation = (R_temp * R_orientation).as_quat()
+            if "x" in state_names:
+                desired_x = hpose.pose.position.x; desired_y = hpose.pose.position.y; desired_z = hpose.pose.position.z
+                desired_qx = hpose.pose.orientation.x; desired_qy = hpose.pose.orientation.y
+                desired_qz = hpose.pose.orientation.z; desired_qw = hpose.pose.orientation.w
+            else: # hybrid
+                # convert out of constraint frame
+                cf_ros = hpose.constraint_frame
+                cf = np.array([cf_ros.x, cf_ros.y, cf_ros.z, cf_ros.w])
+                R_cf = R.from_quat(cf)
+                pos_global = R_cf.apply(np.array([hpose.pose.position.x, hpose.pose.position.y, hpose.pose.position.z]))
+                R_local = R.from_quat(np.array([hpose.pose.orientation.x, hpose.pose.orientation.y, hpose.pose.orientation.z, hpose.pose.orientation.w]))
+                q_global = (R_cf * R_local).as_quat()
+                desired_x = pos_global[0]
+                desired_y = pos_global[1]
+                desired_z = pos_global[2]
+                desired_qx = q_global[0]; desired_qy = q_global[1]
+                desired_qz = q_global[2]; desired_qw = q_global[3]
 
-            desired_qx = rotated_orientation[0]
-            desired_qy = rotated_orientation[1]
-            desired_qz = rotated_orientation[2]
-            desired_qw = rotated_orientation[3]
-
+            # convert to position control
+            hpose.constraint_frame.x = 0.0
+            hpose.constraint_frame.y = 0.0
+            hpose.constraint_frame.z = 0.0
+            hpose.constraint_frame.w = 1.0
+            hpose.sel_vector = [1,1,1,1,1,1]
 
             # Get current pose from TF2
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))

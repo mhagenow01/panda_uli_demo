@@ -112,6 +112,13 @@ def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, join
     quat = p[3:7]
     success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
     return success
+
+def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, curr_mask, ii, jj):
+    if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
+        success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        if success:
+            return 1
+    return 0
     
 #
 # NOTE: this assumes that the kdlik service is running
@@ -135,13 +142,18 @@ def getReachable(trajectories, curr_mask):
 
     # call for each element of each trajectory
     for ii in range(0,len(trajectories)):
+        successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj) for jj in range(np.shape(trajectories[ii])[1]))
         for jj in range(0,np.shape(trajectories[ii])[1]):
-            pos = trajectories[ii][0:3,jj].flatten()
-            quat = trajectories[ii][3:7,jj].flatten()
-            if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
-                success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-                if success: # found soln
-                    taskmask[ii][jj]=1
+            if successes[jj]==1:
+                taskmask[ii][jj]=1
+        
+        # for jj in range(0,np.shape(trajectories[ii])[1]):
+        #     pos = trajectories[ii][0:3,jj].flatten()
+        #     quat = trajectories[ii][3:7,jj].flatten()
+        #     if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
+        #         success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        #         if success: # found soln
+        #             taskmask[ii][jj]=1
 
     return taskmask
 
@@ -589,14 +601,14 @@ class FragmentedExecutionManager():
         # Compute and display current reachability
         print("getting frag")
         if self.taskmask is not None:
-            print("-----------------------------")
-            print("TASKMASK")
-            print(self.taskmask)
+            # print("-----------------------------")
+            # print("TASKMASK")
+            # print(self.taskmask)
         self.tempmask, self.trajs, self.new_pts = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask)
         print("-----------------------------")
         print("TEMPMASK")
         print(np.shape(self.tempmask))
-        print(self.tempmask)
+        # print(self.tempmask)
         print("-----------------------------")
         print("disp reach")
         self.displayReachability(self.trajs)

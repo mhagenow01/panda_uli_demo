@@ -193,6 +193,8 @@ def parallelSurfPt(surface,u_temp,v_temp):
     return r
 
 
+
+
 class DMPLWRhardcoded:
     def __init__(self,surfacefile='', verbose=False, input_tx=np.array([0, 0, 0, 1]),dt = 0.1):
         # DMP parameters
@@ -378,6 +380,15 @@ class DMPLWRhardcoded:
     def linearInterpolation(self,start,end,val):
         return start + (end-start)*val
 
+    def getStartValue(self,s_curr,segment):
+        # for a partial start, quickly figure out the current state based on the starting point and dmps
+        X = segment.start_vals
+        dX = np.zeros(np.shape(segment.start_vals))
+        ddX = np.zeros(np.shape(segment.start_vals))
+        delta_s = 1.0
+        for s in range(0,round(s_curr)):
+            ddX, dX, X = self.getNewState(segment,ddX,dX,X,delta_s,s)
+        return X
 
     def getNewState(self,segment,ddX,dX,X,delta_s,s):
         length_s = np.shape(segment.forcing_vals)[1]-1
@@ -444,7 +455,7 @@ class DMPLWRhardcoded:
 
         return ddY, dY, Y
 
-    def setupSegment(self,learnedSegments,segID,from_back=False):
+    def setupSegment(self,learnedSegments,segID,from_back=False, initial_segment = False, s_start = 0, start_val_temp = None):
         segment = learnedSegments[segID]
         num_states = len(segment.state_names)
         if segment.hybrid:
@@ -455,7 +466,12 @@ class DMPLWRhardcoded:
 
         ddX = np.zeros((num_states,))
         dX = np.zeros((num_states,))
+        
         X = segment.start_vals
+        
+        if initial_segment:
+            X = start_val_temp
+
         ddY = np.zeros((num_states,))
         dY = np.zeros((num_states,))
         Y = np.zeros((num_states,))
@@ -464,9 +480,11 @@ class DMPLWRhardcoded:
             if var in segment.state_names:
                 Y[segment.state_names.index(var)+3] = 1.0 #initialize quaternions to 0,0,0,1 x,y,z,w
 
-        s = 0.0  # canonical variable
+        s = 0.0 # canonical variable
+        if initial_segment:
+            s = s_start
         if from_back:
-            s = np.shape(segment.forcing_vals)[1] - 1.0
+            s = np.shape(segment.forcing_vals)[1] - s - 1.0
             X = segment.end_vals
 
         return segment, num_states, ddX, dX, X, s, ddY, dY, Y
@@ -647,7 +665,7 @@ class DMPLWRhardcoded:
             plt.show()
 
 
-    def executeModel(self,learnedSegments = None, model_pkl_file = '',R_surface = np.array([0, 0, 0, 1]),t_surface = np.zeros((3,)),input_type="none"):
+    def executeModel(self,learnedSegments = None, model_pkl_file = '',R_surface = np.array([0, 0, 0, 1]),t_surface = np.zeros((3,)),input_type="none", segID_start=0, s_start=0.0):
         #############################
         # Load model                #
         #############################
@@ -665,16 +683,19 @@ class DMPLWRhardcoded:
 
         num_segments = len(learnedSegments)
 
-        # go to replay start
-        rosExecution.goToReplayStart(learnedSegments[0].state_names,learnedSegments[0].start_vals,tfBuffer,listener)
+        # go to replay start (might be in the middle of a behavior)
+        initial_segment = True
+        start_val_temp = self.getStartValue(s_start,learnedSegments[segID_start])
+        rosExecution.goToReplayStart(s_start,learnedSegments[segID_start].state_names,start_val_temp,learnedSegments[segID_start].surface,tfBuffer,listener)
 
         delta_s = 1.0
 
         # replay through each of the segments
-        segID = 0
+        segID = segID_start # default 0 but can start partially through execution
         while segID < num_segments:
-            segment, num_states, ddX, dX, X, s, ddY, dY, Y = self.setupSegment(learnedSegments, segID, from_back=False)
+            segment, num_states, ddX, dX, X, s, ddY, dY, Y = self.setupSegment(learnedSegments, segID, from_back=False, initial_segment=initial_segment, s_start=s_start, start_val_temp = start_val_temp)
             Z = X
+            initial_segment = False
 
             if segment.hybrid:
                 surface = segment.surface
@@ -684,10 +705,10 @@ class DMPLWRhardcoded:
             while np.ceil(s) < segment.num_samples:
                 input_vals, input_button = rosExecution.getZDInput()
 
-                # Quit if the robot isn't active anymore
-                if not rosExecution.robotActive():
+                # Quit if the robot isn't active anymore or if the behavior is paused
+                if not rosExecution.robotActive() or rosExecution.isInterrupted():
                     rosExecution.shutdown()
-                    return
+                    return segID, s
 
                 correction = self.getCorrection(segment.corrections,input_type,input_vals,segment.state_names,s,surface,Z,dX)
                 # correction = np.zeros(np.shape(correction))
@@ -717,7 +738,6 @@ class DMPLWRhardcoded:
                 # print("deltas:", delta_s," ",Y[segment.state_names.index('delta_s')])
                 s += delta_s
 
-
                 # If backwards, check for segment change
                 if(s < 0 and segID > 0): # revert to previous segment
                     segID = segID - 1
@@ -732,7 +752,7 @@ class DMPLWRhardcoded:
 
             segID = segID + 1
 
-
+        return -1, -1 # segID is -1 and s is -1 if successful
 
 
 
