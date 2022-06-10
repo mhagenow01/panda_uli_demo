@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from random import sample
 import numpy as np
 import signal
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ import struct
 from core_robotics.PyBSpline import convertToUV, BSplineSurface
 from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment, DMPLWRhardcoded
 from scipy.spatial.transform import Rotation as ScipyR
+from corrective_shared_autonomy.TaskModels.FragmentedExecution import getFragmentedTraj, constructConnectedTraj
 
 import sys
 import json
@@ -38,46 +40,12 @@ import tf2_ros
 import tf2_geometry_msgs
 from scipy.spatial.transform import Rotation as ScipyR
 
+from franka_core_msgs.msg import RobotState
+
 from corrective_shared_autonomy.TaskModels.FragmentedExecution import checkReachabilityOfPoses
 
 REFERENCE_FRAME='panda_link0'
 CAMERA_FRAME='rgb_camera_link'
-
-# starting vals is a list of starting vals
-# ending vals is a list of ending vals
-# num_pts is how many interp values
-# quat_vars is the index of any starts of quaternions so they can be SLERPed instead of LERPed
-# super_pos_vars is the starting index for 2-pairs of variables which should have an added sine wave (e.g., rubbing)
-# super_pos_freq is the frequency for the starting index pairs
-# super_pos_amp is the amplitude for the starting index pairs
-def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[3], super_pos_vars = [], super_pos_freq=[], super_pos_amp = []):
-    vals = []
-    # LERP ALL VARIABLES
-    for ii in range(0,num_pts):
-        # super is to potentially add a circular motion on top of the LERP motion
-        freq_super = 0.0
-        amp_super = 0.0
-        added_sine = np.zeros((np.shape(starting_vals)))
-        for jj in range(0,len(super_pos_vars)):
-            amp = super_pos_amp[jj]
-            freq = super_pos_freq[jj]
-            added_sine[super_pos_vars[jj]] = np.sin(np.pi*float(ii)/num_pts)*amp*np.sin(freq*float(ii)/2*np.pi)
-            added_sine[super_pos_vars[jj]+1] = np.sin(np.pi*float(ii)/num_pts)*amp*np.cos(freq*float(ii)/2*np.pi)
-        c_i = float(ii)/float(num_pts) # interpolation coefficient
-        vals.append(list(c_i*(e-s)+s+a for s,e,a in zip(starting_vals,ending_vals,added_sine)))
-    vals = np.asarray(vals) # currently,num_samples x num_vars
-    # SLERP QUATERIONS
-    for jj in range(0,len(quat_vars)):
-        starting_q = np.array(starting_vals[quat_vars[jj]:quat_vars[jj]+4])
-        ending_q = np.array(ending_vals[quat_vars[jj]:quat_vars[jj]+4])
-        key_times = [0,num_pts-1]
-        key_rots = ScipyR.from_quat(np.concatenate((starting_q.reshape((1,4)),ending_q.reshape((1,4))),axis=0))
-        slerper = Slerp(key_times, key_rots)
-        pts = list(range(0,num_pts))
-        slerped = slerper(pts)
-        vals[:,quat_vars[jj]:quat_vars[jj]+4] = np.asarray(slerped.as_quat())
-    return vals.T
-
 
 def get_mid_points(p1,p2,k):
     return [[p1[0]+i*(p2[0]-p1[0])/(k-1),p1[1]+i*(p2[1]-p1[1])/(k-1)] for i in range(k)]
@@ -127,18 +95,31 @@ class Spliner(object):
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
         self._ui_reach_pub = rospy.Publisher("/ui/reach",String,queue_size = 1)
+        self._ui_robot_state_pub = rospy.Publisher("/ui/robot_state",String,queue_size = 1)
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
         self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
 
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self._n_passes = 2
         self._horizontal = True
+        self._time_sampling = 20.0
 
-        self.surfaceBSpline = None
+        self._surfaceBSpline = None
+        self._robot_state = "grey"
 
+        self._robot_state_sub = rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.on_state)
 
+    def on_state(self, msg):
+        if msg.robot_mode == 1 or msg.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
+            self._robot_state = "green"
+        if msg.robot_mode == 4:
+            self._robot_state = "red"
+        if msg.robot_mode == 5:
+            self._robot_state = "orange"
+        self._ui_robot_state_pub.publish(self._robot_state)
+        
     def get_param(self, label):
-        idx = next((i for i, item in enumerate(self._param) if item["label"] == label), None)
+        idx = next((i for i, item in enumerate(self._param) if item["id"] == label), None)
         if idx is not None:
             return self._param[idx]["value"]
         else:
@@ -148,25 +129,26 @@ class Spliner(object):
         self._param = json.loads(msg.data)
         print(self._param)
         
-        passes = self.get_param("Number of passes")
+        passes = self.get_param("passes")
         if passes is not None:
             self._n_passes = int(passes)
         else:
             self._n_passes = 2
 
-        force = self.get_param("Force (N)")
+        force = self.get_param("force")
         if force is not None:
             self._force = -int(force)
         else:
             self._force = -5.
 
-        velocity = self.get_param("Feed Rate (cm/s)")
+        velocity = self.get_param("speed")
         if velocity is not None:
             self._velocity = int(velocity)/100.
         else:
             self._velocity = .01
 
-        self._horizontal = self.get_param("Orientation") == "horizontal"
+        self._horizontal = self.get_param("direction") == "horizontal"
+        self._ui_robot_state_pub.publish(self._robot_state)
 
     def on_info(self,msg):
         if self._camera_model is None:
@@ -234,15 +216,12 @@ class Spliner(object):
             y = int(float(l[1].split(",")[1])*self._height)
             p = self.get_point([x,y],CAMERA_FRAME)
         if l[0] == "execute":
-            if self._model is not None and self._learnedSegments is not None:
-                trans = self._tfBuffer.lookup_transform(REFERENCE_FRAME,REFERENCE_FRAME, rospy.Time())
+            if self._learnedSegments is not None:
 
-                q=trans.transform.rotation
-                t=trans.transform.translation
-                R_surface=[q.x,q.y,q.z,q.w]
-                t_surface=[t.x,t.y,t.z]
+                model = DMPLWRhardcoded(verbose=True, dt=1.0/self._time_sampling)
+                model.executeModel(learnedSegments=self._learnedSegments, input_type='1dof')
+            
 
-                self._model.executeModel(learnedSegments=self._learnedSegments,R_surface=R_surface,t_surface=t_surface,input_type="1dof")
                 self._events_pub.publish("motion_finished")
 
             
@@ -319,14 +298,6 @@ class Spliner(object):
             pp2 = points[start_index - 1]
             pp3 = points[start_index - 2]
             pp4 = points[start_index - 3]
-        print("p1 "+str(p1))
-        print("p2 "+str(p2))
-        print("p3 "+str(p3))
-        print("p4 "+str(p4))
-        print("pp1 "+str(pp1))
-        print("pp2 "+str(pp2))
-        print("pp3 "+str(pp3))
-        print("pp4 "+str(pp4))
         pose1 = self.get_point(pp1,frame_id)
         pose2 = self.get_point(pp2,frame_id)
         pose3 = self.get_point(pp3,frame_id)
@@ -395,27 +366,39 @@ class Spliner(object):
         R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
         q_ts = R_tool_surf.as_quat()
 
-        segment = HybridSegment()
-        segment.hybrid = True
-        segment.surface = surfaceBSpline
-        segment.state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','delta_s','valve']
-        segment.original_vals = []
-        segment.num_samples = 0
-
-        segments = []
-        for i in range(len(us)-1):
-            start, _, _, _ = surfaceBSpline.calculate_surface_point(us[i], vs[i])
-            end, _, _, _ = surfaceBSpline.calculate_surface_point(us[i+1], vs[i+1])
+        hybrid = True
+        surface = surfaceBSpline
+        state_names = ['u','v','f','theta_qx','theta_qy','theta_qz','theta_qw','delta_s','valve']
+        original_vals = []
+        num_samples = 0
+        state_vals = []
+        for i in range(int(len(us)/2)):
+            start, _, _, _ = self._surfaceBSpline.calculate_surface_point(us[2*i], vs[2*i])
+            end, _, _, _ = self._surfaceBSpline.calculate_surface_point(us[2*i+1], vs[2*i+1])
             distance = np.linalg.norm(start-end)
             samps = int(20 * distance / self._velocity)
-            segment.num_samples+=samps
-            segments.append(interpMultD([us[i], vs[i], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1,1],[us[i+1], vs[i+1], self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3],1,1],samps))
-        R_extra_tool = ScipyR.from_euler('y',-10,degrees=True)
+            state_val = np.zeros((len(state_names),samps)) 
+            for j in range(samps):
+                state_val[0,j]=us[2*i]+j/samps*(us[2*i+1]-us[2*i])
+                state_val[1,j]=vs[2*i]+j/samps*(vs[2*i+1]-vs[2*i])
+                state_val[2,j]=self._force
+                state_val[3,j]=q_ts[0]
+                state_val[4,j]=q_ts[1]
+                state_val[5,j]=q_ts[2]
+                state_val[6,j]=q_ts[3]
+                state_val[7,j]=1
+                state_val[8,j]=1
+            state_vals.append(state_val)
+
+        temp_masks, trajs, _ = getFragmentedTraj(surfaceBSpline,state_names,state_vals,np.array([0,0,0,1]),np.zeros((3,)),3)
+        if self._horizontal:
+            R_extra_tool = ScipyR.from_euler('x',-10,degrees=True)
+        else:
+            R_extra_tool = ScipyR.from_euler('y',-10,degrees=True)
         q_extra = R_extra_tool.as_quat()
         corrections = [0.0, 0.0, -5.0, q_extra[0], q_extra[1], q_extra[2], q_extra[3], -0.5, 0.0]
-        segment.corrections.append(interpMultD(corrections,corrections,segment.num_samples,quat_vars=[3]))
-        segment.original_vals.append(np.hstack(segments))
-        return segment
+        fragmentedBehavior = constructConnectedTraj(surfaceBSpline,state_names,state_vals,temp_masks,corrections,self._time_sampling)
+        return temp_masks,trajs,fragmentedBehavior
 
     def get_return(self,surfaceBSpline,un,vn):
         ang_relative_to_surface = 0 # degrees
@@ -483,28 +466,25 @@ class Spliner(object):
         us,vs = self.get_uvs()
         
         print("getting segments")
-        segments = [self.get_approach(surfaceBSpline, us[0],vs[0]), self.get_segments(surfaceBSpline,us,vs), self.get_return(surfaceBSpline,us[-1],vs[-1])]
-        segments = np.hstack(segments)
+        self._mask,self._trajs, self._learnedSegments = self.get_segments(surfaceBSpline,us,vs)
         
-        print("creating model")
-        self._model = DMPLWRhardcoded(verbose=False,dt=0.05)
-        print("learning")
-        self._learnedSegments = self._model.learnModel(segments,'')
-        print("getting traj")
-        xs,ys,zs = self._model.getTraj(self._learnedSegments,orig=False)
         print("done")
         path = Path()
         path.header.frame_id = REFERENCE_FRAME
-        for x,y,z in zip(xs,ys,zs):
-            
-            pose = PoseStamped()
-            pose.header.frame_id = REFERENCE_FRAME
+        for i,segment in enumerate(self._mask):
+            for j,val in enumerate(segment):
+                if val:
+                    pose = PoseStamped()
+                    pose.header.frame_id = REFERENCE_FRAME
 
-            pose.pose.position.x = x
-            pose.pose.position.y = y
-            pose.pose.position.z = z
-            pose.pose.orientation.w = 1
-            path.poses.append(pose)
+                    pose.pose.position.x = self._trajs[i][0,j]
+                    pose.pose.position.y = self._trajs[i][1,j]
+                    pose.pose.position.z = self._trajs[i][2,j]
+                    pose.pose.orientation.x = self._trajs[i][3,j]
+                    pose.pose.orientation.y = self._trajs[i][4,j]
+                    pose.pose.orientation.z = self._trajs[i][5,j]
+                    pose.pose.orientation.w = self._trajs[i][6,j]
+                    path.poses.append(pose)
 
         return path
 

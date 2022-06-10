@@ -10,6 +10,7 @@ const immer = (config) => (set, get, api) =>
 const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
+    robotStatus: "grey",
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],
@@ -18,12 +19,12 @@ const store = (set,get) => ({
     imageHeight: 805,//900
     imagedata: "",
     canvasOpacity: 1.,
-    parameters: [ {type: "select", label:"Number of passes", value:"2", options:["2","3","4","5"]},
-                  {type: "select", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
-                  {type: "select", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
-                  {type: "slider", label:"Force (N)", value:1,min:0,max:10},
-                  {type: "slider", label:"Feed Rate (cm/s)", value:1,min:0,max:10},
-                  {type: "select", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
+    parameters: [ {type: "select", id:"passes", label:"# of passes", value:"2", options:["2","3","4","5"]},
+                  {type: "select", id:"direction", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
+                  {type: "select", id:"material", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
+                  {type: "slider", id:"force", label:"Force", value:1,min:0,max:10,unit: "N"},
+                  {type: "slider", id:"speed", label:"Feed Rate", value:2,min:1,max:10, unit: "cm/s"},
+                  {type: "select", id:"tool", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
                 ],
     configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
@@ -43,6 +44,9 @@ const store = (set,get) => ({
         h = w/k
       state.imageWidth = w
       state.imageHeight = h
+    }),
+    setRobotStatus: (msg) => set(state=>{
+      state.robotStatus = msg 
     }),
     setGamepads: (msg) => set(state=>{
       // https://answers.ros.org/question/284741/seq-or-time-stamp-for-publishing-a-message/

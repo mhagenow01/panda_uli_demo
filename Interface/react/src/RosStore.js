@@ -164,6 +164,13 @@ const store = (set) => ({
 			// document.getElementById('livestream').src = imagedata;
 		});
 
+		const robotTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/ui/robot_state',
+			messageType: 'std_msgs/String',
+		});
+
+        robotTopic.subscribe((msg)=>useAppStore.getState().setRobotStatus(msg.data));
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
         eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
         setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
@@ -179,6 +186,7 @@ const store = (set) => ({
             imageTopic:imageTopic,
             paramTopic:paramTopic,
             joyTopic:joyTopic,
+            robotTopic:robotTopic,
         };
     })
 });

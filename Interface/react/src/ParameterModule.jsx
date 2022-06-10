@@ -31,8 +31,8 @@ export const ParameterModule = (props) => {
               onChange={event => setParameter(idx,event.target.value)}
               margin={"medium"}/>
             </Box>
-            <Box justify={"center"} alignContent={"center"} width={"xxsmall"}>
-              <Text justify={"center"} alignSelf="center" size="2.2vh" >{parameterInfo.value} </Text>
+            <Box justify={"center"} alignContent={"center"} width={"small"}>
+              <Text justify={"center"} alignSelf="left" size="2.2vh" >{parameterInfo.value+" "+parameterInfo.unit} </Text>
             </Box>
         </Box>
       )}
