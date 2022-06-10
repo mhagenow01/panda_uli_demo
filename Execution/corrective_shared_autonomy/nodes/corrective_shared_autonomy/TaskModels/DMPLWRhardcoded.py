@@ -42,7 +42,7 @@ class DMP:
         self.k = k
         self.b = b
         self.dt = dt
-        self.num_kernels = 60
+        self.num_kernels = 20
         self.kernel_per_overlap = 0.10  # absolute e.g., 5 percent -> 0.05
         self.input = 0.0
 
@@ -60,10 +60,10 @@ class DMP:
         return x_out
 
     # Calculate required forcing to produce
-    def getDMPForcing(self,x, xf):
+    def getDMPForcing(self,x, xf, dt):
         # Finit differencing to get the desired velocity and acceleration to compute the force
-        vel = np.gradient(x) / self.dt
-        acc = np.gradient(vel) / self.dt
+        vel = np.gradient(x) / dt
+        acc = np.gradient(vel) / dt
 
         # Calculate the forcing required to produce this motion
         # Using the ODE and solving for f: F = x_ddot-k(x_final-x)+bx_dot
@@ -82,6 +82,21 @@ class DMP:
         # Data is expected to a list of equal length arrays
         num_demos = len(data)
         num_samples = len(data[0])
+        num_samples_orig = num_samples
+        dt = self.dt
+
+        target_samples = 120
+        ds_factor = round(num_samples/target_samples)
+        ds_factor = max(ds_factor,1)
+
+        dt = dt*ds_factor
+
+        data_new = []
+        for ii in range(len(data)):
+            data_new.append(data[ii][::ds_factor])
+        data = data_new
+        num_samples = len(data[0])
+
         start_sum=0.0
         end_sum=0.0
         for ii in range(0,num_demos):
@@ -105,12 +120,12 @@ class DMP:
         f_data_total = np.zeros((0,))
         samples_total = np.zeros((0,))
         for ii in range(0,num_demos):
-            f_data = self.getDMPForcing(data[ii], end)
+            f_data = self.getDMPForcing(data[ii], end, dt)
             samples = np.arange(0, len(f_data))
 
             # canonical system
-            s_alpha = 3 / (len(samples) * self.dt)
-            canonical = np.exp(-s_alpha * np.arange(0, len(samples)) * self.dt)  # decay function
+            s_alpha = 3 / (len(samples) * dt)
+            canonical = np.exp(-s_alpha * np.arange(0, len(samples)) * dt)  # decay function
 
             # normalize required forcing w.r.t. canonical system
             f_data_canonical = np.divide(f_data, canonical)
@@ -144,6 +159,11 @@ class DMP:
         # plt.plot(samples,f_data_canonical[0:119])
         # plt.plot(samples,forcing)
         # plt.show()
+
+        forcing = np.repeat(forcing,ds_factor)
+        f = interpolate.interp1d(np.linspace(0,1,len(forcing)), forcing)
+        forcing = f(np.linspace(0,1,num_samples_orig))
+
         return start,end,forcing
 
 ##############################
@@ -257,7 +277,7 @@ class DMPLWRhardcoded:
                 surface = segment.surface
                 backend = 'loky'
                 # parallelize retrieval of surface locations
-                behaviors = Parallel(n_jobs=8, backend=backend)(delayed(
+                behaviors = Parallel(n_jobs=12, backend=backend)(delayed(
                 parallelSurfPt)(surface,u_temp,v_temp) for u_temp, v_temp in zip(u,v))
                 behaviors = np.array(behaviors)
                 x.extend(behaviors[:,0])
