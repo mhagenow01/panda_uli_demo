@@ -42,6 +42,7 @@ class FTProcessor:
         self.stale_time = 5.0 # seconds
         self.t_reqd_stationary = 0.5 # seconds
         self.t_bias = rospy.get_time()-self.stale_time
+        self.sensorbiased = False # not initially biased
         self.t_stationary = None
         self.stationary = False
         
@@ -56,9 +57,6 @@ class FTProcessor:
         self._b,self._a = scisignal.butter(2,20,fs=750)
         self.last_y = np.zeros((6,))
         self.last_x = np.zeros((6,))
-
-        # TODO: subscribe to new EE weight/pos?
-        # TODO: dynamic compensation?
 
         self.ft_comp_pub = rospy.Publisher("/ft/wrench", Wrench, queue_size =1, latch = False)
         rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
@@ -101,6 +99,7 @@ class FTProcessor:
             self.force_bias += (R_ft.inv()).apply(f_global_wo_mass) 
             self.torque_bias += (R_ft.inv()).apply(t_global_no_mass)
 
+            self.sensorbiased = True
             print("Biasing: ",self.force_bias)
 
 
@@ -212,8 +211,11 @@ class FTProcessor:
             wrench_out.torque.x = w_filt[3]
             wrench_out.torque.y = w_filt[4]
             wrench_out.torque.z = w_filt[5]
-            
-            self.ft_comp_pub.publish(wrench_out)                       
+
+            if self.sensorbiased:
+                # do not publish until biased
+                # (messes with admittance controller)          
+                self.ft_comp_pub.publish(wrench_out)                       
        
 if __name__ == "__main__":
     ft = FTProcessor()

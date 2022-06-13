@@ -30,25 +30,28 @@ class HybridController:
 
         time.sleep(0.5)
 
+        self.mode = HybridMode.Hybrid
+        # self.mode = HybridMode.Passthrough
+        self.samprate = 100.0
         self.gain_lin = 0.002
         self.gain_ang = 0.1
+        self.admittance = True
+        self.lin_stiffness = np.array([700.0, 700.0, 700.0])
+        self.ang_stiffness = np.array([20.0, 20.0, 20.0])
 
         self.forces = np.zeros((3,))
-        self.torques = np.zeros((3,))
-
-        self.mode = HybridMode.Passthrough
-
+        self.torques = np.zeros((3,))        
         self.cf = np.array((0,0,0,1))
-
-
-        self.admittance = False
-        self.lin_stiffness = np.array([500.0, 500.0, 500.0])
-        self.ang_stiffness = np.array([10.0, 10.0, 10.0])
+        self.sel_vector = np.ones((6,))
+        self.desired_pos_cf = None
 
         self.lin_damping  = 2.0 * np.sqrt(self.lin_stiffness)
         self.ang_damping  = 2.0 * np.sqrt(self.ang_stiffness)
 
-        self.vel = np.zeros((6,))
+        self.prev_q = None
+        self.prev_pos = None
+        self.linvel = np.zeros((3,))
+        self.angvel = np.zeros((3,))
 
         rospy.Subscriber("/panda/pose_command", PoseStamped, self.commandPose)
         rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
@@ -62,10 +65,10 @@ class HybridController:
 
 
     def runHybrid(self):
-        rate = rospy.Rate(100.0)
+        rate = rospy.Rate(self.samprate)
         while not rospy.is_shutdown():
             rate.sleep()
-
+        
             # If currently commanding traditional pose, bypass hybrid calculation
             if self.mode == HybridMode.Passthrough:
                 continue
@@ -78,8 +81,15 @@ class HybridController:
                 curr_q = np.array([trans.transform.rotation.x, trans.transform.rotation.y, trans.transform.rotation.z, trans.transform.rotation.w])
 
                 # store ee velocity for admittance law
-                twist = self.tfBuffer.lookup_twist('panda_link0', 'panda_ee', rospy.Time())
-                print(twist)
+                if self.prev_q is not None:
+                    R_p = ScipyR.from_quat(self.prev_q)
+                    R_c = ScipyR.from_quat(curr_q)
+                    angvel_prev = (R_p.inv() * R_c).as_rotvec()*self.samprate
+                    # self.angvel = R_p.apply(angvel_prev) # rotate into global
+                    # TODO: angvel seems to cause instability -- leaving 0 for now and using robot friction
+                    self.linvel = (curr_pos - self.prev_pos)*self.samprate
+                self.prev_q = curr_q
+                self.prev_pos = curr_pos 
 
                 # convert current state into constraint frame
                 R_cf = ScipyR.from_quat(self.cf)
@@ -89,6 +99,15 @@ class HybridController:
                 curr_pos_cf = (R_cf.inv()).apply(curr_pos)
                 curr_f_cf = (R_cf.inv()).apply(self.forces)
                 curr_t_cf = (R_cf.inv()).apply(self.torques)
+                linvel_cf = (R_cf.inv()).apply(self.linvel)
+                angvel_cf = (R_cf.inv()).apply(self.angvel)
+
+                # No command sent yet.. use current pos and other defaults
+                if self.desired_pos_cf is None:
+                    self.desired_pos_cf = curr_pos_cf
+                    self.desired_q_cf = curr_q_cf
+                    self.desired_force_cf = np.zeros((3,))
+                    self.desired_torque = np.zeros((3,))
 
                 #############################
                 # apply control law         #
@@ -98,7 +117,8 @@ class HybridController:
                 if not self.admittance:                
                     admit_pos = self.sel_vector[0:3]*self.desired_pos_cf
                 else:
-                    admit_pos = self.sel_vector[0:3]*(self.desired_pos_cf + (curr_f_cf + self.lin_damping*self.vel[0:3])/self.lin_stiffness)
+                    # force is negative because it is the reaction force
+                    admit_pos = self.sel_vector[0:3]*(self.desired_pos_cf + (-curr_f_cf + self.lin_damping*linvel_cf)/self.lin_stiffness)
                 force_pos = (np.ones(3,)-self.sel_vector[0:3])*(self.gain_lin*(self.desired_force_cf-curr_f_cf)+curr_pos_cf)
                 new_pos_cf = admit_pos + force_pos
                 
@@ -107,7 +127,13 @@ class HybridController:
                 rvec_des_cf = R_desired_q_cf.as_rotvec() # compute using rotation vectors
                 rvec_curr_cf = R_curr_q_cf.as_rotvec()
                 
-                hyb_torque_cmd = self.sel_vector[3:6]*rvec_des_cf + (np.ones(3,)-self.sel_vector[3:6])*(self.gain_ang*(self.desired_torque-curr_t_cf)+rvec_curr_cf)
+                if not self.admittance:
+                    admit_q = self.sel_vector[3:6]*rvec_des_cf
+                else:
+                    # torque is negative because it is the reaction torque
+                    admit_q = self.sel_vector[3:6]*(rvec_des_cf + (-curr_t_cf + self.ang_damping*angvel_cf)/self.ang_stiffness)
+                force_q = (np.ones(3,)-self.sel_vector[3:6])*(self.gain_ang*(self.desired_torque-curr_t_cf)+rvec_curr_cf)
+                hyb_torque_cmd = admit_q + force_q
                 R_torque_hybrid = ScipyR.from_rotvec(hyb_torque_cmd)
 
                 # Convert back to global frame
