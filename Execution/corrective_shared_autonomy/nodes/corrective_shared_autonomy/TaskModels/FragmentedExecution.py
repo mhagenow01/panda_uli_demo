@@ -142,9 +142,12 @@ def getReachable(trajectories, curr_mask):
 
     # call for each element of each trajectory
     for ii in range(0,len(trajectories)):
-        successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj) for jj in range(np.shape(trajectories[ii])[1]))
+        # TODO: base this off of distance -- tough to do when it is parallelized
+        # TODO: maybe think of a preliminary step as a keyframe extraction
+        downsamp = 10
+        successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
         for jj in range(0,np.shape(trajectories[ii])[1]):
-            if successes[jj]==1:
+            if successes[int(jj/downsamp)]==1:
                 taskmask[ii][jj]=1
         
         # for jj in range(0,np.shape(trajectories[ii])[1]):
@@ -186,6 +189,8 @@ def getPoseFromState(surface,state_names,state_vals,q_surf = np.array([0, 0, 0, 
         theta_qw = state_vals[state_names.index("theta_qw")]
         norm_q_surf = np.array([theta_qx, theta_qy, theta_qz, theta_qw])/np.linalg.norm(np.array([theta_qx, theta_qy, theta_qz, theta_qw]))
     R_theta = ScipyR.from_quat(norm_q_surf)
+
+    constraint_frame_matrx = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)),r_v_norm.reshape((3,1)),n_hat.reshape((3,1))]))
 
     if("tool_offset_x" in state_names):
         to_ind = state_names.index("tool_offset_x")
@@ -304,9 +309,8 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     approach_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
     q_app = (R_surf * R_tool_surf).as_quat()
-    q_app2 = R_surf.as_quat()
 
-    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app2[0], q_app2[1], q_app2[2], q_app2[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0, 0.0, 0.0, 0.0]
     ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     starting[0:3] = starting[0:3] + approach_dists[0] * n_hat
     ending[0:3] = ending[0:3] + approach_dists[1] * n_hat
@@ -333,11 +337,9 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     retract_pt, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(ending_coords[0], ending_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
     q_ret = (R_surf * R_tool_surf).as_quat()
-    q_ret2 = (R_surf).as_quat()
-    
 
     starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
-    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret2[0], q_ret2[1], q_ret2[2], q_ret2[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0, 0.0, 0.0, 0.0]
     starting[0:3] = starting[0:3] + retraction_dists[0] * n_hat
     ending[0:3] = ending[0:3] + retraction_dists[1] * n_hat
     orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
@@ -346,8 +348,6 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     return segment
 
 def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel):
-    # TODO: switch this to follow the surface
-
     retract_pt, n_hat1, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
     q_ret = (R_surf * R_tool_surf_start).as_quat()
@@ -372,8 +372,8 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     for ii in range(segment.num_samples):
         r, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(uvs[0,ii],uvs[1,ii])
         orig_vals[0:3,ii] = r + 0.05 * n_hat 
-        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
-        orig_vals[3:7,ii] = R_surf.as_quat()
+        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
+        orig_vals[3:7,ii] = (R_surf * R_tool_surf_end).as_quat()
 
     # starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0]
     # starting[0:3] = starting[0:3] + 0.05 * n_hat1
@@ -474,7 +474,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             last_uv = [ending_u, ending_v] # store previous end of path
             last_R_tool_surf = R_tool_surf_ret
 
-    model = DMPLWRhardcoded(verbose=True, dt=1./samps_per_sec)
+    model = DMPLWRhardcoded(verbose=False, dt=1./samps_per_sec)
     learnedSegments = model.learnModel(segments) # second argument is the outfile
     return learnedSegments
 
@@ -514,10 +514,11 @@ class FragmentedExecutionManager():
         self.rvizpub = rospy.Publisher("rviz_triggers", String, queue_size =1, latch = True)
         self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
         self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
-        self.restartexec = rospy.Subscriber("delete_active", String, self.deleteActive)
+        self.readtriggers = rospy.Subscriber("rviz_triggers", String, self.readTriggers)
         # TODO: plan -> execute
         self.model_name = ''
-        self.min_length = 5
+        self.min_length = 40
+        self.dt = 40
         self.plotting_size = 0.01
         self.max_num_traj_pts = 0
         self.fragmentedBehavior = None
@@ -530,8 +531,10 @@ class FragmentedExecutionManager():
         if data.data=='resume':
             self.resume = True
 
-    def deleteActive(self,data):
-        self.resetExecution()
+    def readTriggers(self,data):
+        if data.data=='deleteactive':
+            self.resetExecution()
+            self.clearReachability()
 
     def resetExecution(self):
         self.taskmask = None
@@ -543,11 +546,11 @@ class FragmentedExecutionManager():
 
     def executeModel(self,data):
         if self.fragmentedBehavior is not None:
-            model = DMPLWRhardcoded(verbose=True, dt=1.0/40.0)
+            model = DMPLWRhardcoded(verbose=False, dt=1.0/self.dt)
             doneExecution = False
             segID=0; s=0
             while not doneExecution:
-                segID, s = model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof')
+                segID, s = model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof', segID_start=segID, s_start=s)
                 if segID==-1 and s==-1:
                     doneExecution = True
                 else:
@@ -655,6 +658,7 @@ class FragmentedExecutionManager():
         self.displayReachability(self.trajs)
         print("learning behav")
         if self.new_pts:
+            print("THERE ARE NEW PTS")
             self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
             print("done")
             self.rvizpub.publish(String("computetrajdone"))

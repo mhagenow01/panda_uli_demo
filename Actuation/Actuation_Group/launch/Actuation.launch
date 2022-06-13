@@ -70,6 +70,9 @@
   <!-- Controlled Valve -->
   <node pkg="controlled_valve" type="controlledValveNode" name="controlledValveNode" output="screen"/>
 
+  <!-- EE Diagnostics -->
+  <node pkg="diagnostics" type="ee_pose_checker" name="ee_pose_checker" output="screen"/>
+
   <!-- <node name="user_experience_enhancer" pkg="user_experience_enhancer" type="user_experience_enhancer" output="screen" /> -->
 
 </launch>

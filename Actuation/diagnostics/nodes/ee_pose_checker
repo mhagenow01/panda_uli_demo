@@ -9,7 +9,7 @@ __author__ = "Mike Hagenow"
 import rospy
 import time
 from std_msgs.msg import Float64
-from geometry_msgs.msg import Wrench, PoseStamped, Vector3
+from geometry_msgs.msg import Wrench, PoseStamped, Pose, Vector3
 from hybrid_controller.msg import HybridPose
 import numpy as np
 from scipy.spatial.transform import Rotation as ScipyR
@@ -21,22 +21,39 @@ class EEPoseChecker:
         self.mag_dist_pub = rospy.Publisher('/pose_error/mag_dist', Float64, queue_size=1)
         self.mag_ang_pub = rospy.Publisher('/pose_error/mag_ang', Float64, queue_size=1)
 
+        tfBuffer = tf2_ros.Buffer()
+        listener = tf2_ros.TransformListener(tfBuffer)
+
         time.sleep(0.5)
 
         self.gotIKcommand = False
         self.gotIKout = False
-        rospy.Subscriber("/ik/pose_command", PoseStamped, self.commandPose)
+        rospy.Subscriber("/ik/pose_command", PoseStamped, self.storeCommand)
         
         mag_dist = Float64()
         mag_ang = Float64()
 
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
+            try:
+                trans = tfBuffer.lookup_transform('panda_link0', 'ik_output', rospy.Time())
+                self.ikout = Pose()
+                self.ikout.position.x = trans.transform.translation.x
+                self.ikout.position.y = trans.transform.translation.y
+                self.ikout.position.z = trans.transform.translation.z
+                self.ikout.orientation.x = trans.transform.rotation.x
+                self.ikout.orientation.y = trans.transform.rotation.y
+                self.ikout.orientation.z = trans.transform.rotation.z
+                self.ikout.orientation.w = trans.transform.rotation.w
+                self.gotIKout = True
+            except Exception as e:
+                print(e)
+
             if self.gotIKcommand and self.gotIKout:
                 pos_command = np.array([self.ikcommand.position.x, self.ikcommand.position.y, self.ikcommand.position.z])
                 pos_out = np.array([self.ikout.position.x, self.ikout.position.y, self.ikout.position.z])
-                pos_err = np.linalg.norm(pos_out - pos_err)
-                mag_dist.data = pos_error
+                pos_err = np.linalg.norm(pos_out - pos_command)
+                mag_dist.data = pos_err
                 self.mag_dist_pub.publish(mag_dist)
                 quat_command = np.array([self.ikcommand.orientation.x, self.ikcommand.orientation.y, self.ikcommand.orientation.z, self.ikcommand.orientation.w])
                 quat_out = np.array([self.ikout.orientation.x, self.ikout.orientation.y, self.ikout.orientation.z, self.ikout.orientation.w])
@@ -45,18 +62,13 @@ class EEPoseChecker:
                 ang_err = np.linalg.norm((R_command.inv() * R_out).as_rotvec())
                 if ang_err > np.pi/2.0:
                     ang_err = np.pi-ang_err
-                mag_ang.data = ang_error
+                mag_ang.data = ang_err
                 self.mag_ang_pub.publish(mag_ang)
             rate.sleep()
 
-
     def storeCommand(self,data):
-        self.gotIKcommand = True
         self.ikcommand = data.pose
-    
-    def storeOut(self,data):
-        self.gotIKout = True
-        self.ikout = data.pose
+        self.gotIKcommand = True
        
 if __name__ == "__main__":
     checker = EEPoseChecker()

@@ -231,7 +231,7 @@ class ExecuteROS:
         return start + (end-start)*val
 
     def shutdown(self):
-        # if panda crashes, appropriately exit other states
+        # if panda crashes or behavior is shut down, appropriately exit other states
         int_temp = Int32()
         int_temp.data = 0
         self.valve_pub.publish(int_temp)
@@ -282,7 +282,6 @@ class ExecuteROS:
         key_rots = R.from_quat(np.array([[qx,qy,qz,qw],[desired_qx,desired_qy,desired_qz,desired_qw]]))
         key_times = [0,1]
         slerp = Slerp(key_times, key_rots)
-
 
         # max cartesian speed - 0.1
         cart_dist = np.linalg.norm(np.array([x,y,z]-np.array([desired_x, desired_y, desired_z])))
