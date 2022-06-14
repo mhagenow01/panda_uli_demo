@@ -85,7 +85,7 @@ def mesh_to_marker(stl_file, index, pos, quat, color=[0.0, 1.0, 0.0], frame="map
     marker.color.r = color[0]
     marker.color.g = color[1]
     marker.color.b = color[2]
-    marker.mesh_resource = "file://"+stl_file
+    marker.mesh_resource = stl_file
     return marker
 
 def empty_marker(count,prev_count,meshes):

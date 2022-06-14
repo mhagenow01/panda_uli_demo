@@ -15,7 +15,7 @@ from affordance_corrections.affordance_helpers.urdf_helpers import getLinksAndJo
 class Model:
     ''' A model contains information such as meshes, links, joints, and transforms '''
     
-    def __init__(self,inputfile, num_pts=150):
+    def __init__(self,inputfile, num_pts=150, pkg_dir=None):
         self.name = inputfile.split('/')[-1].split(".")[0]
         self.filename = inputfile
 
@@ -23,9 +23,9 @@ class Model:
 
         ''' Currently loads either a single STL or a URDF model'''
         if filetype=="STL" or filetype=="stl":
-            self.links, self.joints = getLinksAndJointsFromSTL(inputfile)
+            self.links, self.joints = getLinksAndJointsFromSTL(inputfile, pkg_dir)
         else:
-            self.links, self.joints = getLinksAndJoints(inputfile)
+            self.links, self.joints = getLinksAndJoints(inputfile, pkg_dir)
         
         self.calculate_diameter()
         self.scaling_allowed = False

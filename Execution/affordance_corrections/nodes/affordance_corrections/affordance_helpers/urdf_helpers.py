@@ -22,7 +22,7 @@ class Joint:
 
 class Link:
     ''' used in model'''
-    def __init__(self,meshfile,R,t, num_pts = 400):
+    def __init__(self,meshfile,R,t, num_pts = 400, pkg_dir = None):
         self.meshfile = meshfile
         self.R = R
         self.t = t
@@ -30,7 +30,12 @@ class Link:
         self.mesh = trimesh.load_mesh(meshfile)
         self.pts = trimesh.sample.sample_surface_even(self.mesh,num_pts,radius=None)[0]
 
-def getLinksAndJoints(urdffile):
+        if pkg_dir is not None:
+            self.meshfile = pkg_dir + meshfile.split('/')[-1]
+        else:
+            self.meshfile = "file://" + meshfile
+
+def getLinksAndJoints(urdffile, pkg_dir=None):
     ''' From the URDF, load link and joint objects for fitting, plotting, etc.
     Note: an object without articulations would be expected to have one link'''
     
@@ -86,17 +91,17 @@ def getLinksAndJoints(urdffile):
                             for ii in range(1,len(mesh_file.split("//")[1].split("/"))):
                                 path_within_package+=("/"+mesh_file.split("//")[1].split("/")[ii])
                             mesh_file_full = rospack.get_path(pkg_temp)+path_within_package
-            link_temp = Link(mesh_file_full,R,t, num_pts =int(400.0/num_links))
+            link_temp = Link(mesh_file_full,R,t, num_pts =int(400.0/num_links), pkg_dir=pkg_dir)
             links.append(link_temp)
 
     return links, joints
 
-def getLinksAndJointsFromSTL(stlfile):
+def getLinksAndJointsFromSTL(stlfile, pkg_dir = None):
     ''' An STL file can be interpreted as a single link'''
     joints = []
     links = []
 
-    link_temp = Link(stlfile,np.eye(3),np.zeros((3,)))
+    link_temp = Link(stlfile,np.eye(3),np.zeros((3,)),pkg_dir = pkg_dir)
     links.append(link_temp)
 
     return links, joints
