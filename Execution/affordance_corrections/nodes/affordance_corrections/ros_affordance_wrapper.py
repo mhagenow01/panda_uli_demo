@@ -194,13 +194,11 @@ class ROSAffordances:
 
     def triggers(self,data):
         ''' Captures triggering events (strings) from the rviz front end (buttons, etc)'''
-        print("YO@")
         if data.data=="clear":
             self.clearAllPts()
         if data.data=="deleteactive":
             self.deleteActive()
         if data.data=="toggleactive":
-            print("YO")
             if len(self.engine.objectsOfInterest)>0:
                 activeid = self.engine.active_obj
                 self.engine.objectsOfInterest[activeid].toggleActive()
