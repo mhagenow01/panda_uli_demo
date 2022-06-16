@@ -198,6 +198,12 @@ class ROSAffordances:
             self.clearAllPts()
         if data.data=="deleteactive":
             self.deleteActive()
+        if data.data=="toggleactive":
+            if len(self.engine.objectsOfInterest)>0:
+                activeid = self.engine.active_obj
+                self.engine.objectsOfInterest[activeid].toggleActive()
+                worldState = self.engine.getUpdatedWorld()
+                self.updateVisualization(worldState)
         if data.data=="refittingon":
             self.engine.setActiveObjectRefitting(True)
         if data.data=="refittingoff":
@@ -209,9 +215,9 @@ class ROSAffordances:
         worldState = self.engine.getUpdatedWorld()
         self.updateVisualization(worldState)
 
-    def setModels(self,models):
+    def setModels(self,models, pkg_dir = None):
         ''' Takes a list of filenames for the objects to be fit'''
-        self.engine.setModels(models)
+        self.engine.setModels(models, pkg_dir)
 
     def toggleSVDforInitialArticulation(self,toggle):
         ''' Tells affordance engine whether or not to use SVD for articulation

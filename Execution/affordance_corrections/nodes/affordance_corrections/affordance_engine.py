@@ -85,10 +85,11 @@ class AffordanceEngine:
                     closest_dist = np.minimum(model_loc_dist,ref_pt_dist)
         return closest_pt # negative value if nothing was found
 
-    def setModels(self,model_files):
+    def setModels(self,model_files,pkg_dir = None):
         ''' List of files (stl or urdf) for the model objects that should be fit '''
+        ''' if pkg_dir is not none, will use this pacakge for mesh plotting instead of the fully qualified file name'''
         for file in model_files:
-            self.models.append(Model(file))
+            self.models.append(Model(file, pkg_dir=pkg_dir))
 
     def toggleSVDforInitialArticulation(self,toggle):
         ''' Toggles whether the initial fit of objects with articulations uses
