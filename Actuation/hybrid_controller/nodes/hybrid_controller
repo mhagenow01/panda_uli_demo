@@ -9,7 +9,7 @@ __author__ = "Mike Hagenow"
 from enum import Enum
 import rospy
 import time
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 from geometry_msgs.msg import Wrench, PoseStamped, Vector3
 from hybrid_controller.msg import HybridPose
 import numpy as np
@@ -54,6 +54,7 @@ class HybridController:
         self.angvel = np.zeros((3,))
 
         rospy.Subscriber("/panda/pose_command", PoseStamped, self.commandPose)
+        rospy.Subscriber("/panda/admittanceon", Bool, self.toggleAdmittance)
         rospy.Subscriber("/panda/hybrid_pose", HybridPose, self.commandHybrid)
         rospy.Subscriber("/panda/set_hybrid_gain_linear", Float64, self.setGainLinear)
         rospy.Subscriber("/panda/set_hybrid_gain_angular", Float64, self.setGainAngular)
@@ -63,6 +64,11 @@ class HybridController:
 
         self.runHybrid()
 
+    def toggleAdmittance(self,data):
+        if data.data == True:
+            self.mode = HybridMode.Hybrid
+        else:
+            self.mode = HybridMode.Passthrough
 
     def runHybrid(self):
         rate = rospy.Rate(self.samprate)
