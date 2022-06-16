@@ -68,6 +68,7 @@ class HybridController:
         if data.data == True:
             self.mode = HybridMode.Hybrid
         else:
+            self.desired_pos_cf = None # so it takes the current joint angles when turned on
             self.mode = HybridMode.Passthrough
 
     def runHybrid(self):
