@@ -17,6 +17,8 @@ from core_robotics.PyBSpline import convertToUV, BSplineSurface
 from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment, DMPLWRhardcoded
 from scipy.spatial.transform import Rotation as ScipyR
 from corrective_shared_autonomy.TaskModels.FragmentedExecution import getFragmentedTraj, constructConnectedTraj
+import cv2
+from cv_bridge import CvBridge
 
 import sys
 import json
@@ -58,6 +60,8 @@ class Spliner(object):
         self._tfBuffer = tf2_ros.Buffer()
         self._tl = tf2_ros.TransformListener(self._tfBuffer)
         self._camera_model = None
+        self._bridge = CvBridge()
+        self._depth_stale = True
         # self._model = image_geometry.PinholeCameraModel()
         # camInfo = CameraInfo()
         # camInfo.header.frame_id="camera1"
@@ -163,7 +167,7 @@ class Spliner(object):
             self._height = msg.height
             self._camera_model = image_geometry.PinholeCameraModel()
             self._camera_model.fromCameraInfo(msg)
-            self._depth_sub = rospy.Subscriber("/k4a/depth_to_rgb/image_raw", Image, self.on_depth)
+            self._depth_sub = rospy.Subscriber("/k4a/depth_to_rgb/image_raw/compressed", CompressedImage, self.on_depth)
             self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
         
     def on_command(self,msg):
@@ -269,6 +273,9 @@ class Spliner(object):
             dist+=1
 
     def get_pose_from_pixel(self, x,y,frame_id=REFERENCE_FRAME):
+        if self._depth_stale is True:
+            self._depth_stale = False
+            self._depth = np.asarray(self._bridge.compressed_imgmsg_to_cv2(self._depth_msg))
         x = int(x)
         y=int(y)
         d = self._depth[y,x]/1000.
@@ -290,9 +297,8 @@ class Spliner(object):
         return [p.pose.position.x, p.pose.position.y,p.pose.position.z]
 
     def on_depth(self, msg):
-        self._depth = ros_numpy.numpify(msg)
-
-
+        self._depth_msg = msg 
+        self._depth_stale = True
     
     def get_surface(self,coord, frame_id = CAMERA_FRAME):
         #s="484,436_615,436_615,816_484,816"
