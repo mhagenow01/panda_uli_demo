@@ -5,7 +5,7 @@ import { Stack } from 'grommet';
 import useRosStore from './RosStore';
 
 export const Canvas = (props) => {
-    var [corners,path,canvasOpacity,spline,good,bad,imageWidth] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth]);
+    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
     const handleDragEnd = (e) => {
@@ -30,8 +30,14 @@ export const Canvas = (props) => {
         }
       );
     };
+    const handleClick = (e) => {
+        var x=e.evt["clientX"]
+        var y=e.evt["clientY"]
+        if (x<maxWidth && y < maxHeight)
+            useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+    };
     return ( 
-    <Stage width={maxWidth} height={maxHeight}>
+    <Stage width={maxWidth} height={maxHeight} onMouseDown={handleClick}>
         <Layer>
           <Shape
             sceneFunc={(context, shape) => {

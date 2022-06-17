@@ -23,8 +23,8 @@ const store = (set) => ({
         const ros = state.ros
         let viewer = new Viewer({
             divID : 'urdf',
-            width : 800,
-            height : 600,
+            width : useAppStore.getState().imageWidth,
+            height : useAppStore.getState().imageHeight,
             antialias : true,
             background : "#f8f8f8"
 
@@ -40,13 +40,20 @@ const store = (set) => ({
           });
       
         //   Setup the marker client.
-          var markerClient = new ROS3D.MarkerClient({
+        var markerClient = new ROS3D.MarkerArrayClient({
             ros : ros,
             tfClient : tfClient,
-            topic : '/viz/meshes',
+            topic : '/reachabilitymap',
             path: process.env.PUBLIC_URL + 'assets/',
             rootObject : viewer.scene
-          });
+        });
+        var markerClient2 = new ROS3D.MarkerArrayClient({
+            ros : ros,
+            tfClient : tfClient,
+            topic : '/meshes',
+            path: process.env.PUBLIC_URL + 'assets/',
+            rootObject : viewer.scene
+        });
 
         var urdfClient = new UrdfClient({
             ros : ros,
@@ -76,7 +83,7 @@ const store = (set) => ({
         var pointCloud2 = new PointCloud2({
             ros : ros,
             tfClient : tfClient,
-            topic : 'cloud2',
+            topic : '/filtered_cloud',
             max_pts : 3245728,
             material: { size: 0.02},
             colorsrc: 'rgb',
@@ -101,6 +108,17 @@ const store = (set) => ({
             name: 'interaction_events',
             messageType: 'std_msgs/String'
         });
+        const objTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'getObjPose',
+            messageType: 'std_msgs/String'
+        })
+
+        const modelTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'executeModel',
+            messageType: 'std_msgs/String'
+        });
 
         const commandTopic = new ROSLIB.Topic({
             ros: ros,
@@ -117,6 +135,12 @@ const store = (set) => ({
         const paramTopic = new ROSLIB.Topic({
             ros: ros,
             name: 'ui/parameters',
+            messageType: 'std_msgs/String'
+        });
+
+        const rvizTopic = new ROSLIB.Topic({
+            ros: ros,
+            name: 'rviz_triggers',
             messageType: 'std_msgs/String'
         });
 
@@ -171,6 +195,7 @@ const store = (set) => ({
 		});
 
         robotTopic.subscribe((msg)=>useAppStore.getState().setRobotStatus(msg.data));
+        rvizTopic.subscribe((msg)=>useAppStore.getState().receivedRviz(msg.data));
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
         eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
         setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
@@ -187,6 +212,9 @@ const store = (set) => ({
             paramTopic:paramTopic,
             joyTopic:joyTopic,
             robotTopic:robotTopic,
+            rvizTopic:rvizTopic,
+            objTopic:objTopic,
+            modelTopic:modelTopic,
         };
     })
 });

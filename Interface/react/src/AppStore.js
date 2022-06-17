@@ -18,7 +18,11 @@ const store = (set,get) => ({
     imageWidth: 1073,//1200
     imageHeight: 805,//900
     imagedata: "",
+    knownWorkflow: 0,
     canvasOpacity: 1.,
+    scanning: false,
+    computed_traj: false,
+    computing: false,
     parameters: [ {type: "select", id:"passes", label:"# of passes", value:"2", options:["2","3","4","5"]},
                   {type: "select", id:"direction", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
                   {type: "select", id:"material", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
@@ -33,6 +37,19 @@ const store = (set,get) => ({
       y: 100,
       isDragging: false,
     })),
+    setScanning: (val) => set(state=>{
+      state.scanning= val
+    }),
+    setComputedTraj: (val) => set(state=>{
+      state.computed_traj= val
+    }),
+    setComputing: (val) => set(state=>{
+      state.computing= val
+    }),
+    setKnownWorkflow: (val) => set(state =>{
+      state.knownWorkflow = val
+      state.canvasOpacity=1-val
+    }),
     resizeWindow: () => set(state=>{
       console.log('resized to: ', window.innerWidth, 'x', window.innerHeight)
       var w = window.innerWidth*.68
@@ -47,6 +64,19 @@ const store = (set,get) => ({
     }),
     setRobotStatus: (msg) => set(state=>{
       state.robotStatus = msg 
+    }),
+    receivedRviz: (msg) => set(state=>{
+      if(msg==="scanningdone")
+        state.scanning=false
+      if(msg==="computetrajdone"){
+        state.computing=false
+        state.computed_traj=true
+      }
+      if(msg==="execdone"){
+        state.computing=false
+        state.computed_traj=false
+      }
+      
     }),
     setGamepads: (msg) => set(state=>{
       // https://answers.ros.org/question/284741/seq-or-time-stamp-for-publishing-a-message/
@@ -91,6 +121,14 @@ const store = (set,get) => ({
     sendMessage: (msg) => set(state =>{
       useRosStore.getState().commandTopic.publish({data:msg})
       //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
+    }),
+    sendTrigger: (msg) => set(state =>{
+      useRosStore.getState().rvizTopic.publish({data:msg})
+    sendObject: (msg) => set(state =>{
+      useRosStore.getState().objTopic.publish({data:msg})
+    }),
+    sendModel: (msg) => set(state =>{
+      useRosStore.getState().modelTopic.publish({data:msg})
     }),
     setImage: (msg) => set(state=>{
       state.imagedata = msg

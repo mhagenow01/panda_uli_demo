@@ -438,7 +438,7 @@ class ROSAffordances:
             color = np.array([0.5, 0.5, 0.5]) # gray for inactive
             if ii==active_obj:
                 if changing:
-                    color = np.array([0.5, 0.8, 0.5]) # mod. green for active, but changing
+                    color = np.array([0.2, 0.8, 0.2]) # mod. green for active, but changing
                 else:
                     color = np.array([0.2, 0.8, 0.2]) # green for active
 

@@ -18,5 +18,6 @@
   <exec_depend>collision_free_ik</exec_depend>
   <exec_depend>franka_panda_description</exec_depend>
   <exec_depend>ft_sensor</exec_depend>
+  <exec_depend>tf</exec_depend>
   <exec_depend>user_experience_enhancer</exec_depend>
 </package>

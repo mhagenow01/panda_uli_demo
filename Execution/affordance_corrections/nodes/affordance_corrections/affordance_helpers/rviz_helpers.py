@@ -62,7 +62,7 @@ def pcd_to_pc2(pcd,active=True):
     return cloud_msg
 
 
-def mesh_to_marker(stl_file, index, pos, quat, color=[0.0, 1.0, 0.0], frame="map", scale=1.0): #xyzw
+def mesh_to_marker(stl_file, index, pos, quat, color=[0.0, 1.0, 0.0], frame="panda_link0", scale=1.0): #xyzw
     """ Converts an STL into the marker representation """
     marker = Marker()
     marker.header.frame_id = frame

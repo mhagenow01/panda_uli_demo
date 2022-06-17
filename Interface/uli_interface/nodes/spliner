@@ -28,7 +28,7 @@ import rospkg
 import ros_numpy
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import Image, PointCloud2, CameraInfo, JointState, CompressedImage,PointCloud2
-from geometry_msgs.msg import TransformStamped, PoseStamped, Point, Pose, PoseArray, Quaternion, Twist, Vector3
+from geometry_msgs.msg import TransformStamped, PoseStamped, Point, Pose, PoseArray, Quaternion, Twist, Vector3, PointStamped
 from std_msgs.msg import String
 from nav_msgs.msg import Path
 from scipy.spatial.transform import Slerp
@@ -97,6 +97,7 @@ class Spliner(object):
         self._ui_reach_pub = rospy.Publisher("/ui/reach",String,queue_size = 1)
         self._ui_robot_state_pub = rospy.Publisher("/ui/robot_state",String,queue_size = 1)
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
+        self._points_pub = rospy.Publisher("/clicked_point",PointStamped,queue_size = 1)
         self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
 
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
@@ -215,6 +216,17 @@ class Spliner(object):
             x = int(float(l[1].split(",")[0])*self._width)
             y = int(float(l[1].split(",")[1])*self._height)
             p = self.get_point([x,y],CAMERA_FRAME)
+        if l[0] == "publish_point":
+            x = int(float(l[1].split(",")[0])*self._width)
+            y = int(float(l[1].split(",")[1])*self._height)
+            p = self.get_point([x,y])
+            point = PointStamped()
+            point.header.frame_id = REFERENCE_FRAME
+            point.header.stamp = rospy.Time.now()
+            point.point.x = p[0]
+            point.point.y = p[1]
+            point.point.z = p[2]
+            self._points_pub.publish(point)
         if l[0] == "execute":
             if self._learnedSegments is not None:
 
