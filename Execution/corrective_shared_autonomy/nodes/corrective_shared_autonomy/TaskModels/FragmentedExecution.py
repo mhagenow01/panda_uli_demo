@@ -4,7 +4,7 @@
     the subset that can be executed given the current
     robot pose
 
- Last Updated: 06/06/2022
+ Last Updated: 06/13/2022
 """
 
 __author__ = "Mike Hagenow"
@@ -89,6 +89,78 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 #         print("Service call failed: %s"%e)
         return False, None
 
+def getContMask(mask):
+    # build a new list of trajectories (start and end samples) based on reachable subsets in the mask
+    trajs_inds = []
+    for ii in range(0,len(mask)):
+        num_samps = len(mask[ii])
+        active_traj = False
+        traj_inds = []
+        for jj in range(0,num_samps):
+            if not active_traj and mask[ii][jj]==1: # new traj section
+                active_traj = True
+                start_ind = jj
+            elif active_traj and mask[ii][jj]==0: # hit an unreachable
+                active_traj = False
+                end_ind = jj
+                traj_inds.append((start_ind,end_ind))
+            elif jj==num_samps-1 and active_traj: # hit end of overall traj
+                active_traj = False
+                end_ind = jj
+                traj_inds.append((start_ind,end_ind))
+        trajs_inds.append(traj_inds)
+
+    return trajs_inds
+
+def getIKSingleSolution(pose_trajs,ii,jj,jangles):
+    # get a single solution from collision free ik for the purposes of checking path execution
+    try:
+        ik_soln = rospy.ServiceProxy('/collision_free_ik/solve_ik/', IK)
+
+        des_pose = Pose()
+        des_pose.position.x = pose_trajs[ii][0,jj]
+        des_pose.position.y = pose_trajs[ii][1,jj]
+        des_pose.position.z = pose_trajs[ii][2,jj]
+        des_pose.orientation.x = pose_trajs[ii][3,jj]
+        des_pose.orientation.y = pose_trajs[ii][4,jj]
+        des_pose.orientation.z = pose_trajs[ii][5,jj]
+        des_pose.orientation.w = pose_trajs[ii][6,jj]
+        pos = np.array([pose_trajs[ii][0,jj], pose_trajs[ii][1,jj], pose_trajs[ii][2,jj]])
+        quat = np.array([pose_trajs[ii][3,jj], pose_trajs[ii][4,jj], pose_trajs[ii][5,jj],pose_trajs[ii][6,jj]])
+
+        starting_joints = Float64MultiArray(data=list(jangles))
+
+        # print(des_pose)
+        resp = ik_soln(des_pose,starting_joints)
+
+        # convert response to numpy
+        soln_pos = resp.soln_pose.position
+        soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+        soln_quat = resp.soln_pose.orientation
+        soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+
+        pos_error = np.linalg.norm(soln_pos_np-pos)
+        quat_error = ang_btwn_quats(soln_quat_np,quat)
+
+        return pos_error, quat_error, np.array(resp.soln_joints.data)      
+
+    except rospy.ServiceException as e:
+#         print("Service call failed: %s"%e)
+        return -1, -1, jangles
+
+def getIKPathsolution(pose_trajs,mask,curr_joints):
+    
+    trajs_inds = getContMask(mask)
+    rospy.wait_for_service('/collision_free_ik/solve_ik/')
+
+    for ii in range(0,len(pose_trajs)):
+        for jj in range(0,len(traj_inds[ii])):
+            # set up starting point
+            jangles = np.copy(curr_joints)
+            for kk in range(traj_inds[ii][jj][0],traj_inds[ii][jj][1]):
+                pos_error, quat_error, curr_joints = getIKSingleSolution(pose_trajs,ii,kk,curr_joints)
+
+
 # assumes kdlik service in corrective_shared_autonomy is running
 # takes in a (7xnum_poses) array of poses
 # output a num_pts array of 0-not reachable, 1-reachable
@@ -120,7 +192,6 @@ def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_t
             return 1
     return 0
     
-#
 # NOTE: this assumes that the kdlik service is running
 def getReachable(trajectories, curr_mask):
     # TODO: based on config
@@ -210,7 +281,7 @@ def getPoseFromState(surface,state_names,state_vals,q_surf = np.array([0, 0, 0, 
 # Takes in a rotation (q_surf) and translation (t_surf) of the surface model
 # Returns a mask of the trajectories that are reachable (list of booleans) [num_samps]
 # TODO: min number of continuous samples
-def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask= None):
+def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask = None):
     
     num_trajs = len(trajs)
 
@@ -234,6 +305,12 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
     mask = getReachable(pose_trajs,curr_mask)
 
     ##########################################
+    # Step 1.5: look at pathwise solution    #
+    ##########################################
+    # curr_joints = np.zeros((7,))
+    # ik_pos_errors, ik_ang_errors = getIKPathsolution(pose_trajs,mask,curr_joints)
+
+    ##########################################
     # Step 2: cull based on min length       #
     ##########################################
     # TODO: min length should be incorporated into reachability
@@ -249,9 +326,10 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
                 if (jj - start_ind) <= min_length:
                     mask[ii][start_ind:jj] = 0
 
+    # Check whether any new points have been enabled (to prevent trying to learn 0-length behaviors)
     new_pts = False
     for ii in range(0,len(mask)):
-        if len(np.where(mask==1)) > 0:
+        if len(np.where(mask[ii]==1)[0].flatten()) > 0:
             new_pts = True
 
     return mask, pose_trajs, new_pts
@@ -389,27 +467,9 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
     segments = []
     vel_between = 0.05
     vel_appret = 0.05
-
-    # build a new list of trajectories based on reachable subsets
-    trajs_inds = []
-    for ii in range(0,len(states)):
-        num_samps = np.shape(states[ii])[1]
-        active_traj = False
-        traj_inds = []
-        for jj in range(0,num_samps):
-            if not active_traj and mask[ii][jj]==1: # new traj section
-                active_traj = True
-                start_ind = jj
-            elif active_traj and mask[ii][jj]==0: # hit an unreachable
-                active_traj = False
-                end_ind = jj
-                traj_inds.append((start_ind,end_ind))
-            elif jj==num_samps-1 and active_traj: # hit end of overall traj
-                active_traj = False
-                end_ind = jj
-                traj_inds.append((start_ind,end_ind))
-        trajs_inds.append(traj_inds)
     
+    trajs_inds = getContMask(mask) # get start and end samples for each continuous segment
+
     last_uv = None # for keeping track of prev for genbetweenpasses
 
     for ii in range(0,len(states)):
@@ -535,6 +595,9 @@ class FragmentedExecutionManager():
         if data.data=='deleteactive':
             self.resetExecution()
             self.clearReachability()
+        if data.data=='resetexec':
+            self.model_name = ''
+            self.resetExecution()
 
     def resetExecution(self):
         self.taskmask = None
@@ -658,7 +721,6 @@ class FragmentedExecutionManager():
         self.displayReachability(self.trajs)
         print("learning behav")
         if self.new_pts:
-            print("THERE ARE NEW PTS")
             self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
             print("done")
             self.rvizpub.publish(String("computetrajdone"))
