@@ -1,8 +1,10 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import useAppStore from './AppStore';
 import useRosStore from './RosStore';
 import {ParameterModule} from './ParameterModule';
 import { Grommet, List, Stack,Button, Collapsible, Tabs, Tab, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
+
+//https://dev.to/nibble/what-is-uselayouteffect-hook-and-when-do-you-use-it-3lan
 
 export const RPanel = (props) => {  
   const [connect, connection, url,imageTopic,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.tmpSub])) 
@@ -11,6 +13,11 @@ export const RPanel = (props) => {
   const [sendObject,sendModel] = useAppStore(state=>([state.sendObject,state.sendModel]))
   const [open, setOpen] = React.useState(true);
 
+  useEffect(() => {
+      setInterval(() => {
+        connect()
+      }, 1000)
+  }, []);
     return (
       <Box background="light-2" 
         round="medium"

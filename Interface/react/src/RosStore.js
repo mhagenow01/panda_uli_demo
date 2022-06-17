@@ -92,6 +92,8 @@ const store = (set) => ({
           });
     }),
     connect: () => set((state)=>{
+        if(state.connection==="connected")
+            return
         const ros = new ROSLIB.Ros({url:state.url});
         ros.on('connection', state.onConnection);
         ros.on('error', state.onError);
@@ -108,6 +110,7 @@ const store = (set) => ({
             name: 'interaction_events',
             messageType: 'std_msgs/String'
         });
+        
         const objTopic = new ROSLIB.Topic({
             ros: ros,
             name: 'getObjPose',
