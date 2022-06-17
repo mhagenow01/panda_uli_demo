@@ -104,6 +104,7 @@ class Spliner(object):
         self._n_passes = 2
         self._horizontal = True
         self._time_sampling = 20.0
+        self._pitch = 0
 
         self._surfaceBSpline = None
         self._robot_state = "grey"
@@ -142,9 +143,14 @@ class Spliner(object):
         else:
             self._force = -5.
 
+        pitch = self.get_param("pitch")
+        if pitch is not None:
+            self._pitch = int(pitch)
+        else:
+            self._pitch = 0
         velocity = self.get_param("speed")
         if velocity is not None:
-            self._velocity = int(velocity)/100.
+            self._velocity = int(velocity)/1000.
         else:
             self._velocity = .01
 
@@ -374,8 +380,10 @@ class Spliner(object):
         return segment
 
     def get_segments(self, surfaceBSpline,us,vs):
-        ang_relative_to_surface = 0 # degrees
-        R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
+        if self._horizontal:
+            R_tool_surf = ScipyR.from_euler('zx',[180,self._pitch],degrees=True)
+        else:
+            R_tool_surf = ScipyR.from_euler('zy',[180,self._pitch],degrees=True)
         q_ts = R_tool_surf.as_quat()
 
         hybrid = True

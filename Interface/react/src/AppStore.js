@@ -27,7 +27,8 @@ const store = (set,get) => ({
                   {type: "select", id:"direction", label:"Orientation", value:"horizontal", options:["horizontal","vertical"]},
                   {type: "select", id:"material", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
                   {type: "slider", id:"force", label:"Force", value:1,min:0,max:10,unit: "N"},
-                  {type: "slider", id:"speed", label:"Feed Rate", value:2,min:1,max:10, unit: "cm/s"},
+                  {type: "slider", id:"speed", label:"Feed Rate", value:2,min:1,max:20, unit: "mm/s"},
+                  {type: "slider", id:"pitch", label:"Pitch angle", value:0,min:-10,max:10, unit: "deg"},
                   {type: "select", id:"tool", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
                 ],
     configDetails: "",
