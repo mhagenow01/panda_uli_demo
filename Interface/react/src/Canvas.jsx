@@ -77,7 +77,7 @@ export const Canvas = (props) => {
                 cornerId={corner.id}
                 x={corner.x}
                 y={corner.y}
-                Radius={imageWidth/40}
+                Radius={Math.min(imageWidth/30.,30)}
                 fill="#0000ff"
                 opacity={0.8*canvasOpacity}
                 draggable

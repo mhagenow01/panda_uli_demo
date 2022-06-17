@@ -52,9 +52,10 @@ const store = (set,get) => ({
     }),
     resizeWindow: () => set(state=>{
       console.log('resized to: ', window.innerWidth, 'x', window.innerHeight)
-      var w = window.innerWidth*.68
-      var h = window.innerHeight*.80-75
-      var k=16./9.
+      var w = window.innerWidth*.98
+      var h = window.innerHeight*.953
+      //var k=16./9.
+      var k=4./3.
       if( w > k*h)
         w = k*h
       else

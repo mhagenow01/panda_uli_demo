@@ -9,7 +9,7 @@ import {BotBar} from './BotBar';
 import {View} from './3Dview';
 import {GamepadHandle} from './Gamepad';
 import Gamepad from 'react-gamepad'
-import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box, Text, CheckBox,Tabs, Tab } from 'grommet';
+import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box, Text, CheckBox,Tabs, Tab, Layer } from 'grommet';
 import styled from "styled-components";
 import useAppStore from './AppStore';
 import useRosStore from './RosStore'; 
@@ -94,7 +94,7 @@ function App() {
             horizontal: 'small',
         },
         extend: {
-            borderRadius: 4,
+            borderRadius: 9,
             padding: 6
         }
     },
@@ -111,48 +111,28 @@ function App() {
     <Grommet
       full theme={theme}
       >
-    <Box height='100vh' width='100vw' background='light-1'>
-    <GamepadHandle/>
-      <Grid
-        rows={['5vh', '85vh','10vh']}
-        columns={['70vw', '30vw']}
-        gap="none"
-        height='100vh' 
-        width='100vw'
-        areas={[
-          {name: 'top', start:[0,0], end: [1,0]},
-          {name: 'video', start:[0,1], end: [0,1]},
-          {name: 'rpanel', start: [1, 1], end: [1, 1] },
-          {name: 'bot', start:[0,2], end: [1,2]},
-        ]}
-      >
-        <Box gridArea="top" background="#9b0000">
-          <TopBar/>
-        </Box>
-        <Stack>
-        <Tabs gridArea="video" onActive={(val) => {
+      <Box height='100vh' width='100vw' background="#9b0000">
+        <GamepadHandle/>
+        <Tabs justify="start" onActive={(val) => {
           if(val ==1)
           setTimeout(function() { //Start the timer
             show3D()
             }.bind(this), 10)
           
           }}>
-          <Tab title=<Box><Text size="2vh">Camera View</Text></Box>>
+          <Tab title={<Box><Text size="2vh">Camera View</Text></Box>}>
             <Stack>
               <Stream />
               <Canvas />
             </Stack>
           </Tab>
-          <Tab title=<Box><Text size="2vh">3D View</Text></Box>>
+          <Tab title={<Box><Text size="2vh">3D View</Text></Box>}>
             <View/>
           </Tab>
         </Tabs>
-        </Stack>
-        <RPanel gridArea='rpanel'/>
-        <Box gridArea="bot" background="#9b0000" zIndex='10'>
-          <BotBar/>
-        </Box>
-      </Grid>
+        <Layer responsive={false} plain={true} modal={false} position="right">
+          <RPanel/>
+        </Layer>
       </Box>
     </Grommet>
     );

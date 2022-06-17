@@ -12,7 +12,7 @@ export const ParameterModule = (props) => {
   const [setParameter] = useAppStore(state=>([state.setParameter]))
   if(!parameterInfo)
     return null
-  const label =<Box justify={"center"} alignContent={"center"} width={'30%'}><Text size="2.2vh">{parameterInfo.label}</Text></Box>
+  const label =<Box justify={"center"} alignContent={"center"} width={'30%'}><Text size="3vh">{parameterInfo.label}</Text></Box>
   return (
     <Box height={"xxsmall"} direction="row" gap="xxsmall">
       {label}
@@ -29,10 +29,10 @@ export const ParameterModule = (props) => {
               min = {parameterInfo.min}
               max = {parameterInfo.max}
               onChange={event => setParameter(idx,event.target.value)}
-              margin={"medium"}/>
+              margin={"xsmall"}/>
             </Box>
             <Box justify={"center"} alignContent={"center"} width={"small"}>
-              <Text justify={"center"} alignSelf="left" size="2.2vh" >{parameterInfo.value+" "+parameterInfo.unit} </Text>
+              <Text justify={"center"} alignSelf="left" size="3vh" >{parameterInfo.value+" "+parameterInfo.unit} </Text>
             </Box>
         </Box>
       )}
@@ -43,8 +43,9 @@ export const ParameterModule = (props) => {
           value= {parameterInfo.value}
           onChange={({ value,option }) => {
             setParameter(idx,option)}}
-          margin={"xxsmall"}
-          size="2vh"
+          margin={"none"}
+          size="3vh"
+          pad="none"
         />
         </Box>
       )}
