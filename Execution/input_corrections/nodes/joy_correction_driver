@@ -6,7 +6,7 @@ import control_msgs.msg
 from geometry_msgs.msg import Twist, PoseStamped, Vector3
 from franka_gripper.msg import GraspAction, MoveAction, GraspGoal, MoveGoal
 from sensor_msgs.msg import Joy
-from std_msgs.msg import String, Float64
+from std_msgs.msg import String, Float64, Float64MultiArray
 import tf2_geometry_msgs
 import tf
 from tf.transformations import *
@@ -18,7 +18,7 @@ import numpy as np
 class JoyCorrectionDriver(object):
     def __init__(self):
         self._button_pub = rospy.Publisher("/zdinput/button", Float64, queue_size=1)
-        self._correction_pub = rospy.Publisher("/zdinput/input", Vector3, queue_size=1)
+        self._correction_pub = rospy.Publisher("/zdinput/input", Float64MultiArray, queue_size=1)
 
         self._joy_sub = rospy.Subscriber('/joy', Joy, self.on_joy)
 
@@ -40,9 +40,9 @@ class JoyCorrectionDriver(object):
             self._ax5_init = True
         if not self._ax5_init:
             ax[5]=1
-        vecTemp = Vector3()
-        vecTemp.x = self.mapping((ax[2]-ax[5])/2)
-        self._correction_pub.publish(vecTemp)
+        cor_temp = Float64MultiArray()
+        cor_temp.data = np.array([self.mapping((ax[2]-ax[5])/2)])
+        self._correction_pub.publish(cor_temp)
        
         button = float(msg.buttons[1])
         tempF = Float64()
