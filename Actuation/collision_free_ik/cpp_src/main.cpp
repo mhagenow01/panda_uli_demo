@@ -75,8 +75,8 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
         for (size_t i = 0; i < iksolver->dof(); i++) {
             q.push_back(0);
         }
-
-        if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data())) {
+        bool local = req.local.data;
+        if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data(), &local)) {
             geometry_msgs::Pose pose_out;
             
             // Store joint angles in array message
@@ -188,7 +188,9 @@ int main(int argc, char** argv) {
             q.push_back(0);
         }
 
-        if (iksolver->solve(current_q.data(), trans, q.data(), trans_return.data())) {
+        bool local = true;
+
+        if (iksolver->solve(current_q.data(), trans, q.data(), trans_return.data(),&local)) {
             auto out_msg = franka_core_msgs::JointCommand();
             out_msg.names = joint_names;
             out_msg.position = q;

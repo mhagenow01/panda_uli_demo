@@ -139,13 +139,15 @@ pub extern "C" fn new_solver(urdf_ptr: *const c_char, ee_frame_ptr: *const c_cha
     }
 }
 
-fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7]) -> Option<(Vec<f64>,[f64; 7])> {
+fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], local_ptr: *const bool) -> Option<(Vec<f64>,[f64; 7])> {
     let iksolver = unsafe { iksolver.as_mut()? };
     let current_q;
     let trans;
+    let local;
     unsafe {
         current_q = Vec::from(std::slice::from_raw_parts(current_q_ptr, iksolver.arm.dof()));
         trans = std::ptr::read(trans_ptr);
+        local = std::ptr::read(local_ptr);
     }
     
 
@@ -155,9 +157,12 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
     let current_q = iksolver.arm.joint_positions();
     let mut lb = iksolver.lb.clone();
     let mut ub = iksolver.ub.clone();
-    for i in 0..lb.len() {
-        lb[i] = lb[i].max(current_q[i] - iksolver.config.solver.local_search_bound);
-        ub[i] = ub[i].min(current_q[i] + iksolver.config.solver.local_search_bound);
+    
+    if local{
+        for i in 0..lb.len() {
+            lb[i] = lb[i].max(current_q[i] - iksolver.config.solver.local_search_bound);
+            ub[i] = ub[i].min(current_q[i] + iksolver.config.solver.local_search_bound);
+        }
     }
     let res = solver::solve(
         &iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, 
@@ -185,8 +190,8 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
 }
 
 #[no_mangle]
-pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64,t_ptr: *mut f64) -> bool {
-    match try_solve(iksolver, current_q_ptr, trans_ptr) {
+pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64,t_ptr: *mut f64, local_ptr: *const bool) -> bool {
+    match try_solve(iksolver, current_q_ptr, trans_ptr, local_ptr) {
         Some((q,t)) => {
             let q_array;
             unsafe {

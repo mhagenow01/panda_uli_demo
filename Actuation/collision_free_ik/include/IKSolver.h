@@ -14,8 +14,8 @@ public:
         return IKSolverInterface::dof(solver_ptr);
     }
 
-    bool solve(double* current_q, const std::array<double, 7>& trans, double* q, double* trans_return) {
-        return IKSolverInterface::solve(solver_ptr, current_q, &trans, q, trans_return);
+    bool solve(double* current_q, const std::array<double, 7>& trans, double* q, double* trans_return, bool* local) {
+        return IKSolverInterface::solve(solver_ptr, current_q, &trans, q, trans_return, local);
     }
 
     bool set_ee(const char* ee_frame_ptr) {
