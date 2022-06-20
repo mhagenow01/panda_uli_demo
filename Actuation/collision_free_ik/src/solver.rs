@@ -98,6 +98,15 @@ fn collision_cost(arm: &k::SerialChain<f64>, robot_geometry: &HashMap<String, Co
     c
 }
 
+fn joint_limit_cost(u: &[f64], lb: &Vec<f64>, hb: &Vec<f64>) -> f64 {
+    let mut n = 0.0;
+    for i in 0..u.len() {
+        let x = ((u[i]-lb[i])/(hb[i]-lb[i]) - 0.5).abs().min(0.4999);
+        n+=(1./(0.5-x).sqrt() - (1./0.5 as f64).sqrt());                           //(groove_loss((state[i]-lb[i])/(hb[i]-lb[i]), 0.5,0.5,12,2.,2.,2);
+    }
+    n
+}
+
 fn regularization(current_q: &Vec<f64>, u: &[f64]) -> f64 {
     let mut c = 0.;
     for i in 0..u.len() {
@@ -105,7 +114,6 @@ fn regularization(current_q: &Vec<f64>, u: &[f64]) -> f64 {
     }
     c
 }
-
 
 pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache, 
     robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet, 
@@ -122,7 +130,6 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
     let disp = (x_k - trans.translation.vector).magnitude();
     // let x_k = trans.translation.vector.lerp(&x_k, disp.min(0.02) / disp);
     // let rot_k = trans.rotation.slerp(&rot_k, angle.min(0.02) / angle);
-
     let current_q = arm.joint_positions();
     let cost = |u: &[f64], c: &mut f64| {
         arm.set_joint_positions_clamped(u);
@@ -131,13 +138,13 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
 
         let trans = arm.end_transform();
 
-        *c += position_cost(&trans.translation.vector, &x_k);
+        *c += 5.0 * position_cost(&trans.translation.vector, &x_k);
         let sigma : f64 = 0.005;
         //let s2 = sigma.powi(2);
         let rotation_decay = 1.;//(-(&trans.translation.vector - &x_k).magnitude_squared() / (2. * s2)).exp();
-        *c += rotation_decay * rotation_cost(&trans.rotation, &rot_k);
+        *c += 5.0 *rotation_decay * rotation_cost(&trans.rotation, &rot_k); // was 3
         *c += collision_cost(arm, &robot_geometry, static_geometry);
-        *c += regularization(&current_q, u);
+        *c += 0.0*joint_limit_cost(&u, &lb, &ub);
         Ok(())
     };
 
@@ -159,6 +166,7 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
     //let jksolver = k::JacobianIkSolver::new(0.05, 0.05, 1., 100);
     let mut panoc = PANOCOptimizer::new(problem, &mut cache).with_max_iter(max_iter).with_max_duration(Duration::from_millis(max_time_ms));
     let status = panoc.solve(&mut u);
+
     if status.is_err() {
         println!("{:?}", status);
         return None;

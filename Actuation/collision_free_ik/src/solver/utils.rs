@@ -49,7 +49,7 @@ pub fn finite_difference(f: &dyn Fn(&[f64], &mut f64) -> Result<(), SolverError>
 }
 
 pub fn position_cost(current_position: &Vector3<f64>, desired_position: &Vector3<f64>) -> f64 {
-    5.0 * groove_loss((current_position - desired_position).norm(), 0., 2, 0.1, 10.0, 2)
+    groove_loss((current_position - desired_position).norm(), 0., 2, 0.1, 10.0, 2)
 }
 
 pub fn position_gradient(current_position: &Vector3<f64>, desired_position: &Vector3<f64>) -> Vector3<f64> {
@@ -58,7 +58,7 @@ pub fn position_gradient(current_position: &Vector3<f64>, desired_position: &Vec
 }
 
 pub fn rotation_cost(current_rotation: &UnitQuaternion<f64>, desired_rotation: &UnitQuaternion<f64>) -> f64 {
-    3.0 * groove_loss(current_rotation.angle_to(desired_rotation).powi(2), 0., 2, 0.1, 10.0, 2)
+    groove_loss(current_rotation.angle_to(desired_rotation).powi(2), 0., 2, 0.1, 10.0, 2)
 }
 
 pub fn rotation_gradient(current_rotation: &UnitQuaternion<f64>, desired_rotation: &UnitQuaternion<f64>) -> Vector3<f64> {
