@@ -607,12 +607,38 @@ class DMPLWRhardcoded:
                     eig_quat_scaled = R.from_rotvec(eig_rotvec*input[0])
                     correction[state_names.index(var):state_names.index(var)+4] = eig_quat_scaled.as_quat()
 
+        elif input_type=="mdof":
+            correction = np.zeros((len(state_names),))
+
+            # multiply each correction by each input dimension
+            for ii in range(0,len(eigen_scaling)):
+                correction_temp = np.multiply(eigen_scaling[ii][:,int(round(s))],input[ii])
+
+                # account for orientation
+                for var in ['theta_qx','qx']:
+                    if var in state_names:
+                        # convert eigen scaling to rot vector and apply scaling to that -- back to quat
+                        eigscale = eigen_scaling[ii][:,int(round(s))]
+
+                        # If correction for orientation is set to zero! (shouldn't happen once upstream is reliable)
+                        if np.linalg.norm(eigscale[state_names.index(var):state_names.index(var)+4])==0.0:
+                            eigscale[state_names.index(var)+3] = 1.0
+
+                        eig_quat = R.from_quat(eigscale[state_names.index(var):state_names.index(var)+4])
+                        eig_rotvec = eig_quat.as_rotvec()
+                        eig_quat_scaled = R.from_rotvec(eig_rotvec*input[ii])
+                        correction_temp[state_names.index(var):state_names.index(var)+4] = eig_quat_scaled.as_quat()
+                
+                correction = correction + correction_temp
+
+
         else: # otherwise, don't allow any corrections
             correction = np.zeros((len(state_names),))
             for var in ['theta_qx','qx']:
                 # If correction for orientation is set to zero! (shouldn't happen once upstream is reliable)
                     if np.linalg.norm(correction[state_names.index(var):state_names.index(var)+4])==0.0:
                         correction[state_names.index(var)+3] = 1.0
+        
         return correction
 
 

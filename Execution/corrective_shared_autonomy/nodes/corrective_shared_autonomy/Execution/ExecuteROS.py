@@ -39,15 +39,20 @@ class ExecuteROS:
 
         self.last_robot_state = rospy.get_time()
 
-        rospy.Subscriber("/zdinput/input", Vector3, self.storeZDInput)
+
+        rospy.Subscriber("/zdinput/input", Float64MultiArray, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
         rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.storePandaStateTime)
         rospy.Subscriber("/execution/interrupt", String, self.checkInterrupt)
         time.sleep(0.5)
 
     def storeZDInput(self, data):
-        R_temp = R.from_quat(self.input_tx)
-        self.input = R_temp.apply(np.array([data.x, data.y, data.z]))
+        input_temp = np.array(data.data)
+        if len(input_temp)==3: # if 3d, apply input transform (e.g., Force dimension)
+            R_temp = R.from_quat(self.input_tx)
+            self.input = R_temp.apply(input_temp)
+        else: # otherwise, just store
+            self.input = input_temp
 
     def storeZDButton(self,data):
         self.input_button = data.data
