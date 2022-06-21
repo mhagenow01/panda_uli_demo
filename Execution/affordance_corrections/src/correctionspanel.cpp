@@ -46,6 +46,7 @@ namespace corrections_panel{
         quat_pub = n.advertise<geometry_msgs::Quaternion>("rviz_camera_q", 1);
         trigger_pub = n.advertise<std_msgs::String>("rviz_triggers", 1);
         obj_pub = n.advertise<std_msgs::String>("getObjPose", 1);
+        pause_pub = n.advertise<std_msgs::String>("/execution/interrupt", 1);
         exec_pub = n.advertise<std_msgs::String>("executeModel", 1);
         refit_sub = n.subscribe("objRefittingUpdate", 1, &CorrectionsPanel::refitCallback, this);
         rviz_sub = n.subscribe("rviz_triggers", 1, &CorrectionsPanel::rvizCallback, this);
@@ -102,6 +103,18 @@ namespace corrections_panel{
                 exec_pub.publish(s_out);
                 toggleBehaviorbutton->setEnabled(false);
                 toggleBehaviorbutton->setText("Executing");
+           }
+           else if(fragmentid==2){ //pause
+                s_out.data = "pause";
+                pause_pub.publish(s_out);
+                toggleBehaviorbutton->setEnabled(false);
+                toggleBehaviorbutton->setText("Pausing...");
+           }
+            else if(fragmentid==3){ //resume
+                s_out.data = "resume";
+                pause_pub.publish(s_out);
+                toggleBehaviorbutton->setEnabled(false);
+                toggleBehaviorbutton->setText("Resuming...");
            }
         });
 
@@ -180,6 +193,16 @@ namespace corrections_panel{
                 toggleBehaviorbutton->setEnabled(true);
                 toggleBehaviorbutton->setText("Compute Trajectory");
                 fragmentid = 0; // ready to compute
+            }
+            if(data.data=="enablepausebutton"){
+                toggleBehaviorbutton->setEnabled(true);
+                toggleBehaviorbutton->setText("Pause Execution");
+                fragmentid = 2; // ready to compute
+            }
+            if(data.data=="enableresumebutton"){
+                toggleBehaviorbutton->setEnabled(true);
+                toggleBehaviorbutton->setText("Resume Execution");
+                fragmentid = 3; // ready to compute
             }
     }
 

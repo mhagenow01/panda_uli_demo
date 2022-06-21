@@ -736,6 +736,8 @@ class DMPLWRhardcoded:
 
         delta_s = 1.0
 
+        
+
         # replay through each of the segments
         segID = segID_start # default 0 but can start partially through execution
         while segID < num_segments:

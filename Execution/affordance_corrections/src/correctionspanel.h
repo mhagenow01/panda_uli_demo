@@ -47,6 +47,7 @@ namespace corrections_panel
             ros::Publisher obj_pub;
             ros::Publisher altview_pub;
             ros::Publisher exec_pub;
+            ros::Publisher pause_pub;
             bool mapping;
             int fragmentid;
             QLabel* bat;

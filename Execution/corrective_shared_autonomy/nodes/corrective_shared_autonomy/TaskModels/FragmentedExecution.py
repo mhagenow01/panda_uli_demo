@@ -188,12 +188,20 @@ def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, join
 def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, curr_mask, ii, jj):
     if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
         success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # pos_margin = 0.08
+        # success2, jangles = queryReachability(pos+np.array([pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # success3, jangles = queryReachability(pos+np.array([-pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # success4, jangles = queryReachability(pos+np.array([0, pos_margin, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # success5, jangles = queryReachability(pos + np.array([0, -pos_margin, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # success6, jangles = queryReachability(pos + np.array([0, 0, pos_margin]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # success7, jangles = queryReachability(pos + np.array([0, 0, -pos_margin]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        # if success and success2 and success3 and success4 and success5 and success6 and success7:
         if success:
             return 1
     return 0
     
 # NOTE: this assumes that the kdlik service is running
-def getReachable(trajectories, curr_mask):
+def getReachable(trajectories, curr_mask, downsamp=1):
     # TODO: based on config
     # TODO: speed -- parallel type stuff http://wiki.ros.org/roscpp/Overview/Callbacks%20and%20Spinning#Multi-threaded_Spinning
     rospack = rospkg.RosPack()
@@ -203,8 +211,8 @@ def getReachable(trajectories, curr_mask):
     baselink = 'panda_link0'
     eelink = 'panda_orbital'
 
-    pos_tol = 0.002
-    quat_tol = 0.05
+    pos_tol = 0.004
+    quat_tol = 0.08
 
     taskmask = []
     for ii in range(0,len(trajectories)):
@@ -215,19 +223,15 @@ def getReachable(trajectories, curr_mask):
     for ii in range(0,len(trajectories)):
         # TODO: base this off of distance -- tough to do when it is parallelized
         # TODO: maybe think of a preliminary step as a keyframe extraction
-        downsamp = 10
         successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
         for jj in range(0,np.shape(trajectories[ii])[1]):
-            if successes[int(jj/downsamp)]==1:
-                taskmask[ii][jj]=1
-        
-        # for jj in range(0,np.shape(trajectories[ii])[1]):
-        #     pos = trajectories[ii][0:3,jj].flatten()
-        #     quat = trajectories[ii][3:7,jj].flatten()
-        #     if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
-        #         success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        #         if success: # found soln
-        #             taskmask[ii][jj]=1
+            erosion = 5
+            ind = int(jj/downsamp)
+            tmp_success = 1
+            for kk in range(ind-erosion,ind+erosion+1):
+                if kk>0 and kk<len(successes):
+                    tmp_success = successes[kk] * tmp_success
+            taskmask[ii][jj]=tmp_success
 
     return taskmask
 
@@ -284,25 +288,30 @@ def getPoseFromState(surface,state_names,state_vals,q_surf = np.array([0, 0, 0, 
 def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask = None):
     
     num_trajs = len(trajs)
+    downsamp = 40
 
     ##########################################
     # Step 0: convert to poses               #
     ##########################################
+    startt = time.time()
     pose_trajs = []
+    total_num_pts = 0
     for ii in range(0,num_trajs):
         num_samps_temp = np.shape(trajs[ii])[1]
         pose_traj = np.zeros((7,num_samps_temp))
-        for jj in range(0,num_samps_temp):
+        for jj in range(0,num_samps_temp,downsamp):
             # for each sample, convert to pose
             pose_traj[:,jj] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf) 
         pose_trajs.append(pose_traj)
+        total_num_pts+=num_samps_temp
 
+    print("Pose Conv Time:",time.time()-startt," - ",total_num_pts)
     # TODO: downsample if required (also, stride based on culling path length)
 
     ##########################################
     # Step 1: cull based on reachability     #
     ##########################################
-    mask = getReachable(pose_trajs,curr_mask)
+    mask = getReachable(pose_trajs,curr_mask,downsamp)
 
     ##########################################
     # Step 1.5: look at pathwise solution    #
@@ -374,7 +383,7 @@ def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[], super_pos_vars =
     return vals.T # num vars x num_samples
 
 def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,tool_offset):
-    approach_dists = [0.05, 0.005]
+    approach_dists = [0.05, 0.01]
     time = np.abs(approach_dists[0]-approach_dists[1]) / vel
     
     segment = HybridSegment()
@@ -401,7 +410,7 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     return segment
 
 def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool_offset):
-    retraction_dists = [0.005, 0.05]
+    retraction_dists = [0.01, 0.05]
     time = np.abs(retraction_dists[0]-retraction_dists[1]) / vel
 
     segment = HybridSegment()
@@ -523,7 +532,8 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             segment.state_names = state_names
             segment.original_vals = []
 
-            segment.corrections.append(interpMultD(corrections,corrections,segment.num_samples,quat_vars=[3]))
+            for cc in range(len(corrections)):
+                segment.corrections.append(interpMultD(corrections[cc],corrections[cc],segment.num_samples,quat_vars=[3]))
             segment.original_vals.append(pass_state_vals)
             segments.append(segment)
 
@@ -613,10 +623,12 @@ class FragmentedExecutionManager():
             doneExecution = False
             segID=0; s=0
             while not doneExecution:
+                self.rvizpub.publish(String("enablepausebutton"))
                 segID, s = model.executeModel(learnedSegments=self.fragmentedBehavior, R_surface = self.q_surf, t_surface=self.t_surf, input_type='1dof', segID_start=segID, s_start=s)
                 if segID==-1 and s==-1:
                     doneExecution = True
                 else:
+                    self.rvizpub.publish(String("enableresumebutton"))
                     while not self.resume:
                         time.sleep(0.5)
                     self.resume = False
