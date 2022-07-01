@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+
+""" Used to calculate an estimate of the sandpaper wear
+
+ Last Updated: 06/30/2022
+"""
+
+__author__ = "Mike Hagenow"
+
+import time
+import rospy
+import numpy as np
+from hybrid_controller.msg import HybridPose
+from geometry_msgs.msg import Quaternion, Pose, Vector3
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Float64, Float64MultiArray, String, Bool
+from franka_core_msgs.msg import RobotState, JointCommand
+from std_msgs.msg import Int32
+from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Slerp
+import tf2_ros
+
+class PaperStatus:
+    def __init__(self):
+        self.health = 1.0
+        self.k_int = 400.0 # 400 N/m stiffness for orbital paper interface
+        self.r = 0.1524 # 6 in for orbital
+        self.w = 5e-7
+
+        self.last_t = None
+
+        rospy.Subscriber("/commands",String,self.on_command)
+        rospy.Subscriber("/panda/orbital_wear",String,self.updateHealth)
+        self.health_pub = rospy.Publisher('/panda/sandpaper_health', Float64, queue_size=1)
+        self.health_msg = Float64()
+        time.sleep(0.5)
+
+        # Publish Health of Sandpaper
+        r = rospy.Rate(1) # 1hz
+        while not rospy.is_shutdown():
+            self.health_msg.data = self.health
+            self.health_pub.publish(self.health_msg)
+            r.sleep()
+    
+    def on_command(self,msg):
+        if msg.data == "reverse":
+            self.resetHealth()
+
+    def getHealth(self):
+        return self.health
+
+    def updateHealth(self,msg):
+        if self.last_t is None:
+            self.last_t = rospy.get_time()
+        else:
+            F = float(msg.data.split(":")[0])
+            theta = float(msg.data.split(":")[1])
+
+            new_time = rospy.get_time()
+            dt = new_time-self.last_t
+            self.last_t = new_time
+
+            print(F,theta,dt)
+            
+            if F < 0:
+                delta_k = np.abs(F) / self.k_int
+                l = min(2*self.r,delta_k/np.abs(np.sin(theta)))
+                A = np.sqrt((2*self.r - l)*l)*(-self.r + l) + self.r**2 * 2*np.arcsin(np.sqrt(l/self.r)/np.sqrt(2))
+                print(l,np.pi*self.r**2,A)
+
+                self.health += max(self.w*F/A*dt*self.health,-self.health) # force is negative, don't allow a health that makes it negative
+
+    def resetHealth(self):
+        self.health = 1.0
+
+
+if __name__ == "__main__":
+    rospy.init_node('paper_wear', anonymous=True)
+    paperwear = PaperStatus()
