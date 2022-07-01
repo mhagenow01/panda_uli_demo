@@ -1,6 +1,7 @@
 geometry_msgs/Pose desired_pose
 std_msgs/Float64MultiArray starting_joints
 std_msgs/Bool local
+std_msgs/Bool underconstrained
 ---
 geometry_msgs/Pose soln_pose
 std_msgs/Float64MultiArray soln_joints

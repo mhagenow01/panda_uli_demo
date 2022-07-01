@@ -9,3 +9,6 @@ geometry_msgs/Wrench wrench
 
 # Constraint Frame
 geometry_msgs/Quaternion constraint_frame
+
+# Underconstrained vs full pose
+std_msgs/Bool underconstrained

@@ -66,6 +66,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 
         startt = time.time()
         # print(des_pose)
+        
         resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
         # print("Time: ",time.time()-startt)
         # print(resp)
@@ -131,7 +132,9 @@ def getIKSingleSolution(pose_trajs,ii,jj,jangles):
         starting_joints = Float64MultiArray(data=list(jangles))
 
         # print(des_pose)
-        resp = ik_soln(des_pose,starting_joints)
+        local = False # check anywhere
+        underconstrained = True # don't enforce z axis when checking
+        resp = ik_soln(des_pose,starting_joints,local,underconstrained)
 
         # convert response to numpy
         soln_pos = resp.soln_pose.position

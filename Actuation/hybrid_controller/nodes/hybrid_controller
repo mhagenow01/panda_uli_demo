@@ -26,6 +26,7 @@ class HybridController:
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.ik_pub = rospy.Publisher('/ik/pose_command', PoseStamped, queue_size=1)
+        self.ik_pub_underconstrained = rospy.Publisher('/ik/pose_command_underconstrained', PoseStamped, queue_size=1)
         self.ik_nohybrid_pub = rospy.Publisher('/panda/pose_nohybrid', PoseStamped, queue_size=1)
 
         time.sleep(0.5)
@@ -38,6 +39,8 @@ class HybridController:
         self.admittance = True
         self.lin_stiffness = np.array([700.0, 700.0, 700.0])
         self.ang_stiffness = np.array([20.0, 20.0, 20.0])
+
+        self.underconstrained = False
 
         self.forces = np.zeros((3,))
         self.torques = np.zeros((3,))        
@@ -173,7 +176,10 @@ class HybridController:
                 pose_out.pose.orientation.y = new_quat[1]
                 pose_out.pose.orientation.z = new_quat[2]
                 pose_out.pose.orientation.w = new_quat[3]
-                self.ik_pub.publish(pose_out)
+                if not self.underconstrained:
+                    self.ik_pub.publish(pose_out)
+                else:
+                    self.ik_pub_underconstrained.publish(pose_out)
 
             except Exception as e:
                 print(e)
@@ -202,6 +208,7 @@ class HybridController:
 
     def commandHybrid(self,hpose):
         self.mode = HybridMode.Hybrid
+        self.underconstrained = hpose.underconstrained
         self.sel_vector = np.frombuffer(hpose.sel_vector, dtype=np.uint8)
         self.cf = np.array([hpose.constraint_frame.x, hpose.constraint_frame.y, hpose.constraint_frame.z, hpose.constraint_frame.w])
         self.desired_pos_cf = np.array([hpose.pose.position.x, hpose.pose.position.y, hpose.pose.position.z])

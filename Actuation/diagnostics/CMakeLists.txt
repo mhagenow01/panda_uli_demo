@@ -11,4 +11,5 @@ catkin_package()
 
 catkin_install_python(PROGRAMS
    nodes/ee_pose_checker
+   nodes/paper_status
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})

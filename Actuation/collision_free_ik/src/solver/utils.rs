@@ -1,7 +1,7 @@
 
 extern crate k;
 use k::{nalgebra as na, SerialChain};
-use na::{UnitQuaternion, Vector3};
+use na::{UnitQuaternion, Vector3, Unit};
 use optimization_engine::{SolverError};
 
 /// Groove loss function taken from "An analysis of RelaxedIK: an optimization-based framework for generating accurate and feasible robot arm motions"
@@ -58,7 +58,32 @@ pub fn position_gradient(current_position: &Vector3<f64>, desired_position: &Vec
 }
 
 pub fn rotation_cost(current_rotation: &UnitQuaternion<f64>, desired_rotation: &UnitQuaternion<f64>) -> f64 {
+   
     groove_loss(current_rotation.angle_to(desired_rotation).powi(2), 0., 2, 0.1, 10.0, 2)
+}
+
+pub fn underconstrained_rotation_cost(current_rotation: &UnitQuaternion<f64>, desired_rotation: &UnitQuaternion<f64>) -> f64 {
+    // let q_diff = current_rotation.rotation_to(desired_rotation);
+    let q_diff = desired_rotation.inverse() * current_rotation;
+    let axang = q_diff.axis_angle();
+    let mag_sq;
+    let og_sq;
+    match axang {
+        Some(ax) => {
+            mag_sq= ax.1.powi(2) * (ax.0[0].powi(2) + ax.0[1].powi(2));
+        },
+        None => {
+            mag_sq = 0. ;
+            og_sq = 0. ;
+        }
+    }
+    println!("{:?} : desired_rotation", desired_rotation);
+    println!("{:?} : current_rotation", current_rotation);
+    println!("{:?} : q_diff", q_diff);
+    println!("{:?} : underconstrained", axang);
+    println!("{:?} : mag_sq", mag_sq);
+    println!("{:?} : og", current_rotation.angle_to(desired_rotation).powi(2));
+    groove_loss(mag_sq, 0., 2, 0.1, 10.0, 2)
 }
 
 pub fn rotation_gradient(current_rotation: &UnitQuaternion<f64>, desired_rotation: &UnitQuaternion<f64>) -> Vector3<f64> {

@@ -17,6 +17,7 @@
 
       <remap from="out" to="/franka_ros_interface/motion_controller/arm/joint_commands" />
       <remap from="in" to="/ik/pose_command" />
+      <remap from="in_underconstrained" to="/ik/pose_command_underconstrained" />
   </node>
 
   <rosparam command="load" file="$(find franka_ros_controllers)/config/ros_controllers.yaml" ns="/franka_ros_interface"/>

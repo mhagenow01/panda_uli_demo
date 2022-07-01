@@ -25,6 +25,7 @@ class ExecuteROS:
         # Set up ROS Publishers
         # rospy.init_node('executeROSfromState', anonymous=True)
         self.hybrid_pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
+        self.orbital_wear_pub = rospy.Publisher('/panda/orbital_wear', String, queue_size=1)
         self.valve_pub = rospy.Publisher('/valvestate',Int32,queue_size=1)
         self.correction_pub = rospy.Publisher('/csacorrection',Float64MultiArray,queue_size=1)
         self.input = np.zeros((3,))
@@ -38,7 +39,6 @@ class ExecuteROS:
         self.task_t = task_t
 
         self.last_robot_state = rospy.get_time()
-
 
         rospy.Subscriber("/zdinput/input", Float64MultiArray, self.storeZDInput)
         rospy.Subscriber("/zdinput/button", Float64, self.storeZDButton)
@@ -75,7 +75,7 @@ class ExecuteROS:
             self.interrupt = True
 
     def storePandaStateTime(self,data):
-        if data.robot_mode == 1 or data.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
+        if data.robot_mode == 1 or data.robot_mode == 2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
             self.robot_active = True
         else:
             self.robot_active = False
@@ -96,6 +96,7 @@ class ExecuteROS:
         if ("qx" in state_names):
             # add rest of stuff
             hpose = HybridPose()
+            hpose.underconstrained = True
             hpose.sel_vector = [1, 1, 1, 1, 1, 1]
             constraint_frame = Quaternion()
             constraint_frame.x = 0.0
@@ -135,6 +136,8 @@ class ExecuteROS:
                 hpose.pose.orientation.z = rotated_orientation[2]
                 hpose.pose.orientation.w = rotated_orientation[3]
 
+                self.orbital_wear_pub.publish(String("0:0")) # no orbital wear, F=0, angle=0
+
                 return hpose
 
             except:
@@ -154,6 +157,13 @@ class ExecuteROS:
                 norm_q = np.array([theta_qx, theta_qy, theta_qz, theta_qw])/np.linalg.norm(np.array([theta_qx, theta_qy, theta_qz, theta_qw]))
             else:
                 norm_q = np.array([0., 0., 0., 1.0])
+
+            # publish force and angle of tool to orbital wear
+            R_theta = R.from_quat(norm_q)
+            theta_rel = np.linalg.norm(R_theta.as_rotvec()[0:2])
+            temp_str = String()
+            temp_str.data = str(f)+":"+str(theta_rel)
+            self.orbital_wear_pub.publish(temp_str)
 
             # Saturate surface values
             if u > 0.99: u = 0.99
@@ -191,6 +201,7 @@ class ExecuteROS:
             xyz_cf = constraint_frame_matrx.inv().apply(np.array(r))
 
             hpose = HybridPose()
+            hpose.underconstrained = True
             hpose.pose.position.x = xyz_cf[0]
             hpose.pose.position.y = xyz_cf[1]
             hpose.pose.position.z = xyz_cf[2]

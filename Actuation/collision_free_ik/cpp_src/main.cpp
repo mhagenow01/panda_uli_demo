@@ -46,6 +46,57 @@ void poseToArray(const geometry_msgs::Pose& msg, array<double, 7>& trans) {
     trans[6] = msg.orientation.z;
 }
 
+// Function actually calls IK
+// Allows to dictate whether or not to do the underconstrained formulation
+void solveIK(const geometry_msgs::PoseStamped::ConstPtr& msg, bool underconstrained, tf2_ros::TransformBroadcaster* br, array<double, 7>& trans, vector<double> current_q, vector<string> joint_names, ros::Publisher* pub){
+        auto pose = msg->pose;
+        string frame = msg->header.frame_id;
+
+        if (!valid_ee) {
+            return;
+        }
+
+        if (iksolver->dof() != 7) {
+            ROS_WARN("This only works if you are commanding 7 dof.");
+            return;
+        }
+
+        poseToArray(pose, trans);
+
+        vector<double> q = vector<double>();
+        vector<double> trans_return = vector<double>(7,0);
+        for (size_t i = 0; i < iksolver->dof(); i++) {
+            q.push_back(0);
+        }
+
+        bool local = true;
+
+        if (iksolver->solve(current_q.data(), trans, q.data(), trans_return.data(),&local,&underconstrained)) {
+            auto out_msg = franka_core_msgs::JointCommand();
+            out_msg.names = joint_names;
+            out_msg.position = q;
+            out_msg.mode = franka_core_msgs::JointCommand::POSITION_MODE;
+
+            pub->publish(out_msg);
+
+            geometry_msgs::TransformStamped transformStamped;  
+            transformStamped.header.stamp = ros::Time::now();
+            transformStamped.header.frame_id = "panda_link0";
+            transformStamped.child_frame_id = "ik_output";
+            transformStamped.transform.translation.x = trans_return[0];
+            transformStamped.transform.translation.y = trans_return[1];
+            transformStamped.transform.translation.z = trans_return[2];
+            transformStamped.transform.rotation.x = trans_return[3];
+            transformStamped.transform.rotation.y = trans_return[4];
+            transformStamped.transform.rotation.z = trans_return[5];
+            transformStamped.transform.rotation.w = trans_return[6];
+
+            br->sendTransform(transformStamped);
+        } else {
+            ROS_WARN("Couldn't do some IK");
+        }
+}
+
 bool solveIKSrv(collision_free_ik::CFIK::Request &req,
              collision_free_ik::CFIK::Response &res){
 
@@ -76,7 +127,9 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
             q.push_back(0);
         }
         bool local = req.local.data;
-        if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data(), &local)) {
+        bool underconstrained = req.underconstrained; // TODO: get this in the service
+
+        if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data(), &local, &underconstrained)) {
             geometry_msgs::Pose pose_out;
             
             // Store joint angles in array message
@@ -167,54 +220,13 @@ int main(int argc, char** argv) {
         
     });
 
+
+    ros::Subscriber sub_underconstrained = n.subscribe<geometry_msgs::PoseStamped>("in_underconstrained", 1, [&](const geometry_msgs::PoseStamped::ConstPtr& msg) {
+        solveIK(msg,true, &br, trans, current_q, joint_names, &pub); // underconstrained
+    });
+
     ros::Subscriber sub = n.subscribe<geometry_msgs::PoseStamped>("in", 1, [&](const geometry_msgs::PoseStamped::ConstPtr& msg) {
-        auto pose = msg->pose;
-        string frame = msg->header.frame_id;
-
-        if (!valid_ee) {
-            return;
-        }
-
-        if (iksolver->dof() != 7) {
-            ROS_WARN("This only works if you are commanding 7 dof.");
-            return;
-        }
-
-        poseToArray(pose, trans);
-
-        vector<double> q = vector<double>();
-        vector<double> trans_return = vector<double>(7,0);
-        for (size_t i = 0; i < iksolver->dof(); i++) {
-            q.push_back(0);
-        }
-
-        bool local = true;
-
-        if (iksolver->solve(current_q.data(), trans, q.data(), trans_return.data(),&local)) {
-            auto out_msg = franka_core_msgs::JointCommand();
-            out_msg.names = joint_names;
-            out_msg.position = q;
-            out_msg.mode = franka_core_msgs::JointCommand::POSITION_MODE;
-
-            pub.publish(out_msg);
-
-            geometry_msgs::TransformStamped transformStamped;  
-            transformStamped.header.stamp = ros::Time::now();
-            transformStamped.header.frame_id = "panda_link0";
-            transformStamped.child_frame_id = "ik_output";
-            transformStamped.transform.translation.x = trans_return[0];
-            transformStamped.transform.translation.y = trans_return[1];
-            transformStamped.transform.translation.z = trans_return[2];
-            transformStamped.transform.rotation.x = trans_return[3];
-            transformStamped.transform.rotation.y = trans_return[4];
-            transformStamped.transform.rotation.z = trans_return[5];
-            transformStamped.transform.rotation.w = trans_return[6];
-
-            br.sendTransform(transformStamped);
-        } else {
-            ROS_WARN("Couldn't do some IK");
-        }
-        
+        solveIK(msg,false, &br, trans, current_q, joint_names, &pub); // not underconstrained
     });
 
     ros::spin();

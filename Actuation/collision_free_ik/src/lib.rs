@@ -47,7 +47,7 @@ pub struct IKSolver {
     pub environment : ColliderSet,
     pub lb: Vec<f64>,
     pub ub: Vec<f64>,
-    pub config: IKSolverConfig
+    pub config: IKSolverConfig,
 }
 
 impl IKSolver {
@@ -139,15 +139,17 @@ pub extern "C" fn new_solver(urdf_ptr: *const c_char, ee_frame_ptr: *const c_cha
     }
 }
 
-fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], local_ptr: *const bool) -> Option<(Vec<f64>,[f64; 7])> {
+fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], local_ptr: *const bool, underconstrained_ptr: *const bool) -> Option<(Vec<f64>,[f64; 7])> {
     let iksolver = unsafe { iksolver.as_mut()? };
     let current_q;
     let trans;
     let local;
+    let underconstrained;
     unsafe {
         current_q = Vec::from(std::slice::from_raw_parts(current_q_ptr, iksolver.arm.dof()));
         trans = std::ptr::read(trans_ptr);
         local = std::ptr::read(local_ptr);
+        underconstrained = std::ptr::read(underconstrained_ptr);
     }
     
 
@@ -157,6 +159,7 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
     let current_q = iksolver.arm.joint_positions();
     let mut lb = iksolver.lb.clone();
     let mut ub = iksolver.ub.clone();
+
     
     if local{
         for i in 0..lb.len() {
@@ -164,9 +167,15 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
             ub[i] = ub[i].min(current_q[i] + iksolver.config.solver.local_search_bound);
         }
     }
+
+    if underconstrained{ // severely limit turning of last joint to protect camera
+        lb[6] = -0.1;
+        ub[6] = 0.1;
+    }
+
     let res = solver::solve(
         &iksolver.arm, &mut iksolver.cache, &iksolver.arm_colliders, &iksolver.environment, 
-        &x, &rot, &lb, &ub,
+        &x, &rot, &lb, &ub, underconstrained,
         iksolver.config.solver.max_iter,
         iksolver.config.solver.max_time_ms, // Yea, this is way too may parameters. Ohh well.
     );
@@ -190,8 +199,8 @@ fn try_solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const
 }
 
 #[no_mangle]
-pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64,t_ptr: *mut f64, local_ptr: *const bool) -> bool {
-    match try_solve(iksolver, current_q_ptr, trans_ptr, local_ptr) {
+pub extern "C" fn solve(iksolver: *mut IKSolver, current_q_ptr: *mut f64, trans_ptr: *const [f64; 7], q_ptr: *mut f64,t_ptr: *mut f64, local_ptr: *const bool, underconstrained_ptr: *const bool) -> bool {
+    match try_solve(iksolver, current_q_ptr, trans_ptr, local_ptr, underconstrained_ptr) {
         Some((q,t)) => {
             let q_array;
             unsafe {

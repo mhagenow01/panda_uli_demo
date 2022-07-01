@@ -119,8 +119,11 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
     robot_geometry: &HashMap<String, Collider>, static_geometry: &ColliderSet, 
     x: &rna::Vector3<f64>, rot: &rna::UnitQuaternion<f64>,
     lb: &Vec<f64>, ub: &Vec<f64>,
+    underconstrained: bool,
     max_iter: usize,
     max_time_ms: u64) -> Option<Vec<f64>> {
+
+    // println!("{} : underconstrained", underconstrained);
     
     let x_k = Vector3::from_iterator(x.iter().map(|&v| v));
     let rot_k = UnitQuaternion::from_quaternion(Quaternion::new(rot.w, rot.i, rot.j, rot.k));
@@ -142,7 +145,12 @@ pub fn solve(arm: &k::SerialChain<f64>, mut cache: &mut PANOCCache,
         let sigma : f64 = 0.005;
         //let s2 = sigma.powi(2);
         let rotation_decay = 1.;//(-(&trans.translation.vector - &x_k).magnitude_squared() / (2. * s2)).exp();
-        *c += 5.0 *rotation_decay * rotation_cost(&trans.rotation, &rot_k); // was 3
+        if underconstrained{
+            *c += 5.0 *rotation_decay * underconstrained_rotation_cost(&trans.rotation, &rot_k); // was 3
+        }
+        else{
+            *c += 5.0 *rotation_decay * rotation_cost(&trans.rotation, &rot_k); // was 3
+        }
         *c += collision_cost(arm, &robot_geometry, static_geometry);
         *c += 0.0*joint_limit_cost(&u, &lb, &ub);
         Ok(())
