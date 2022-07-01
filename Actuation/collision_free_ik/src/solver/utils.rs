@@ -77,12 +77,12 @@ pub fn underconstrained_rotation_cost(current_rotation: &UnitQuaternion<f64>, de
             og_sq = 0. ;
         }
     }
-    println!("{:?} : desired_rotation", desired_rotation);
-    println!("{:?} : current_rotation", current_rotation);
-    println!("{:?} : q_diff", q_diff);
-    println!("{:?} : underconstrained", axang);
-    println!("{:?} : mag_sq", mag_sq);
-    println!("{:?} : og", current_rotation.angle_to(desired_rotation).powi(2));
+    // println!("{:?} : desired_rotation", desired_rotation);
+    // println!("{:?} : current_rotation", current_rotation);
+    // println!("{:?} : q_diff", q_diff);
+    // println!("{:?} : underconstrained", axang);
+    // println!("{:?} : mag_sq", mag_sq);
+    // println!("{:?} : og", current_rotation.angle_to(desired_rotation).powi(2));
     groove_loss(mag_sq, 0., 2, 0.1, 10.0, 2)
 }
 

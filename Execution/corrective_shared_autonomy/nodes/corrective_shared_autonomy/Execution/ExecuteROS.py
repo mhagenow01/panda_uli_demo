@@ -96,7 +96,7 @@ class ExecuteROS:
         if ("qx" in state_names):
             # add rest of stuff
             hpose = HybridPose()
-            hpose.underconstrained = True
+            hpose.underconstrained.data = True
             hpose.sel_vector = [1, 1, 1, 1, 1, 1]
             constraint_frame = Quaternion()
             constraint_frame.x = 0.0
@@ -201,7 +201,7 @@ class ExecuteROS:
             xyz_cf = constraint_frame_matrx.inv().apply(np.array(r))
 
             hpose = HybridPose()
-            hpose.underconstrained = True
+            hpose.underconstrained.data = True
             hpose.pose.position.x = xyz_cf[0]
             hpose.pose.position.y = xyz_cf[1]
             hpose.pose.position.z = xyz_cf[2]

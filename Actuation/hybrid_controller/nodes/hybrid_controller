@@ -177,8 +177,10 @@ class HybridController:
                 pose_out.pose.orientation.z = new_quat[2]
                 pose_out.pose.orientation.w = new_quat[3]
                 if not self.underconstrained:
+                    print("NAY CONSTRAIN")
                     self.ik_pub.publish(pose_out)
                 else:
+                    print("YAY CONSTRAIN")
                     self.ik_pub_underconstrained.publish(pose_out)
 
             except Exception as e:
@@ -208,7 +210,7 @@ class HybridController:
 
     def commandHybrid(self,hpose):
         self.mode = HybridMode.Hybrid
-        self.underconstrained = hpose.underconstrained
+        self.underconstrained = hpose.underconstrained.data
         self.sel_vector = np.frombuffer(hpose.sel_vector, dtype=np.uint8)
         self.cf = np.array([hpose.constraint_frame.x, hpose.constraint_frame.y, hpose.constraint_frame.z, hpose.constraint_frame.w])
         self.desired_pos_cf = np.array([hpose.pose.position.x, hpose.pose.position.y, hpose.pose.position.z])

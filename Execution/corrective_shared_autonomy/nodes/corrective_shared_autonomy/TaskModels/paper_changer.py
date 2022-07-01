@@ -100,6 +100,7 @@ class PaperChanger:
 
             # convert to position control
             hpose = HybridPose()
+            hpose.underconstrained.data = False
             hpose.constraint_frame.x = 0.0
             hpose.constraint_frame.y = 0.0
             hpose.constraint_frame.z = 0.0

@@ -127,7 +127,7 @@ bool solveIKSrv(collision_free_ik::CFIK::Request &req,
             q.push_back(0);
         }
         bool local = req.local.data;
-        bool underconstrained = req.underconstrained; // TODO: get this in the service
+        bool underconstrained = req.underconstrained.data; // TODO: get this in the service
 
         if (iksolver->solve(current_q.data(), trans, q.data(),trans_return.data(), &local, &underconstrained)) {
             geometry_msgs::Pose pose_out;

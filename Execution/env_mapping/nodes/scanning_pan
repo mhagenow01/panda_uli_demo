@@ -56,7 +56,7 @@ class PandaReg:
         hpose.constraint_frame.y = 0.0
         hpose.constraint_frame.z = 0.0
         hpose.constraint_frame.w = 1.0
-        hpose.underconstrained = False # full pose
+        hpose.underconstrained.data = False # full pose
 
         try:
             # Get current pose from TF2
