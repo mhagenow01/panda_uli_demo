@@ -11,6 +11,7 @@ const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
     robotStatus: "grey",
+    paperStatus: 0.0,
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],
@@ -50,6 +51,9 @@ const store = (set,get) => ({
     setKnownWorkflow: (val) => set(state =>{
       state.knownWorkflow = val
       state.canvasOpacity=1-val
+    }),
+    setPaperStatus: (val) => set(state =>{
+      state.paperStatus = val
     }),
     resizeWindow: () => set(state=>{
       console.log('resized to: ', window.innerWidth, 'x', window.innerHeight)

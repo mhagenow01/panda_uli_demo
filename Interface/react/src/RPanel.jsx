@@ -5,12 +5,19 @@ import {ParameterModule} from './ParameterModule';
 import { Grommet, List, Stack,Button, Collapsible, Tabs, Tab, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
 
 //https://dev.to/nibble/what-is-uselayouteffect-hook-and-when-do-you-use-it-3lan
+function d2hex(number)
+{
+  let s=parseInt(number*255).toString(16)
+  if (s.length == 1)
+    s="0"+s
+  return s
+}
 
 export const RPanel = (props) => {  
   const [connect, connection, url,imageTopic,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.tmpSub])) 
   const [parameters,scanning,computed_traj,computing,setScanning,setComputed_traj,setComputing,setKnownWorkflow] = useAppStore(state=>[state.parameters,state.scanning,state.computed_traj,state.computing,state.setScanning,state.setComputed_traj,state.setComputing,state.setKnownWorkflow])
-  const [messages, addMessage, sendTrigger, sendMessage, get_path,publishStates,setCanvasOpacity,robotStatus] = useAppStore(state=>([state.messages,state.addMessage,state.sendTrigger,state.sendMessage,state.get_path,state.publishStates,state.setCanvasOpacity,state.robotStatus,state.sendObject,state.sendModel]))
-  const [sendObject,sendModel] = useAppStore(state=>([state.sendObject,state.sendModel]))
+  const [messages, addMessage, sendTrigger, sendMessage, get_path,publishStates,setCanvasOpacity,robotStatus,paperStatus] = useAppStore(state=>([state.messages,state.addMessage,state.sendTrigger,state.sendMessage,state.get_path,state.publishStates,state.setCanvasOpacity,state.robotStatus,state.paperStatus]))
+  const [sendObject,sendModel,decreaseTimer] = useAppStore(state=>([state.sendObject,state.sendModel,state.decreaseTimer]))
   const [open, setOpen] = React.useState(true);
 
   useEffect(() => {
@@ -37,6 +44,11 @@ export const RPanel = (props) => {
             <Box basis="6vh" fill="horizontal" alignContent='center' justify="start" direction="row" gap="medium">
               <Box alignSelf={"center"} background={{color:robotStatus}} round={"large"} width="4vh" height={"4vh"}/>
               <Box justify={"center"} ><Text justify={"center"} size="3vh">Robot state</Text></Box>
+              <Box alignSelf={"center"} background={{color:["#",d2hex(1-paperStatus),d2hex(paperStatus),"00"].join('')}} round={"large"} width="4vh" height={"4vh"}/>
+              <Box justify={"center"} ><Text justify={"center"} size="3vh">Paper state</Text></Box>
+              <Button size="xsmall" alignSelf="center" label={<Box><Text size="3vh">Change Paper</Text></Box>} 
+                    onClick={() => {
+                    }} />
             </Box>
             <Tabs alignSelf="stretch" margin="none" onActive={(val) => {
               setKnownWorkflow(val)

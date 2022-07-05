@@ -197,7 +197,14 @@ const store = (set) => ({
 			messageType: 'std_msgs/String',
 		});
 
+		const paperTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/panda/sandpaper_health',
+			messageType: 'std_msgs/Float64',
+		});
+
         robotTopic.subscribe((msg)=>useAppStore.getState().setRobotStatus(msg.data));
+        paperTopic.subscribe((msg)=>useAppStore.getState().setPaperStatus(msg.data));
         rvizTopic.subscribe((msg)=>useAppStore.getState().receivedRviz(msg.data));
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
         eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
