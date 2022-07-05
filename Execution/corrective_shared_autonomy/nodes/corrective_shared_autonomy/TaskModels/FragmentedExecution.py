@@ -17,11 +17,13 @@ import time
 import pickle
 from core_robotics.PyBSpline import BSplineSurface
 from corrective_shared_autonomy.srv import IK
+from collision_free_ik.srv import CFIK
 from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment, DMPLWRhardcoded
 from scipy.spatial.transform import Rotation as ScipyR
 from scipy.spatial.transform import Slerp
-from std_msgs.msg import String
-from geometry_msgs.msg import Pose, PoseStamped, Twist
+from std_msgs.msg import String, Bool, Float64MultiArray
+from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Pose, PoseStamped, Twist, PoseArray
 from visualization_msgs.msg import Marker, MarkerArray
 from joblib import Parallel, delayed
 
@@ -40,18 +42,12 @@ def ang_btwn_quats(q1,q2, underconstrained=False):
         ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec())
     return ang_diff
 
-def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames):
-    rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
 def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses=None):
-    try:
-        ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
+    rospy.wait_for_service('/collision_free_ik/solve_ik')
 
-        urdf_file = String()
-        urdf_file.data = urdf
-        base = String()
-        base.data = baselink
-        ee = String()
-        ee.data = eelink
+    try:
+        ik_soln = rospy.ServiceProxy('/collision_free_ik/solve_ik', CFIK)
+
 
         des_pose = Pose()
         des_pose.orientation.x = quat[0]
@@ -63,15 +59,11 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
         des_pose.position.z = pos[2]
 
         # package jointnames
-        jnames = []
-        for ii in range(0,len(jointnames)):
-            jnames.append(String(jointnames[ii]))
 
 
-        startt = time.time()
         # print(des_pose)
-        
-        resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
+
+        resp = ik_soln(des_pose,joint_poses,Bool(False))
         # print("Time: ",time.time()-startt)
         # print(resp)
 
@@ -88,7 +80,31 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
             return True, np.array(resp.soln_joints.data)
         else: 
             # print("err: ",pos_error, quat_error)
-            return False, None           
+            rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
+            ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
+            jnames = []
+            for ii in range(0,len(jointnames)):
+                jnames.append(String(jointnames[ii]))
+
+            urdf_file = String()
+            urdf_file.data = urdf
+            base = String()
+            base.data = baselink
+            ee = String()
+            ee.data = eelink
+
+            resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
+            soln_pos = resp.soln_pose.position
+            soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+            soln_quat = resp.soln_pose.orientation
+            soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+
+            pos_error = np.linalg.norm(soln_pos_np-pos)
+            quat_error = ang_btwn_quats(soln_quat_np,quat)
+            if (pos_error<pos_tol and quat_error<quat_tol):
+                return True, np.array(resp.soln_joints.data)
+            else:  
+                return False, None           
 
     except rospy.ServiceException as e:
 #         print("Service call failed: %s"%e)
@@ -172,6 +188,10 @@ def getIKPathsolution(pose_trajs,mask,curr_joints):
 # takes in a (7xnum_poses) array of poses
 # output a num_pts array of 0-not reachable, 1-reachable
 def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
+    current_joints = rospy.wait_for_message("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState).position
+    joint_poses = Float64MultiArray()
+    for i in range(7):
+        joint_poses.data.append(current_joints[i])
     rospack = rospkg.RosPack()
     configpath = rospack.get_path('uli_config') + '/../Actuation/config/'
     urdf_file = configpath + 'panda.urdf'
@@ -183,18 +203,18 @@ def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
 
     reachable = np.zeros((num_samps,))
     
-    return Parallel(n_jobs=10, backend='loky')(delayed(checkReachabilityOfPose)(poses[:,i].flatten(),urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames) for i in range(num_samps))
+    return Parallel(n_jobs=10, backend='loky')(delayed(checkReachabilityOfPose)(poses[:,i].flatten(),urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,joint_poses) for i in range(num_samps))
 
 
-def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames):
+def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses):
     pos = p[0:3]
     quat = p[3:7]
-    success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+    success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses)
     return success
 
-def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, curr_mask, ii, jj):
+def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, curr_mask, ii, jj, joint_poses):
     if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
-        success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
+        success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,joint_poses)
         # pos_margin = 0.08
         # success2, jangles = queryReachability(pos+np.array([pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
         # success3, jangles = queryReachability(pos+np.array([-pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
@@ -211,6 +231,12 @@ def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_t
 def getReachable(trajectories, curr_mask, downsamp=1):
     # TODO: based on config
     # TODO: speed -- parallel type stuff http://wiki.ros.org/roscpp/Overview/Callbacks%20and%20Spinning#Multi-threaded_Spinning
+
+    current_joints = rospy.wait_for_message("/franka_ros_interface/custom_franka_state_controller/joint_states", JointState).position
+    joint_poses = Float64MultiArray()
+    for i in range(7):
+        joint_poses.data.append(current_joints[i])
+
     rospack = rospkg.RosPack()
     configpath = rospack.get_path('uli_config') + '/../Actuation/config/'
     urdf_file = configpath + 'panda.urdf'
@@ -230,7 +256,7 @@ def getReachable(trajectories, curr_mask, downsamp=1):
     for ii in range(0,len(trajectories)):
         # TODO: base this off of distance -- tough to do when it is parallelized
         # TODO: maybe think of a preliminary step as a keyframe extraction
-        successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
+        successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj,joint_poses) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
         for jj in range(0,np.shape(trajectories[ii])[1]):
             erosion = 5
             ind = int(jj/downsamp)
@@ -307,8 +333,8 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
         pose_traj = np.zeros((7,num_samps_temp))
         for jj in range(0,num_samps_temp,downsamp):
             # for each sample, convert to pose (put same downsampled pose in each of the entries)
-            end_ind = min(len(num_samps_temp,jj+downsamp))
-            pose_traj[:,jj:jj+end_ind] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf)
+            end_ind = min(num_samps_temp,jj+downsamp)
+            pose_traj[:,jj:end_ind] = np.repeat(getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf).reshape((7,1)),end_ind-jj,axis=1)
         pose_trajs.append(pose_traj)
         total_num_pts+=num_samps_temp
 
