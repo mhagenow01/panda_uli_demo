@@ -74,6 +74,9 @@
   <!-- EE Diagnostics -->
   <node pkg="diagnostics" type="ee_pose_checker" name="ee_pose_checker" output="screen"/>
 
+  <!-- Sandpaper calc -->
+  <node pkg="diagnostics" type="paper_status" name="paper_status" output="screen"/>
+
   <!-- <node name="user_experience_enhancer" pkg="user_experience_enhancer" type="user_experience_enhancer" output="screen" /> -->
 
 </launch>
