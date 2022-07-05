@@ -16,6 +16,7 @@ import useRosStore from './RosStore';
 
 function App() {
   const [show3D] = useRosStore(state=>([state.show3D])) 
+  const [feedback] = useAppStore(state=>([state.feedback])) 
   const primaryColor="#9b0000"
   const theme = {
     name: 'UW-sanding',
@@ -111,8 +112,8 @@ function App() {
     <Grommet
       full theme={theme}
       >
-      <Box height='100vh' width='100vw' background="#9b0000">
-        <GamepadHandle/>
+      <Box height='100vh' width='100vw' background="#9b0000">      
+        {/* <GamepadHandle/> */}
         <Tabs justify="start" onActive={(val) => {
           if(val ==1)
           setTimeout(function() { //Start the timer
@@ -132,6 +133,28 @@ function App() {
         </Tabs>
         <Layer responsive={false} plain={true} modal={false} position="right">
           <RPanel/>
+        </Layer>
+        <Layer responsive={false} plain={true} modal={false} position="top">
+        <Box
+          radius="small"
+          pad="medium"
+        >
+        <Box
+          border={{ color: 'brand', size: 'xsmall' }}
+          background={{
+            color: "light-3",
+            opacity: .9
+          }}
+          round="medium"
+          width="large"
+          pad="medium"
+          alignContent='center'
+          opacity={.4}
+          hidden={feedback ===""}
+        >
+          <Text size="3vh" alignSelf='center'>{feedback}</Text>
+      </Box>
+        </Box>
         </Layer>
       </Box>
     </Grommet>

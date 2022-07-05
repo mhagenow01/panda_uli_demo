@@ -134,6 +134,7 @@ class Spliner(object):
         self._learnedSegments = None
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
+        self._ui_feedback_pub = rospy.Publisher("/ui/feedback",String,queue_size = 1)
         self._ui_reach_pub = rospy.Publisher("/ui/reach",String,queue_size = 1)
         self._ui_robot_state_pub = rospy.Publisher("/ui/robot_state",String,queue_size = 1)
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
@@ -243,6 +244,7 @@ class Spliner(object):
         rospy.sleep(0.1)
         self._ui_reach_pub.publish("bad:"+';'.join(bad))
         self._reach_thread = None
+        self._ui_feedback_pub.publish("4;Reach computed")
     def on_command(self,msg):
         l = msg.data.split(":")
         if l[0] == "stop_reach":
@@ -265,7 +267,9 @@ class Spliner(object):
                         q = (R_surf * R_tool_surf).as_quat()
                         p[:,u*k+v]=np.array([pt[0],pt[1],pt[2],q[0],q[1],q[2],q[3]])
             except:
+                self._ui_feedback_pub.publish("4;Error, out of bounds")
                 return
+            self._ui_feedback_pub.publish("20;Computing reach")
             ros_poses = PoseArray()
             ros_poses.header.stamp = rospy.Time.now()
             ros_poses.header.frame_id = "panda_link0"
@@ -291,6 +295,7 @@ class Spliner(object):
         if l[0] == "get_path":
             if self._surfaceBSpline is None:
                 return
+            self._ui_feedback_pub.publish("40;Computing path")
             path = self.get_path()
             ratio_points = []
             for p in path.poses:
@@ -300,6 +305,7 @@ class Spliner(object):
             
             self._ui_path_pub.publish(String(';'.join(ratio_points)))
             self._path_pub.publish(path)
+            self._ui_feedback_pub.publish("2;Path computed")
             print("path finished")
         if l[0] == "push":
             print("push")
@@ -320,9 +326,11 @@ class Spliner(object):
         if l[0] == "execute":
             if self._learnedSegments is not None:
 
+                self._ui_feedback_pub.publish("2000;Executing")
                 model = DMPLWRhardcoded(verbose=True, dt=1.0/self._time_sampling)
                 model.executeModel(learnedSegments=self._learnedSegments, input_type='1dof')
             
+                self._ui_feedback_pub.publish("4;Finished executing")
 
                 self._events_pub.publish("motion_finished")
 

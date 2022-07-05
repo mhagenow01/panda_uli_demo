@@ -166,6 +166,11 @@ const store = (set) => ({
 			name: '/ui/reach',
 			messageType: 'std_msgs/String',
 		});
+		const feedbackTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/ui/feedback',
+			messageType: 'std_msgs/String',
+		});
 
         pathTopic.subscribe(function (message) {
 			useAppStore.getState().setPath(message.data.split(';'));
@@ -203,6 +208,7 @@ const store = (set) => ({
 			messageType: 'std_msgs/Float64',
 		});
 
+        feedbackTopic.subscribe((msg)=>{useAppStore.getState().setFeedback(msg.data)});
         robotTopic.subscribe((msg)=>useAppStore.getState().setRobotStatus(msg.data));
         paperTopic.subscribe((msg)=>useAppStore.getState().setPaperStatus(msg.data));
         rvizTopic.subscribe((msg)=>useAppStore.getState().receivedRviz(msg.data));

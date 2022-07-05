@@ -12,6 +12,7 @@ const store = (set,get) => ({
     messages: ['default message 2','default message 1'],
     robotStatus: "grey",
     paperStatus: 0.0,
+    timer: 0,
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],
@@ -20,6 +21,7 @@ const store = (set,get) => ({
     imageHeight: 805,//900
     imagedata: "",
     knownWorkflow: 0,
+    feedback: "",
     canvasOpacity: 1.,
     scanning: false,
     computed_traj: false,
@@ -39,6 +41,12 @@ const store = (set,get) => ({
       y: 100,
       isDragging: false,
     })),
+    decreaseTimer: () => set(state=>{
+      if(state.timer > 0)
+        state.timer -= 1
+      else
+        state.feedback = ""
+    }),
     clearReach: () => set(state=>{
       state.good = []
       state.bad = []
@@ -46,6 +54,11 @@ const store = (set,get) => ({
     }),
     setScanning: (val) => set(state=>{
       state.scanning= val
+    }),
+    setFeedback: (msg) => set(state=>{
+      let cmds = msg.split(';')
+      state.timer = cmds[0]
+      state.feedback= cmds[1]
     }),
     setComputedTraj: (val) => set(state=>{
       state.computed_traj= val

@@ -21,9 +21,14 @@ export const RPanel = (props) => {
   const [open, setOpen] = React.useState(true);
 
   useEffect(() => {
-      setInterval(() => {
-        connect()
-      }, 1000)
+    setInterval(() => {
+      decreaseTimer()
+    }, 500)
+  }, []);
+  useEffect(() => {
+    setInterval(() => {
+      connect()
+    }, 1000)
   }, []);
     return (
       <Box background="light-2" 
