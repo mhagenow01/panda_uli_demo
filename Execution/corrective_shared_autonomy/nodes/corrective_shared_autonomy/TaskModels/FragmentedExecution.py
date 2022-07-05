@@ -62,8 +62,10 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 
 
         # print(des_pose)
+        local = False # check anywhere in the joint space
+        underconstrained = True
 
-        resp = ik_soln(des_pose,joint_poses,Bool(False))
+        resp = ik_soln(des_pose,joint_poses,Bool(local),Bool(underconstrained))
         # print("Time: ",time.time()-startt)
         # print(resp)
 
@@ -154,7 +156,7 @@ def getIKSingleSolution(pose_trajs,ii,jj,jangles):
         # print(des_pose)
         local = False # check anywhere
         underconstrained = True # don't enforce z axis when checking
-        resp = ik_soln(des_pose,starting_joints,local,underconstrained)
+        resp = ik_soln(des_pose,starting_joints,Bool(local),Bool(underconstrained))
 
         # convert response to numpy
         soln_pos = resp.soln_pose.position
@@ -491,7 +493,7 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     orig_vals[7,:] = 1.0
     for ii in range(segment.num_samples):
         r, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(uvs[0,ii],uvs[1,ii])
-        orig_vals[0:3,ii] = r + 0.05 * n_hat 
+        orig_vals[0:3,ii] = r + 0.10 * n_hat 
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
         orig_vals[3:7,ii] = (R_surf * R_tool_surf_end).as_quat()
 
