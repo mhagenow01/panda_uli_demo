@@ -147,13 +147,11 @@ class PaperChanger:
             hpose.pose.orientation.z = slerp(jj / num_interp_samples).as_quat()[2]
             hpose.pose.orientation.w = slerp(jj / num_interp_samples).as_quat()[3]
             self.publishToRobot(hpose)
-            print(self._current_state.position)
             self._trajectory.append(self._current_state.position)
             time.sleep(0.01)
         self.admittance_pub.publish(Bool(False))
     
     def reverse(self):
-        print("reverse")
         self.admittance_pub.publish(Bool(False))
         rospy.sleep(.1)
         for joint in self._trajectory[::-1]:    

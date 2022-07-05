@@ -1,14 +1,29 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="sim" default="true"/>
+    <arg name="sim" default="false"/>
+    <arg name="rviz" default="false"/>
 
-     <group if="$(arg sim)">
+    <group if="$(arg sim)">
         <include file="$(find panda_sim)/launch/sim.launch"/>
+        <node pkg="tf" type="static_transform_publisher" name="sim_kinect" args="-0.004 -0.032 -0.000 -0.502 0.504 -0.497 0.497 /camera_base /rgb_camera_link 1"/>
+        <node pkg="uli_interface" type="publisher" name="publisher"/>
+        <node pkg="corrective_shared_autonomy" type="kdlik" name="kdlik"/>
+    </group>
+    <group if="$(arg rviz)">
+           <arg name="rvizconfig" default="sim.rviz"/> 
+        
+            <!-- startup rviz -->
+            <node pkg="panda_sim" type="rviz_manager" name="rviz_manager">
+                <param name="rvizconfig" type="string" value="$(arg rvizconfig)" />
+            </node>
+
     </group>
 
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+    
     <node pkg="uli_interface" type="spliner" name="spliner" output="screen"/>
     <node pkg="uli_interface" type="param_handler" name="param_handler" output="screen"/>
+    <!-- <node pkg="corrective_shared_autonomy" type="kdlik" name="kdlik" output="screen"/> -->
     <node pkg="tf2_web_republisher" type="tf2_web_republisher" name="tf2_web_republisher" output="screen"/>
     <!-- <node pkg="uli_interface" type="pc_publish" name="pc_publish" output="screen"/> -->
     <node pkg="tf" type="static_transform_publisher" name="kinect" args="0 0 0 0 0 0 1 /panda_link0 /map 1"/>

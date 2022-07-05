@@ -54,7 +54,7 @@ class ROSAffordances:
         self.usevisualmodels = False
 
         # Rostopics: publishers and subscribers
-        self.objspub = rospy.Publisher('meshes', MarkerArray, queue_size=1)
+        self.objspub = rospy.Publisher('meshes', MarkerArray, queue_size=1, latch=True)
         self.pointsclickedpub = rospy.Publisher('points_clicked', MarkerArray, queue_size=10)
         self.clickedptlogger = rospy.Publisher('rvizclick', String, queue_size=1)
         self.scenepub = rospy.Publisher('scene', PointCloud2, queue_size=1)

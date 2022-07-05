@@ -42,6 +42,7 @@ def ang_btwn_quats(q1,q2, underconstrained=False):
 
 def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames):
     rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
+def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses=None):
     try:
         ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
 

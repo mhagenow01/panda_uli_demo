@@ -96,9 +96,16 @@ install(DIRECTORY
 #     meshes/
 #     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/meshes
 # )
+install(DIRECTORY
+    saved_msgs/
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/saved_msgs
+)
 
 catkin_install_python(PROGRAMS
     nodes/spliner
+    nodes/pc_publish
+    nodes/saver
+    nodes/publisher
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
