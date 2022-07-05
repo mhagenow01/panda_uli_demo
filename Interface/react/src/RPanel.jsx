@@ -36,7 +36,7 @@ export const RPanel = (props) => {
         direction="row" justify="end" height="100vh">
         <Button color="light-2" alignSelf="stretch" basis="small" onClick={() => setOpen(!open)} label={open?">":"<"} />
         <Collapsible direction="horizontal" open={open}>
-          <Box direction='column' gap="xsmall" pad="xsmall">
+          <Box direction='column' gap="xxsmall" pad="xxsmall">
             <Box basis="6vh" fill="horizontal" alignContent='center'  direction="row" gap="medium">
               <Box alignSelf={"center"} background={{color:connection==='connected'?"green":"red"}} round={"large"} width="4vh" height={"4vh"}/>
                 <Button onClick={()=>{
@@ -55,13 +55,14 @@ export const RPanel = (props) => {
                     onClick={() => {
                     }} />
             </Box>
+            
             <Tabs alignSelf="stretch" margin="none" onActive={(val) => {
               setKnownWorkflow(val)
               }}> 
               <Tab title={<Box><Text size="4vh">Unknown Object</Text></Box>}>
                 <Box
                 round="medium"
-                pad="small"
+                pad="xsmall"
                 justify="evenly"
                 alignSelf="stretch"
                 direction='column' 
@@ -98,7 +99,7 @@ export const RPanel = (props) => {
                   </Box> 
                 </Box>
               </Tab>
-              <Tab title={<Box><Text size="4vh">Known object</Text></Box>}>
+              <Tab title={<Box><Text size="4vh">Known Object</Text></Box>}>
                 <Box
                   round="medium"
                   align="center"

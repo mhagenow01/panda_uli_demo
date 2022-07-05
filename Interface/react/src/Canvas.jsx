@@ -3,20 +3,23 @@ import useAppStore from './AppStore';
 import { Stage, Layer, Circle, Shape, Text } from 'react-konva';
 import { Stack } from 'grommet';
 import useRosStore from './RosStore';
+import Konva from 'konva';
 
 export const Canvas = (props) => {
     var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
+
+    Konva.pixelRatio = 1;
+
     const handleDragEnd = (e) => {
-        setCorner(e.target.attrs["cornerId"],Math.min(Math.max(e.target.attrs["x"],0),maxWidth),Math.min(Math.max(e.target.attrs["y"],0),maxHeight))
-        corners.map((corner) => {
-          return {
-            ...corner,
-            isDragging: false,
-          };
-        }
-      );
+      setCorner(e.target.attrs["cornerId"],Math.min(Math.max(e.target.attrs["x"],0),maxWidth),Math.min(Math.max(e.target.attrs["y"],0),maxHeight))
+      corners.map((corner) => {
+        return {
+          ...corner,
+          isDragging: false,
+        };
+      });
       spline()
     };
     const handleDragStart = (e) => {
@@ -77,9 +80,9 @@ export const Canvas = (props) => {
               // (!) Konva specific method, it is very important
               context.fillStrokeShape(shape);
             }}
-            stroke="green"
-            opacity={.5*canvasOpacity}
-            strokeWidth={4}
+            stroke="#78A2cc"
+            opacity={.8*canvasOpacity}
+            strokeWidth={imageWidth/100.}
           />
 
           <Shape
@@ -94,7 +97,7 @@ export const Canvas = (props) => {
               context.fillStrokeShape(shape);
             }}
             fill="#00D2FF"
-            stroke="red"
+            stroke="#eeeeee"
             opacity={.1*canvasOpacity}
             strokeWidth={4}
           />
@@ -105,8 +108,8 @@ export const Canvas = (props) => {
                 cornerId={corner.id}
                 x={corner.x}
                 y={corner.y}
-                Radius={Math.min(imageWidth/30.,30)}
-                fill="#0000ff"
+                Radius={imageWidth/30.}
+                fill="#eeeeee"
                 opacity={0.8*canvasOpacity}
                 draggable
                 shadowColor="black"

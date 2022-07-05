@@ -132,6 +132,7 @@ class Spliner(object):
         self._depth = None
         self._camera_model = None
         self._learnedSegments = None
+        self._scanning = False
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
         self._ui_feedback_pub = rospy.Publisher("/ui/feedback",String,queue_size = 1)
@@ -139,11 +140,9 @@ class Spliner(object):
         self._ui_robot_state_pub = rospy.Publisher("/ui/robot_state",String,queue_size = 1)
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
         self._points_pub = rospy.Publisher("/clicked_point",PointStamped,queue_size = 1)
-        self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
         self._pose_pub = rospy.Publisher("/checked_poses", PoseArray,queue_size=1)
         self._reach_thread = None
 
-        self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self._n_passes = 2
         self._horizontal = True
         self._time_sampling = 20.0
@@ -153,8 +152,21 @@ class Spliner(object):
         self._robot_state = "grey"
 
         self._depth_sub = None
+        self._corners_sub = None
+
         self._robot_state_sub = rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.on_state)
         self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
+        self._rviz_trigger_sub = rospy.Subscriber("/rviz_triggers", String, self.on_trigger)
+        self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
+
+    def on_trigger(self, msg):
+        if msg.data == "scan":
+            self._scanning = True
+            self._depth_sub.unregister()
+            self._corners_sub.unregister()
+        if msg.data == "scanningdone":
+            self.register_depth()
+            
 
     def on_state(self, msg):
         if msg.robot_mode == 1 or msg.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
@@ -199,7 +211,7 @@ class Spliner(object):
         else:
             self._velocity = .01
 
-        self._horizontal = self.get_param("direction") == "horizontal"
+        self._horizontal = self.get_param("direction") == "Horizontal"
         self._ui_robot_state_pub.publish(self._robot_state)
 
     def register_depth(self):
@@ -551,7 +563,7 @@ class Spliner(object):
     def get_uvs(self):
         n_passes = self._n_passes
         horizontal = self._horizontal
-        margin = 0.1
+        margin = 0.05
         length = 1-2*margin
         us=[margin]
         vs=[margin]

@@ -6,8 +6,7 @@ import * as ROS3D from 'ros3d';
 import useAppStore from './AppStore';
 
 const store = (set) => ({
-    //url: 'ws://localhost:9090',
-    url: 'ws://192.168.3.5:9090',
+    url: '',
     // SetURL resets ROS
     setUrl: (url) => set((_)=>({url:url,connection:'disconnected'})),
     ros: null,
@@ -217,7 +216,7 @@ const store = (set) => ({
         setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
         ros.connect();
         useAppStore.getState().resizeWindow();
-
+        paramTopic.publish({data:JSON.stringify(useAppStore.getState().parameters)})
         return {
             url:state.url,
             connection:'connecting',
@@ -237,6 +236,13 @@ const store = (set) => ({
 
 const useRosStore = create(store);
 
-//useRosStore.getState().setUrl('ws://localhost:9090');
-useRosStore.getState().setUrl('ws://192.168.3.5:9090');
+useRosStore.getState().setUrl('ws://localhost:9090');
+//useRosStore.getState().setUrl('ws://192.168.0.114:9090'); //Home
+//useRosStore.getState().setUrl('ws://10.141.20.93:9090'); //UWnet
+//useRosStore.getState().setUrl('ws://192.168.3.4:9090'); // wifi
+//useRosStore.getState().setUrl('ws://192.168.3.5:9090'); // lan
+//useRosStore.getState().setUrl('ws://192.168.0.2:9090');
+//useRosStore.getState().setUrl('ws://10.138.193.103:9090'); // eduroam
+
+
 export default useRosStore;

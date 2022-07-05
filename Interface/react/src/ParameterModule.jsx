@@ -45,7 +45,7 @@ export const ParameterModule = (props) => {
             setParameter(idx,option)}}
           margin={"none"}
           size="3vh"
-          pad="none"
+          pad="medium"
         />
         </Box>
       )}

@@ -15,6 +15,7 @@ import useAppStore from './AppStore';
 import useRosStore from './RosStore';
 
 function App() {
+  
   const [show3D] = useRosStore(state=>([state.show3D])) 
   const [feedback] = useAppStore(state=>([state.feedback])) 
   const primaryColor="#9b0000"
@@ -45,7 +46,14 @@ function App() {
     button: {
         border: {
           width: "4px"
-        }
+        },
+        default: {
+          background:{
+            color: "#c5050c"
+          }
+        },
+        color: "#adadad"
+
     },
     text: {
       textAlign:"center",
@@ -106,11 +114,14 @@ function App() {
         },
         panel: { padding: 0},
         extend: {padding: 3}
-    }
+    },
+
   }
-  return (
+
+  return (  
     <Grommet
-      full theme={theme}
+    full={true}
+      theme={theme}
       >
       <Box height='100vh' width='100vw' background="#9b0000">      
         {/* <GamepadHandle/> */}
