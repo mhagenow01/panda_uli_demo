@@ -96,7 +96,7 @@ const store = (set,get) => ({
         var secs = Math.floor(currentTime.getTime()/1000);
         var nsecs = Math.round(1000000000*(currentTime.getTime()/1000-secs));
         var buttons = []
-        msg[0].buttons.map((button) => {
+        msg.buttons.map((button) => {
           buttons.push(button.value)  
         })
         var joy_msg = new ROSLIB.Message({
@@ -108,7 +108,7 @@ const store = (set,get) => ({
             },
             frame_id: "/dev/input/js0"
           },
-          axes: msg[0].axes,
+          axes: msg.axes,
           buttons: buttons
         });
 
@@ -117,7 +117,6 @@ const store = (set,get) => ({
       catch (err){
         console.log(err)
       }
-      state.gamepads = msg
     }),
     addMessage: (message) => set(state=>{
         state.messages = [message,...state.messages]
@@ -199,5 +198,56 @@ const store = (set,get) => ({
 });
 
 const useAppStore = create(immer(store));
+
+
+var haveEvents = 'GamepadEvent' in window;
+var haveWebkitEvents = 'WebKitGamepadEvent' in window;
+var controller = [];
+var rAF = window.mozRequestAnimationFrame ||
+  window.webkitRequestAnimationFrame ||
+  window.requestAnimationFrame;
+
+const updateGamepadStore = useAppStore.getState().setGamepads;
+function connecthandler(e) {
+  addgamepad(e.gamepad);
+}
+function addgamepad(gamepad) {
+  // console.log("New gamepad")
+  controller = gamepad; 
+  
+  rAF(updateStatus);
+}
+
+function disconnecthandler(e) {
+  removegamepad(e.gamepad);
+}
+
+function removegamepad(gamepad) {
+  // delete controllers[gamepad.index];
+}
+
+function updateStatus() {
+  // console.log("update")
+  scangamepads();
+  updateGamepadStore(controller)
+  rAF(updateStatus);
+}
+
+function scangamepads() {
+  var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
+  
+  controller=gamepads[0]
+  
+}
+
+if (haveEvents) {
+  window.addEventListener("gamepadconnected", connecthandler);
+  window.addEventListener("gamepaddisconnected", disconnecthandler);
+} else if (haveWebkitEvents) {
+  window.addEventListener("webkitgamepadconnected", connecthandler);
+  window.addEventListener("webkitgamepaddisconnected", disconnecthandler);
+} else {
+  setInterval(scangamepads, 500);
+}
 
 export default useAppStore;
