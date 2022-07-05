@@ -30,11 +30,14 @@ from joblib import Parallel, delayed
 # RELATED TO REACHABILITY CHECKS                                        #
 #########################################################################
 
-def ang_btwn_quats(q1,q2):
+def ang_btwn_quats(q1,q2, underconstrained=False):
     # assumes xyzw notation
     R_1 = ScipyR.from_quat(q1)
     R_2 = ScipyR.from_quat(q2)
-    ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec())
+    if underconstrained:
+        ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec()[0:2]) # ignore z if underconstrained
+    else:
+        ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec())
     return ang_diff
 
 def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames):
@@ -78,7 +81,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
         soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
 
         pos_error = np.linalg.norm(soln_pos_np-pos)
-        quat_error = ang_btwn_quats(soln_quat_np,quat)
+        quat_error = ang_btwn_quats(quat,soln_quat_np)
 
         if (pos_error<pos_tol and quat_error<quat_tol):
             return True, np.array(resp.soln_joints.data)
@@ -143,7 +146,7 @@ def getIKSingleSolution(pose_trajs,ii,jj,jangles):
         soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
 
         pos_error = np.linalg.norm(soln_pos_np-pos)
-        quat_error = ang_btwn_quats(soln_quat_np,quat)
+        quat_error = ang_btwn_quats(quat,soln_quat_np,underconstrained)
 
         return pos_error, quat_error, np.array(resp.soln_joints.data)      
 
@@ -298,14 +301,21 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
     ##########################################
     startt = time.time()
     pose_trajs = []
+    downsampled_pose_trajs = []
     total_num_pts = 0
     for ii in range(0,num_trajs):
         num_samps_temp = np.shape(trajs[ii])[1]
         pose_traj = np.zeros((7,num_samps_temp))
+        downsampled_pose_traj = np.zeros((7,len(range(0,num_samps_temp,downsamp))))
+        temp_ind = 0
+        # TODO: make this more graceful
         for jj in range(0,num_samps_temp,downsamp):
             # for each sample, convert to pose
-            pose_traj[:,jj] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf) 
+            pose_traj[:,jj] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf)
+            downsampled_pose_traj[:,temp_ind] = pose_traj[:,jj]
+            temp_ind+=1
         pose_trajs.append(pose_traj)
+        downsampled_pose_trajs.append(downsampled_pose_traj)
         total_num_pts+=num_samps_temp
 
     print("Pose Conv Time:",time.time()-startt," - ",total_num_pts)
@@ -344,7 +354,7 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
         if len(np.where(mask[ii]==1)[0].flatten()) > 0:
             new_pts = True
 
-    return mask, pose_trajs, new_pts
+    return mask, downsampled_pose_trajs, new_pts
 
 #########################################################################
 # RELATED TO TRAJECTORY CONSTRUCTION                                    #
@@ -583,7 +593,7 @@ class FragmentedExecutionManager():
         self.taskmask = None
         self.registrationsub = rospy.Subscriber("/registeredObject", PoseStamped, self.computeTask)
         self.executesub = rospy.Subscriber("/executeModel", String, self.executeModel)
-        self.correctionsub = rospy.Subscriber("/correction", Twist, self.modelMoved)
+        self.correctionsub = rospy.Subscriber("/correction", Twist, self.modelMoved, queue_size =1)
         self.rvizpub = rospy.Publisher("rviz_triggers", String, queue_size =1, latch = True)
         self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
         self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
@@ -596,6 +606,7 @@ class FragmentedExecutionManager():
         self.max_num_traj_pts = 0
         self.fragmentedBehavior = None
         self.resume = False # resume execution after paused
+        self.moveinprogress = False
         
         time.sleep(0.5)
         rospy.spin()
@@ -617,8 +628,12 @@ class FragmentedExecutionManager():
 
     def modelMoved(self,data):
         # when the model is moved, clear reachability and make sure the "compute trajectory" button is renabled
-        self.clearReachability()
-        self.rvizpub.publish(String("execdone"))
+        if not self.moveinprogress: # to avoid hanging if this is called a bunch of times (clear reachability takes a while)
+            self.moveinprogress = True 
+            self.clearReachability()
+            print("fragmentedexecdone")
+            self.rvizpub.publish(String("execdone"))
+            self.moveinprogress = False
 
     def executeModel(self,data):
         if self.fragmentedBehavior is not None:
