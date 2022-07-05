@@ -291,31 +291,24 @@ def getPoseFromState(surface,state_names,state_vals,q_surf = np.array([0, 0, 0, 
 # Takes in a rotation (q_surf) and translation (t_surf) of the surface model
 # Returns a mask of the trajectories that are reachable (list of booleans) [num_samps]
 # TODO: min number of continuous samples
-def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask = None):
+def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_mask = None, downsamp=40):
     
     num_trajs = len(trajs)
-    downsamp = 40
 
     ##########################################
     # Step 0: convert to poses               #
     ##########################################
     startt = time.time()
     pose_trajs = []
-    downsampled_pose_trajs = []
     total_num_pts = 0
     for ii in range(0,num_trajs):
         num_samps_temp = np.shape(trajs[ii])[1]
         pose_traj = np.zeros((7,num_samps_temp))
-        downsampled_pose_traj = np.zeros((7,len(range(0,num_samps_temp,downsamp))))
-        temp_ind = 0
-        # TODO: make this more graceful
         for jj in range(0,num_samps_temp,downsamp):
-            # for each sample, convert to pose
-            pose_traj[:,jj] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf)
-            downsampled_pose_traj[:,temp_ind] = pose_traj[:,jj]
-            temp_ind+=1
+            # for each sample, convert to pose (put same downsampled pose in each of the entries)
+            end_ind = min(len(num_samps_temp,jj+downsamp))
+            pose_traj[:,jj:jj+end_ind] = getPoseFromState(surface,state_names,trajs[ii][:,jj].flatten(),q_surf,t_surf)
         pose_trajs.append(pose_traj)
-        downsampled_pose_trajs.append(downsampled_pose_traj)
         total_num_pts+=num_samps_temp
 
     print("Pose Conv Time:",time.time()-startt," - ",total_num_pts)
@@ -354,7 +347,7 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
         if len(np.where(mask[ii]==1)[0].flatten()) > 0:
             new_pts = True
 
-    return mask, downsampled_pose_trajs, new_pts
+    return mask, pose_trajs, new_pts
 
 #########################################################################
 # RELATED TO TRAJECTORY CONSTRUCTION                                    #
