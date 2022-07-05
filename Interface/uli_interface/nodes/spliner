@@ -18,6 +18,8 @@ from corrective_shared_autonomy.TaskModels.DMPLWRhardcoded import HybridSegment,
 from scipy.spatial.transform import Rotation as ScipyR
 from corrective_shared_autonomy.TaskModels.FragmentedExecution import getFragmentedTraj, constructConnectedTraj
 import cv2
+from threading import Thread
+
 from cv_bridge import CvBridge
 
 import sys
@@ -39,6 +41,9 @@ import image_geometry
 from tf.transformations import quaternion_from_euler
 import tf
 import tf2_ros
+import ctypes
+import threading
+
 import tf2_geometry_msgs
 from scipy.spatial.transform import Rotation as ScipyR
 
@@ -54,6 +59,37 @@ def get_mid_points(p1,p2,k):
 
 def get_distance(p1,p2):
     return np.sqrt((p2[0]-p1[0])**2+(p2[1]-p1[1])**2+(p2[2]-p1[2])**2)
+
+# https://www.geeksforgeeks.org/python-different-ways-to-kill-a-thread/
+class thread_with_trace(threading.Thread):
+  def __init__(self, *args, **keywords):
+    threading.Thread.__init__(self, *args, **keywords)
+    self.killed = False
+ 
+  def start(self):
+    self.__run_backup = self.run
+    self.run = self.__run     
+    threading.Thread.start(self)
+ 
+  def __run(self):
+    sys.settrace(self.globaltrace)
+    self.__run_backup()
+    self.run = self.__run_backup
+ 
+  def globaltrace(self, frame, event, arg):
+    if event == 'call':
+      return self.localtrace
+    else:
+      return None
+ 
+  def localtrace(self, frame, event, arg):
+    if self.killed:
+      if event == 'line':
+        raise SystemExit()
+    return self.localtrace
+ 
+  def kill(self):
+    self.killed = True
 
 class Spliner(object):
     def __init__(self):
@@ -103,6 +139,8 @@ class Spliner(object):
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
         self._points_pub = rospy.Publisher("/clicked_point",PointStamped,queue_size = 1)
         self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
+        self._pose_pub = rospy.Publisher("/checked_poses", PoseArray,queue_size=1)
+        self._reach_thread = None
 
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self._n_passes = 2
@@ -113,7 +151,9 @@ class Spliner(object):
         self._surfaceBSpline = None
         self._robot_state = "grey"
 
+        self._depth_sub = None
         self._robot_state_sub = rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.on_state)
+        self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
 
     def on_state(self, msg):
         if msg.robot_mode == 1 or msg.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
@@ -161,52 +201,92 @@ class Spliner(object):
         self._horizontal = self.get_param("direction") == "horizontal"
         self._ui_robot_state_pub.publish(self._robot_state)
 
+    def register_depth(self):
+        self._depth_sub = rospy.Subscriber("/k4a/depth_to_rgb/image_raw/compressed", CompressedImage, self.on_depth)
+        self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
+
     def on_info(self,msg):
         if self._camera_model is None:
             self._width = msg.width
             self._height = msg.height
             self._camera_model = image_geometry.PinholeCameraModel()
             self._camera_model.fromCameraInfo(msg)
-            self._depth_sub = rospy.Subscriber("/k4a/depth_to_rgb/image_raw/compressed", CompressedImage, self.on_depth)
-            self._corners_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
+            
+        if self._depth_sub is None and not self._scanning:
+            self.register_depth()
         
+    def get_reach(self, p):
+        reachable = checkReachabilityOfPoses(p)
+        good = []
+        bad = []
+        for index,reach in enumerate(reachable):
+            pose = PoseStamped()
+            pose.header.frame_id=REFERENCE_FRAME
+            pose.pose.position.x = p[0,index]
+            pose.pose.position.y = p[1,index]
+            pose.pose.position.z = p[2,index]
+            pose.pose.orientation.x = p[3,index]
+            pose.pose.orientation.y = p[4,index]
+            pose.pose.orientation.z = p[5,index]
+            pose.pose.orientation.w = p[6,index]
+            # print(pose)
+            coord = self.get_pixel_from_pose(pose)
+            if coord is None:
+                continue
+            coord=[str(coord[0]/self._width),str(coord[1]/self._height)]
+            if reach:
+                good.append(','.join(coord))
+            else:
+                bad.append(','.join(coord))
+        
+        self._ui_reach_pub.publish("good:"+';'.join(good))
+        rospy.sleep(0.1)
+        self._ui_reach_pub.publish("bad:"+';'.join(bad))
+        self._reach_thread = None
     def on_command(self,msg):
         l = msg.data.split(":")
+        if l[0] == "stop_reach":
+            if self._reach_thread is not None:
+                print("killing thread")
+                self._reach_thread.kill()
         if l[0] == "spline":
             self._surfaceBSpline = self.get_surface(l[1],REFERENCE_FRAME)
             print("splining finished")
-            p=np.zeros((7,100))
-            for u in range(10):
-                for v in range(10):
-                    pt, n_hat, r_u_norm, r_v_norm = self._surfaceBSpline.calculate_surface_point(u/10., v/10.)
-                    R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
-                    q = R_surf.as_quat()
-                    p[:,u*10+v]=np.array([pt[0],pt[1],pt[2],q[0],q[1],q[2],q[3]])
-            reachable = checkReachabilityOfPoses(p)
-            good = []
-            bad = []
-            for index,reach in enumerate(reachable):
-                pose = PoseStamped()
-                pose.header.frame_id=REFERENCE_FRAME
-                pose.pose.position.x = p[0,index]
-                pose.pose.position.y = p[1,index]
-                pose.pose.position.z = p[2,index]
-                pose.pose.orientation.x = p[3,index]
-                pose.pose.orientation.y = p[4,index]
-                pose.pose.orientation.z = p[5,index]
-                pose.pose.orientation.w = p[6,index]
-                coord = self.get_pixel_from_pose(pose)
-                if coord is None:
-                    continue
-                coord=[str(coord[0]/self._width),str(coord[1]/self._height)]
-                if reach:
-                    good.append(','.join(coord))
-                else:
-                    bad.append(','.join(coord))
+            k=15
+            p=np.zeros((7,k*k))
+            R_tool_surf = ScipyR.from_euler('z',180,degrees=True)
+            try:
+                for u in range(k):
+                    for v in range(k):
+                        x=min(.999,u/float(k-1))
+                        y=min(.999,v/float(k-1))
+                        pt, n_hat, r_u_norm, r_v_norm = self._surfaceBSpline.calculate_surface_point(x, y)
+                        R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
+                        q = (R_surf * R_tool_surf).as_quat()
+                        p[:,u*k+v]=np.array([pt[0],pt[1],pt[2],q[0],q[1],q[2],q[3]])
+            except:
+                return
+            ros_poses = PoseArray()
+            ros_poses.header.stamp = rospy.Time.now()
+            ros_poses.header.frame_id = "panda_link0"
+
+            for pose in np.array(p).T:
+                pp = Pose()
+                pp.position.x = pose[0]
+                pp.position.y = pose[1]
+                pp.position.z = pose[2]
+                pp.orientation.x = pose[3]
+                pp.orientation.y = pose[4]
+                pp.orientation.z = pose[5]
+                pp.orientation.w = pose[6]
+                ros_poses.poses.append(pp)
             
-            self._ui_reach_pub.publish("good:"+';'.join(good))
-            rospy.sleep(0.1)
-            self._ui_reach_pub.publish("bad:"+';'.join(bad))
+            self._pose_pub.publish(ros_poses)
+            rospy.sleep(.01)
+            if self._reach_thread is not None:
+                self._reach_thread.kill()
+            self._reach_thread = thread_with_trace(target = self.get_reach, args=(p,))
+            self._reach_thread.start()
 
         if l[0] == "get_path":
             if self._surfaceBSpline is None:

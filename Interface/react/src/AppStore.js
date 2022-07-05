@@ -39,6 +39,11 @@ const store = (set,get) => ({
       y: 100,
       isDragging: false,
     })),
+    clearReach: () => set(state=>{
+      state.good = []
+      state.bad = []
+      console.log("clearing")
+    }),
     setScanning: (val) => set(state=>{
       state.scanning= val
     }),

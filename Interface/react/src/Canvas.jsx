@@ -5,7 +5,7 @@ import { Stack } from 'grommet';
 import useRosStore from './RosStore';
 
 export const Canvas = (props) => {
-    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow]);
+    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
     const handleDragEnd = (e) => {
@@ -18,6 +18,10 @@ export const Canvas = (props) => {
         }
       );
       spline()
+    };
+    const handleDragStart = (e) => {
+      useRosStore.getState().commandTopic.publish({data:"stop_reach:"})
+      clearReach()
     };
     const handleMove = (e) => {
         e.target.attrs["x"]=Math.min(Math.max(e.target.attrs["x"],0),maxWidth)
@@ -39,6 +43,30 @@ export const Canvas = (props) => {
     return ( 
     <Stage width={maxWidth} height={maxHeight} onMouseDown={handleClick}>
         <Layer>
+        {good.map((point) => (
+            <Circle
+                x={point.x}
+                y={point.y}
+                Radius={imageWidth/300.}
+                fill="#00ff00"
+                opacity={0.8*canvasOpacity}
+                shadowColor="black"
+                shadowBlur={10}
+                shadowOpacity={0.3} />
+          ))
+          }
+          {bad.map((point) => (
+            <Circle
+                x={point.x}
+                y={point.y}
+                Radius={imageWidth/300.}
+                fill="#ff0000"
+                opacity={0.8*canvasOpacity}
+                shadowColor="black"
+                shadowBlur={10}
+                shadowOpacity={0.3} />
+          ))
+          }
           <Shape
             sceneFunc={(context, shape) => {
               context.beginPath();
@@ -88,35 +116,9 @@ export const Canvas = (props) => {
                 shadowOffsetY={corner.isDragging ? 10 : 5}
                 scaleX={corner.isDragging ? 1.2 : 1}
                 scaleY={corner.isDragging ? 1.2 : 1}
-                // onDragStart={handleDragStart}
                 onDragMove={handleMove}
-                onDragEnd={handleDragEnd} />
-          ))
-          }
-          {good.map((point) => (
-            <Circle
-                x={point.x}
-                y={point.y}
-                Radius={4}
-                fill="#00ff00"
-                opacity={0.8*canvasOpacity}
-                draggable
-                shadowColor="black"
-                shadowBlur={10}
-                shadowOpacity={0.6} />
-          ))
-          }
-          {bad.map((point) => (
-            <Circle
-                x={point.x}
-                y={point.y}
-                Radius={4}
-                fill="#ff0000"
-                opacity={0.8*canvasOpacity}
-                draggable
-                shadowColor="black"
-                shadowBlur={10}
-                shadowOpacity={0.6} />
+                onDragEnd={handleDragEnd} 
+                onDragStart={handleDragStart}/>
           ))
           }
         </Layer>
