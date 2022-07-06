@@ -39,7 +39,7 @@ class ROSDemoAffordances(ROSAffordances):
         ''' Set up additionalROS topics'''
         self.regobjposepub = rospy.Publisher('/registeredObject',PoseStamped,queue_size=1)
         rospy.Subscriber("/getObjPose", String, self.getObjPose, queue_size=1)
-        super().__init__('spacemouseNL')
+        super().__init__('phone')
     
     def getObjPose(self,data):
         # gets pose and model from affordance engine and publish out registration info

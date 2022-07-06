@@ -15,7 +15,7 @@ from std_msgs.msg import String, Float64, Int8
 class InputHandler:
     ''' Class runs as a separate thread to properly manipulate input
         from a variety of devices and communicate to the ros_affordance_wrapper'''
-    def __init__(self, input_method="teleop", pubtime=0.02):
+    def __init__(self, input_method="phone", pubtime=0.02):
         self.updatepub = rospy.Publisher('correction',Twist,queue_size=1)
         self.flippub = rospy.Publisher('pc_flip',String,queue_size=1)
         self.articpub = rospy.Publisher('articulation',Float64,queue_size=1)
@@ -40,10 +40,43 @@ class InputHandler:
             ''' Mode 2 is the teleop interface within RVIZ '''
             rospy.Subscriber("/rviz/teleop", Twist, self.teleopRvizParse)
             rospy.Subscriber("/rviz/artic", Int8, self.teleopRvizArtic)
+        elif (input_method=="phone"):
+            ''' Mode 3 is the gamepad on the phone '''
+            rospy.Subscriber("/joy", Joy, self.GamePadParse)
         else:
             ''' default back to teleop'''
             rospy.Subscriber("/rviz/teleop", Twist, self.teleopRvizParse)
     
+    def mapping(self,x,low=0.005,high=.25):
+        a = (np.log(high)-np.log(low))/0.9
+        b = np.exp(np.log(low)-.1*a)
+        return np.sign(x)*b*((np.exp(a*np.abs(x))-1))
+        
+
+    def GamePadParse(self, msg):
+        ax = np.array(msg.axes)
+
+        self.twist.linear.x = self.mapping(ax[1])
+        self.twist.linear.y = self.mapping(ax[0])
+        self.twist.angular.x = self.mapping(-ax[2],low=.01,high=1)
+        self.twist.angular.y = self.mapping(ax[3],low=.01,high=1)
+        if msg.buttons[4]:
+            self.twist.angular.z = -np.pi/4
+        elif msg.buttons[5]:
+            self.twist.angular.z = np.pi/4
+        else:
+            self.twist.angular.z = 0
+        if msg.buttons[6]:
+            self.twist.linear.z = .01
+        elif msg.buttons[7]:
+            self.twist.linear.z = -.01
+        else:
+            self.twist.linear.z = .0
+        currTime = time.time()
+        if currTime > (self.lastPubTime+self.pubtime):
+            self.updatepub.publish(self.twist)
+            self.lastPubTime = currTime
+
     def spaceMouseParse(self,data,nonlinear):
         ''' Takes Joy topic from spacemouse and republishes as a Twist '''
         # Scaling factors for translation and rotation of spacemouse input (empirically determined)
@@ -86,6 +119,7 @@ class InputHandler:
             if currTime > (self.lastPubTime+self.pubtime):
                 self.articpub.publish(temp_ang)
                 self.lastPubTime = currTime
+
     def teleopRvizParse(self,data):
         ''' Takes Joy topic from the teleop widget panel and republishes as a Twist '''
         # Scaling factors for translation and rotation of spacemouse input
