@@ -15,6 +15,7 @@ import serial
 import signal
 import sys
 import numpy as np
+import struct
 
 class RockrDriver():
     def __init__(self):
@@ -33,7 +34,6 @@ class RockrDriver():
         while not rospy.is_shutdown():
             # Wait until there is data waiting in the serial buffer
             if self.serialPort.in_waiting > 0:
-
                 # Read data out of the buffer until a carraige return / new line is found
                 serialString = self.serialPort.readline()
                 #print(serialString)
@@ -42,14 +42,16 @@ class RockrDriver():
                 # Print the contents of the serial data
                 try:
                     # print('bytes:',serialString)
-                    int_val = int.from_bytes(serialString[len(serialString)-6:len(serialString)-2], byteorder='little', signed = False)
+                    # int_val = int.from_bytes(serialString[len(serialString)-6:len(serialString)-2], byteorder='little', signed = False)
+                    int_val = struct.unpack('<I',serialString[len(serialString)-6:len(serialString)-2])[0]
                     conv_val = (float(int_val)-40000.)/30000. # megh added 40k offset to encoder count, range is ~ +/-30k
-                    # print(int_val)
+                    
                     input_temp = Float64MultiArray()
                     input_temp.data = np.array([conv_val])
                     self._correction_pub.publish(input_temp)
 
-                except:
+                except Exception as e:
+                    print(e)
                     pass
             rate.sleep()
 
