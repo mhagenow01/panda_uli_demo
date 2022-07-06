@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+from typing import Callable
+import rospy
+import actionlib
+import control_msgs.msg 
+from geometry_msgs.msg import Twist, PoseStamped, Vector3
+from franka_gripper.msg import GraspAction, MoveAction, GraspGoal, MoveGoal
+from sensor_msgs.msg import Joy
+from std_msgs.msg import String, Float64, Float64MultiArray
+import tf2_geometry_msgs
+import tf
+from tf.transformations import *
+import tf2_ros
+import serial
+import signal
+import sys
+import numpy as np
+
+class RockrDriver():
+    def __init__(self):
+        self.setup()
+        self.loop()    
+
+    def setup(self):
+        self.serialPort = serial.Serial(port='/dev/serial/by-id/usb-TI_Texas_Instruments_Inc.XDS100_Ver_2.0_TI64KDGR-if01-port0', baudrate=115200, bytesize=serial.EIGHTBITS, timeout=2, stopbits=serial.STOPBITS_ONE)
+        self.serialString = ""  # Used to hold data coming over UART
+        self._button_pub = rospy.Publisher("/zdinput/button", Float64, queue_size=1)
+        self._correction_pub = rospy.Publisher("/zdinput/input", Float64MultiArray, queue_size=1)
+        rospy.sleep(0.5)
+
+    def loop(self):
+        rate = rospy.Rate(100) # 100 Hz
+        while not rospy.is_shutdown():
+            # Wait until there is data waiting in the serial buffer
+            if self.serialPort.in_waiting > 0:
+
+                # Read data out of the buffer until a carraige return / new line is found
+                serialString = self.serialPort.readline()
+                #print(serialString)
+
+                #temp = np.array(int(serialString.decode('ascii'))).astype('uint32')
+                # Print the contents of the serial data
+                try:
+                    # print('bytes:',serialString)
+                    int_val = int.from_bytes(serialString[len(serialString)-6:len(serialString)-2], byteorder='little', signed = False)
+                    conv_val = (float(int_val)-40000.)/30000. # megh added 40k offset to encoder count, range is ~ +/-30k
+                    # print(int_val)
+                    input_temp = Float64MultiArray()
+                    input_temp.data = np.array([conv_val])
+                    self._correction_pub.publish(input_temp)
+
+                except:
+                    pass
+            rate.sleep()
+
+    def signal_handler(self, signal, frame):
+        sys.exit()
+
+if __name__ == "__main__":
+    rospy.init_node('rockr')
+    rockr_driver = RockrDriver()
+    signal.signal(signal.SIGINT, mouse_driver.signal_handler)
