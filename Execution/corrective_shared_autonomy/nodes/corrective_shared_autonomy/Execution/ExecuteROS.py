@@ -303,10 +303,10 @@ class ExecuteROS:
         cart_dist = np.linalg.norm(np.array([x,y,z]-np.array([desired_x, desired_y, desired_z])))
         num_samples_cart = cart_dist / 0.1
 
-        # max angular speed - 10 degrees per second = 0.1745
+        # max angular speed - 30 degrees per second = 0.5235
         rot_between = key_rots[1].inv() * key_rots[0]
         ang_dist = np.linalg.norm(rot_between.as_rotvec())
-        num_samples_ang = ang_dist / 0.1745
+        num_samples_ang = ang_dist / 0.5235
 
         # 100 samples per second
         num_interp_samples = int(100*np.max([num_samples_cart, num_samples_ang]))
