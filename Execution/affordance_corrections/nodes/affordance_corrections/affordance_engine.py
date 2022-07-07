@@ -259,6 +259,11 @@ class AffordanceEngine:
         ''' Once corrections are applied, this routine refits using the slimmed ICP'''
         if(len(self.objectsOfInterest)>0 and self.fitting):
             self.objectsOfInterest[self.active_obj].refit_obj(self.scene, self.cpprefitting)
+
+    def refit_active_object_with_restarts(self):
+        ''' This routine refits the active object after it has moved (random restarts)'''
+        if(len(self.objectsOfInterest)>0 and self.fitting):
+            self.objectsOfInterest[self.active_obj].refit_obj_restarts(self.scene, self.artic_svd_initial, self.cppfitting)
     
     def refit_all_objects(self):
         ''' Fits all objects in scene, for example, when scene is updated '''
