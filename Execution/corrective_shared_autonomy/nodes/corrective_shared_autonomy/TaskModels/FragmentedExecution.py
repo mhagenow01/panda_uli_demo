@@ -418,7 +418,7 @@ def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[], super_pos_vars =
     return vals.T # num vars x num_samples
 
 def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,tool_offset):
-    approach_dists = [0.05, 0.01]
+    approach_dists = [0.1, 0.01]
     time = np.abs(approach_dists[0]-approach_dists[1]) / vel
     
     segment = HybridSegment()
@@ -432,7 +432,7 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
     q_app = (R_surf * R_tool_surf).as_quat()
 
-    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    starting = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 0.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     ending = [approach_pt[0], approach_pt[1], approach_pt[2], q_app[0], q_app[1], q_app[2], q_app[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     starting[0:3] = starting[0:3] + approach_dists[0] * n_hat
     ending[0:3] = ending[0:3] + approach_dists[1] * n_hat
@@ -445,7 +445,7 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     return segment
 
 def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool_offset):
-    retraction_dists = [0.01, 0.05]
+    retraction_dists = [0.01, 0.1]
     time = np.abs(retraction_dists[0]-retraction_dists[1]) / vel
 
     segment = HybridSegment()
@@ -461,7 +461,7 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     q_ret = (R_surf * R_tool_surf).as_quat()
 
     starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 1.0, tool_offset[0], tool_offset[1], tool_offset[2]]
-    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0, 0.0, 0.0, 0.0]
+    ending = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0, tool_offset[0], tool_offset[1], tool_offset[2]]
     starting[0:3] = starting[0:3] + retraction_dists[0] * n_hat
     ending[0:3] = ending[0:3] + retraction_dists[1] * n_hat
     orig_vals = interpMultD(starting,ending,segment.num_samples,quat_vars=[3])
@@ -469,7 +469,7 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     
     return segment
 
-def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel):
+def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel, tool_offset_start, tool_offset_end):
     retract_pt, n_hat1, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
     q_ret = (R_surf * R_tool_surf_start).as_quat()
@@ -484,7 +484,7 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     segment.hybrid = False
     segment.num_samples = int(time*samps_per_sec) 
     segment.num_samples = max(5,segment.num_samples) # at least 5 samples to avoid crashing dmp
-    segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve']
+    segment.state_names = ['x','y','z','qx','qy','qz','qw','delta_s','valve', 'tool_offset_x','tool_offset_y','tool_offset_z']
     segment.original_vals = []
     segment.corrections.append(np.zeros((len(segment.state_names),segment.num_samples)))
 
@@ -496,6 +496,8 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
         orig_vals[0:3,ii] = r + 0.10 * n_hat 
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
         orig_vals[3:7,ii] = (R_surf * R_tool_surf_end).as_quat()
+
+    orig_vals[9:12,:] = interpMultD([tool_offset_start[0], tool_offset_start[1], tool_offset_start[2]],[tool_offset_end[0], tool_offset_end[1], tool_offset_end[2]],segment.num_samples)   
 
     # starting = [retract_pt[0], retract_pt[1], retract_pt[2], q_ret[0], q_ret[1], q_ret[2], q_ret[3], 1.0, 0.0]
     # starting[0:3] = starting[0:3] + 0.05 * n_hat1
@@ -510,7 +512,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
     # TODO: this should actually also consider reachability
     segments = []
     vel_between = 0.05
-    vel_appret = 0.05
+    vel_appret = 0.03
     
     trajs_inds = getContMask(mask) # get start and end samples for each continuous segment
 
@@ -547,12 +549,12 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             tool_offset_ret = np.zeros((3,))
             if("tool_offset_x" in state_names):
                 to_ind = state_names.index("tool_offset_x")
-                tool_offset_app = np.array([pass_state_vals[to_ind,0], pass_state_vals[to_ind,0], pass_state_vals[to_ind,0]])
-                tool_offset_ret = np.array([pass_state_vals[to_ind,-1], pass_state_vals[to_ind,-1], pass_state_vals[to_ind,-1]])
+                tool_offset_app = np.array([pass_state_vals[to_ind,0], pass_state_vals[to_ind+1,0], pass_state_vals[to_ind+2,0]])
+                tool_offset_ret = np.array([pass_state_vals[to_ind,-1], pass_state_vals[to_ind+1,-1], pass_state_vals[to_ind+2,-1]])
 
             # Generate in between passes if this is not the first overall pass
             if last_uv is not None:
-                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], vel_between)
+                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], vel_between, last_tool_offset, tool_offset_app)
                 segments.append(segmentTemp)
 
             # Generate approach
@@ -577,6 +579,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
             segments.append(segmentTemp)
 
             last_uv = [ending_u, ending_v] # store previous end of path
+            last_tool_offset = tool_offset_ret
             last_R_tool_surf = R_tool_surf_ret
 
     model = DMPLWRhardcoded(verbose=False, dt=1./samps_per_sec)
@@ -653,7 +656,6 @@ class FragmentedExecutionManager():
         if not self.moveinprogress: # to avoid hanging if this is called a bunch of times (clear reachability takes a while)
             self.moveinprogress = True 
             self.clearReachability()
-            print("fragmentedexecdone")
             self.rvizpub.publish(String("execdone"))
             self.moveinprogress = False
 
