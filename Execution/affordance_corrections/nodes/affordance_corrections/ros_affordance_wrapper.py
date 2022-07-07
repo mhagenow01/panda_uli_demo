@@ -74,6 +74,7 @@ class ROSAffordances:
         rospy.Subscriber("correction", Twist, self.applyCorrection)
         rospy.Subscriber("articulation",Float64,self.applyArticulation)
         rospy.Subscriber("nextarticulation",String,self.nextArticulation)
+        rospy.Subscriber("refitrandomrestarts",String,self.refitRandomRestarts)
 
         rospy.sleep(1) # sleep one second to allow publishers to register
 
@@ -83,6 +84,13 @@ class ROSAffordances:
 
         self.lock = Lock() # avoid duplicate calls to visualization
 
+    def refitRandomRestarts(self):
+        ''' Refit active object with random restarts. For example if object is repositioned '''
+        if len(self.pts_of_interest)>0:
+            self.engine.refit_active_object_with_restarts()
+
+        worldState = self.engine.getUpdatedWorld()
+        self.updateVisualization(worldState)
 
     def deleteActive(self):
         ''' If there is an active object, delete it! '''

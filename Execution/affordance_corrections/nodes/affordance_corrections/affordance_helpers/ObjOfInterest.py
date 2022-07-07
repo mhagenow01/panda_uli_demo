@@ -83,6 +83,41 @@ class ObjOfInterest:
         # get sorted likelihoods for model cycling
         self.sorted = np.argsort(np.array(min_errors_temp))
 
+    def refit_obj_restarts(self, scene, artic_svd_initial,cppfitting):
+        """ for the active model, fit again with random restarts"""
+
+        # TODO: make this only do the active model
+        startt = time.time()
+
+        # fits each of the models in the library
+        if cppfitting: # c++ fitting
+            rospack = rospkg.RosPack()
+            root_dir = rospack.get_path('affordance_corrections')
+            cppreglibpath = os.path.join(root_dir, "nodes", "affordance_corrections", "affordance_helpers", "cppfitting", "build", "libcppregistration.so")
+            cppreglib = ctypes.CDLL(cppreglibpath)
+            cppreglib.getFitsForModels.restype = ctypes.POINTER(FITHOLDER)
+    
+            fitinputs = packageFittingInfo(np.asarray(scene.points),self.ref_point,self.models,artic_svd_initial)
+            
+            # Call to C++
+            fitholder_ptr_unconverted = cppreglib.getFitsForModels(ctypes.byref(fitinputs))
+            self.fits = convert_fits(fitholder_ptr_unconverted,cppreglib)
+
+        else: # python fitting
+            self.fits = get_fits_for_models(scene,self.ref_point,self.models,artic_svd_initial)
+
+        print("Fitting Time: ",time.time()-startt)
+
+        # Set active to lowest error
+        min_err = np.inf
+        min_errors_temp = []
+        for ii in range(0,len(self.models)):
+            weighted_residual = self.fits[ii].residual/(self.models[ii].num_pts)
+            min_errors_temp.append(weighted_residual)
+        
+        # get sorted likelihoods for model cycling
+        self.sorted = np.argsort(np.array(min_errors_temp))
+
     def refit_obj(self,scene,cpp_refitting):
         ''' After the user finishes a correction, perform a more basic ICP to further refine the pose '''
         if self.refitting:

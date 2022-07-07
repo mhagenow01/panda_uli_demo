@@ -35,11 +35,11 @@ angle = None
 class ROSDemoAffordances(ROSAffordances):
     """ Keeps track of objects of interest, fits, etc. Specificially, provides a level on top of the
         affordance engine which interfaces with many ROS topics"""
-    def __init__(self):
+    def __init__(self, input_method='spacemouseNL'):
         ''' Set up additionalROS topics'''
         self.regobjposepub = rospy.Publisher('/registeredObject',PoseStamped,queue_size=1)
         rospy.Subscriber("/getObjPose", String, self.getObjPose, queue_size=1)
-        super().__init__('phone')
+        super().__init__(input_method)
     
     def getObjPose(self,data):
         # gets pose and model from affordance engine and publish out registration info
@@ -116,6 +116,7 @@ def receivedScene(data):
     print("received a new scene: ", len(xyz), " in ",time.time()-startt," seconds")
 
     rosaff.setSceneXYZRGB(xyz,rgb)
+    rosaff.refitRandomRestarts() # if there is an object, refit it after rescanning (including random restarts)
     time.sleep(1.0)
 
 def main():
@@ -124,13 +125,16 @@ def main():
     rospack = rospkg.RosPack()
     package_dir = rospack.get_path('affordance_corrections')+'/../../'
     
-    rosaff = ROSDemoAffordances()
+    input_method = rospy.get_param("/ros_uli_wrapper/input_method")
+    models_str = rospy.get_param("/ros_uli_wrapper/models")
+    model_dir = rospy.get_param("/ros_uli_wrapper/model_dir")
+
+    rosaff = ROSDemoAffordances(input_method=input_method)
     rosaff.toggleSVDforInitialArticulation(True)
     rosaff.setCppFitting(True)
     rosaff.setCppRefitting(False)
     rosaff.setFitting(True)
-    models_str = rospy.get_param("/ros_uli_wrapper/models")
-    model_dir = rospy.get_param("/ros_uli_wrapper/model_dir")
+   
     models = []
     for model in models_str.split(";"):
         models.append(package_dir+'ULIConfig/registration_models/'+model)

@@ -4,6 +4,7 @@
     <include file="$(find affordance_corrections)/launch/affordance_corrections.launch">
         <arg name="models" value="IRC_piece1.STL" /> <!-- semi-colon delimited list e.g. anna_study1.STL-->
         <arg name="model_dir" value="ULIConfig/registration_models/" /> <!-- path of model directory within src-->
+        <arg name="input_method" value="spacemouseNL" /> <!-- name of input: e.g., spacemouseNL, phone-->
     </include>
     <node pkg="corrective_shared_autonomy" type="run_templates" name="run_templates" output="screen"/>
     <node pkg="corrective_shared_autonomy" type="kdlik" name="kdlik" output="screen"/>
