@@ -21,4 +21,5 @@ install(TARGETS fdonedzdcontroller
 
 catkin_install_python(PROGRAMS
     nodes/joy_correction_driver
+    nodes/rockr_driver
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
