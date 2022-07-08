@@ -633,6 +633,7 @@ class FragmentedExecutionManager():
         self.model_name = ''
         self.min_length = 40
         self.dt = 40
+        self.downsamp = 40
         self.plotting_size = 0.01
         self.max_num_traj_pts = 0
         self.fragmentedBehavior = None
@@ -715,7 +716,7 @@ class FragmentedExecutionManager():
             markers.markers.append(marker)
         self.pathmarkerarraypub.publish(markers)
 
-    def displayReachability(self,trajs):
+    def displayReachability(self,trajs,downsamp):
         self.clearReachability()
         markerarr = MarkerArray()
         mark_id = 0
@@ -730,7 +731,7 @@ class FragmentedExecutionManager():
 
         for ii in range(0,len(trajs)):
             tmp_num_samps = np.shape(trajs[ii])[1]
-            for jj in range(0,tmp_num_samps):
+            for jj in range(0,tmp_num_samps,downsamp):
                 pos = trajs[ii][0:3,jj]
                 if mask_tmp[ii][jj]==0: # not possible
                     markerarr.markers.append(circ_marker(mark_id, pos, self.plotting_size, color=[1.0, 150./255, 138./255], frame="map"))
@@ -771,14 +772,14 @@ class FragmentedExecutionManager():
             # print("-----------------------------")
             # print("TASKMASK")
             # print(self.taskmask)
-        self.tempmask, self.trajs, self.new_pts = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask)
+        self.tempmask, self.trajs, self.new_pts = getFragmentedTraj(self.surface,self.state_names,self.state_vals,self.q_surf,self.t_surf,self.min_length,self.taskmask, self.downsamp)
         print("-----------------------------")
         print("TEMPMASK")
         print(np.shape(self.tempmask))
         # print(self.tempmask)
         print("-----------------------------")
         print("disp reach")
-        self.displayReachability(self.trajs)
+        self.displayReachability(self.trajs,self.downsamp)
         print("learning behav")
         if self.new_pts:
             self.fragmentedBehavior = constructConnectedTraj(self.surface,self.state_names,self.state_vals,self.tempmask,self.corrections,40.0)
