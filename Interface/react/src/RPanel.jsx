@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
 import useAppStore from './AppStore';
+import useParamStore from './ParamStore';
 import useRosStore from './RosStore';
 import {ParameterModule} from './ParameterModule';
 import { Grommet, List, Stack,Button, Collapsible, Tabs, Tab, TextInput, Heading, Text, Card, CardHeader, CardBody, Grid, Box,CheckBox } from 'grommet';
@@ -15,8 +16,9 @@ function d2hex(number)
 
 export const RPanel = (props) => {  
   const [connect, connection, url,imageTopic,tmpSub] = useRosStore(state=>([state.connect, state.connection, state.url,state.imageTopic,state.tmpSub])) 
-  const [parameters,scanning,computed_traj,computing,setScanning,setComputed_traj,setComputing,setKnownWorkflow] = useAppStore(state=>[state.parameters,state.scanning,state.computed_traj,state.computing,state.setScanning,state.setComputed_traj,state.setComputing,state.setKnownWorkflow])
-  const [messages, addMessage, sendTrigger, sendMessage, get_path,publishStates,setCanvasOpacity,robotStatus,paperStatus] = useAppStore(state=>([state.messages,state.addMessage,state.sendTrigger,state.sendMessage,state.get_path,state.publishStates,state.setCanvasOpacity,state.robotStatus,state.paperStatus]))
+  const [parameters] = useParamStore(state=>[state.parameters])
+  const [scanning,computed_traj,computing,setScanning,setComputed_traj,setComputing,setKnownWorkflow,setTargetOpacity] = useAppStore(state=>[state.scanning,state.computed_traj,state.computing,state.setScanning,state.setComputed_traj,state.setComputing,state.setKnownWorkflow,state.setTargetOpacity])
+  const [messages, addMessage, sendTrigger, sendMessage, get_path,publishStates,setCanvasOpacity,robotStatus,paperStatus,setPaperChange,paperChange] = useAppStore(state=>([state.messages,state.addMessage,state.sendTrigger,state.sendMessage,state.get_path,state.publishStates,state.setCanvasOpacity,state.robotStatus,state.paperStatus,state.setPaperChange,state.paperChange]))
   const [sendObject,sendModel,decreaseTimer] = useAppStore(state=>([state.sendObject,state.sendModel,state.decreaseTimer]))
   const [open, setOpen] = React.useState(true);
 
@@ -34,10 +36,10 @@ export const RPanel = (props) => {
       <Box background="light-2" 
         round="medium"
         direction="row" justify="end" height="100vh">
-        <Button color="light-2" alignSelf="stretch" basis="small" onClick={() => setOpen(!open)} label={open?">":"<"} />
-        <Collapsible direction="horizontal" open={open}>
+        {/* <Button color="light-2" alignSelf="stretch" basis="small" onClick={() => setOpen(!open)} label={open?">":"<"} />
+        <Collapsible direction="horizontal" open={open}> */}
           <Box direction='column' gap="xxsmall" pad="xxsmall">
-            <Box basis="6vh" fill="horizontal" alignContent='center'  direction="row" gap="medium">
+            <Box basis="6vh" fill="horizontal" alignContent='center'  direction="row" gap="small">
               <Box alignSelf={"center"} background={{color:connection==='connected'?"green":"red"}} round={"large"} width="4vh" height={"4vh"}/>
                 <Button onClick={()=>{
                     connect();
@@ -46,13 +48,23 @@ export const RPanel = (props) => {
                   <Box><Text size="3vh">{connection==='connected'?"Connected":"Connect"} to {url}</Text></Box>
                 </Button>
             </Box>
-            <Box basis="6vh" fill="horizontal" alignContent='center' justify="start" direction="row" gap="medium">
+            <Box basis="6vh" fill="horizontal" alignContent='center' justify="start" direction="row" gap="small">
               <Box alignSelf={"center"} background={{color:robotStatus}} round={"large"} width="4vh" height={"4vh"}/>
               <Box justify={"center"} ><Text justify={"center"} size="3vh">Robot state</Text></Box>
               <Box alignSelf={"center"} background={{color:["#",d2hex(1-paperStatus),d2hex(paperStatus),"00"].join('')}} round={"large"} width="4vh" height={"4vh"}/>
               <Box justify={"center"} ><Text justify={"center"} size="3vh">Paper state</Text></Box>
               <Button size="xsmall" alignSelf="center" label={<Box><Text size="3vh">Change Paper</Text></Box>} 
                     onClick={() => {
+                      if(paperChange === "Change paper"){
+                        console.log("true")
+                        setPaperChange("Return to position")
+                        useRosStore.getState().commandTopic2.publish({data:"gotopaper"})                      
+                      }
+                      else{
+                        console.log("false")
+                        setPaperChange("Change paper")
+                        useRosStore.getState().commandTopic2.publish({data:"reverse"})
+                      }
                     }} />
             </Box>
             
@@ -77,7 +89,7 @@ export const RPanel = (props) => {
                       </CardHeader>
                       <CardBody pad="small">
                       {parameters.map((button,idx) => (
-                        <ParameterModule param={button} key={idx} idx={idx}/>
+                         <ParameterModule param={button} key={idx} idx={idx}/>
                       ))
                       }
                       </CardBody>
@@ -115,6 +127,7 @@ export const RPanel = (props) => {
                       onClick={() => {
                         sendTrigger("scan"); //Waiting for scanningdone
                         setScanning(true)
+                        setTargetOpacity(1)
                       }} />
                     <Button size="small" label={<Box><Text size="4vh">Delete Object</Text></Box>} 
                       onClick={() => {
@@ -137,7 +150,7 @@ export const RPanel = (props) => {
               </Tab>
             </Tabs>
           </Box>
-        </Collapsible>
+        {/* </Collapsible> */}
       </Box>
     )
 }

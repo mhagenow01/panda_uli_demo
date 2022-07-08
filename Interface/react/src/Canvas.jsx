@@ -6,7 +6,7 @@ import useRosStore from './RosStore';
 import Konva from 'konva';
 
 export const Canvas = (props) => {
-    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach]);
+    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach,targetOpacity] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach,state.targetOpacity]);
     const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
     const setCorner = useAppStore(state=>state.setCorner)
 
@@ -37,14 +37,25 @@ export const Canvas = (props) => {
         }
       );
     };
-    const handleClick = (e) => {
+    const handleTarget = (e) => {
+      console.log(e)
+      console.log(e.evt.type)
+      if(e.evt.type === "mouseup"){
         var x=e.evt["clientX"]
         var y=e.evt["clientY"]
         if (x<maxWidth && y < maxHeight)
-            useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+        useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+      }
+      else{
+        var x=e.evt.changedTouches[0]["clientX"]
+        var y=e.evt.changedTouches[0]["clientY"]
+        if (x<maxWidth && y < maxHeight)
+        useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+
+      }
     };
     return ( 
-    <Stage width={maxWidth} height={maxHeight} onMouseDown={handleClick}>
+    <Stage width={maxWidth} height={maxHeight}>
         <Layer>
         {good.map((point) => (
             <Circle
@@ -52,10 +63,7 @@ export const Canvas = (props) => {
                 y={point.y}
                 Radius={imageWidth/300.}
                 fill="#00ff00"
-                opacity={0.8*canvasOpacity}
-                shadowColor="black"
-                shadowBlur={10}
-                shadowOpacity={0.3} />
+                opacity={0.8*canvasOpacity} />
           ))
           }
           {bad.map((point) => (
@@ -64,10 +72,7 @@ export const Canvas = (props) => {
                 y={point.y}
                 Radius={imageWidth/300.}
                 fill="#ff0000"
-                opacity={0.8*canvasOpacity}
-                shadowColor="black"
-                shadowBlur={10}
-                shadowOpacity={0.3} />
+                opacity={0.8*canvasOpacity}/>
           ))
           }
           <Shape
@@ -84,7 +89,17 @@ export const Canvas = (props) => {
             opacity={.8*canvasOpacity}
             strokeWidth={imageWidth/100.}
           />
-
+          <Circle
+              x={300}
+              y={300}
+              Radius={imageWidth/30.}
+              fill="#eeeeee"
+              opacity={0.8*targetOpacity}
+              draggable
+              shadowColor="black"
+              shadowBlur={10}
+              shadowOpacity={0.6}
+              onDragEnd={handleTarget}/>
           <Shape
             sceneFunc={(context, shape) => {
               context.beginPath();

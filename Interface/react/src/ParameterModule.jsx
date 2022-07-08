@@ -1,15 +1,15 @@
 import React, {useCallback} from 'react';
-import useAppStore from './AppStore';
+import useParamStore from './ParamStore';
 import { Grommet, List, Stack,Button, Text, Card, Grid, Box,CheckBox, Select, RangeInput } from 'grommet';
 
 export const ParameterModule = (props) => { 
   const {idx} = props;
-  const parameterInfo = useAppStore(useCallback(state=>state.parameters[idx],[idx]));
+  const parameterInfo = useParamStore(useCallback(state=>state.parameters[idx],[idx]));
 
   // const parameterInfoChanged = useAppStore(useCallback(state=>{
   //   state.buttonDetails[idx]
   // },[idx]));
-  const [setParameter] = useAppStore(state=>([state.setParameter]))
+  const [setParameter] = useParamStore(state=>([state.setParameter]))
   if(!parameterInfo)
     return null
   const label =<Box justify={"center"} alignContent={"center"} width={'30%'}><Text size="3vh">{parameterInfo.label}</Text></Box>

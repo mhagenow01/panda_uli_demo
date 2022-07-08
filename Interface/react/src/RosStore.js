@@ -4,6 +4,8 @@ import {Viewer, Grid, UrdfClient,PointCloud2} from 'ros3d';
 import * as ROS3D from 'ros3d';
 
 import useAppStore from './AppStore';
+import useParamStore from './ParamStore';
+import useImageStore from './ImageStore';
 
 const store = (set) => ({
     url: '',
@@ -39,13 +41,13 @@ const store = (set) => ({
           });
       
         //   Setup the marker client.
-        var markerClient = new ROS3D.MarkerArrayClient({
-            ros : ros,
-            tfClient : tfClient,
-            topic : '/reachabilitymap',
-            path: process.env.PUBLIC_URL + 'assets/',
-            rootObject : viewer.scene
-        });
+        // var markerClient = new ROS3D.MarkerArrayClient({
+        //     ros : ros,
+        //     tfClient : tfClient,
+        //     topic : '/reachabilitymap',
+        //     path: process.env.PUBLIC_URL + 'assets/',
+        //     rootObject : viewer.scene
+        // });
         var markerClient2 = new ROS3D.MarkerArrayClient({
             ros : ros,
             tfClient : tfClient,
@@ -154,20 +156,23 @@ const store = (set) => ({
 
 		const pathTopic = new ROSLIB.Topic({
 			ros: ros,
-			//name: 'camera/image_raw/compressed',
 			name: '/ui/path',
 			messageType: 'std_msgs/String',
 		});
 
 		const reachTopic = new ROSLIB.Topic({
 			ros: ros,
-			//name: 'camera/image_raw/compressed',
 			name: '/ui/reach',
 			messageType: 'std_msgs/String',
 		});
 		const feedbackTopic = new ROSLIB.Topic({
 			ros: ros,
 			name: '/ui/feedback',
+			messageType: 'std_msgs/String',
+		});
+		const commandTopic2 = new ROSLIB.Topic({
+			ros: ros,
+			name: '/commands',
 			messageType: 'std_msgs/String',
 		});
 
@@ -183,17 +188,19 @@ const store = (set) => ({
 		});
 
 		const imageTopic = new ROSLIB.Topic({
+            queue_length: 1,
 			ros: ros,
 			//name: 'camera/image_raw/compressed',
 			name: 'k4a/rgb/image_raw/compressed',
-			messageType: 'sensor_msgs/CompressedImage',
+			messageType: 'sensor_msgs/CompressedImage'
 		});
+        const _ = require('lodash');
+
+        var throt_fun = _.throttle(function (message) {
+			useImageStore.getState().setImage('data:image/jpg;base64,' + message.data);
+            }, 200);
          
-        imageTopic.subscribe(function (message) {
-			useAppStore.getState().setImage('data:image/jpg;base64,' + message.data);
-			// console.log(imagedata);
-			// document.getElementById('livestream').src = imagedata;
-		});
+        imageTopic.subscribe((msg) =>{throt_fun (msg)});
 
 		const robotTopic = new ROSLIB.Topic({
 			ros: ros,
@@ -213,10 +220,10 @@ const store = (set) => ({
         rvizTopic.subscribe((msg)=>useAppStore.getState().receivedRviz(msg.data));
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
         eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
-        setParamTopic.subscribe((msg)=>useAppStore.getState().setParameters(msg.data));
+        setParamTopic.subscribe((msg)=>useParamStore.getState().setParameters(msg.data));
         ros.connect();
         useAppStore.getState().resizeWindow();
-        paramTopic.publish({data:JSON.stringify(useAppStore.getState().parameters)})
+        paramTopic.publish({data:JSON.stringify(useParamStore.getState().parameters)})
         return {
             url:state.url,
             connection:'connecting',
@@ -230,17 +237,18 @@ const store = (set) => ({
             rvizTopic:rvizTopic,
             objTopic:objTopic,
             modelTopic:modelTopic,
+            commandTopic2:commandTopic2,
         };
     })
 });
 
 const useRosStore = create(store);
 
-useRosStore.getState().setUrl('ws://localhost:9090');
+//useRosStore.getState().setUrl('ws://localhost:9090');
 //useRosStore.getState().setUrl('ws://192.168.0.114:9090'); //Home
 //useRosStore.getState().setUrl('ws://10.141.20.93:9090'); //UWnet
 //useRosStore.getState().setUrl('ws://192.168.3.4:9090'); // wifi
-//useRosStore.getState().setUrl('ws://192.168.3.5:9090'); // lan
+useRosStore.getState().setUrl('ws://192.168.3.5:9090'); // lan
 //useRosStore.getState().setUrl('ws://192.168.0.2:9090');
 //useRosStore.getState().setUrl('ws://10.138.193.103:9090'); // eduroam
 

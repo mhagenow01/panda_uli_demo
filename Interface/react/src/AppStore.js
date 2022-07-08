@@ -12,7 +12,9 @@ const store = (set,get) => ({
     messages: ['default message 2','default message 1'],
     robotStatus: "grey",
     paperStatus: 0.0,
+    paperChange: "Change paper",
     timer: 0,
+    targetOpacity:0.,
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],
@@ -26,14 +28,6 @@ const store = (set,get) => ({
     scanning: false,
     computed_traj: false,
     computing: false,
-    parameters: [ {type: "select", id:"passes", label:"# of passes", value:"2", options:["2","3","4","5","6","7"]},
-                  {type: "select", id:"direction", label:"Orientation", value:"Horizontal", options:["Horizontal","Vertical"]},
-                  {type: "select", id:"material", label:"Material", value:"Composite", options:["Composite","Metal","Paint"]},
-                  {type: "slider", id:"force", label:"Force", value:7,min:0,max:20,unit: "N"},
-                  {type: "slider", id:"speed", label:"Feed Rate", value:10,min:1,max:20, unit: "mm/s"},
-                  {type: "slider", id:"pitch", label:"Pitch angle", value:0,min:-10,max:10, unit: "deg"},
-                  {type: "select", id:"tool", label:"Tool", value:"pandaOrbital", options:["pandaOrbital","panda_gripper"]}
-                ],
     configDetails: "",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
@@ -55,6 +49,9 @@ const store = (set,get) => ({
     setScanning: (val) => set(state=>{
       state.scanning= val
     }),
+    setPaperChange: (val) => set(state=>{
+      state.paperChange = val
+    }),
     setFeedback: (msg) => set(state=>{
       let cmds = msg.split(';')
       state.timer = cmds[0]
@@ -69,14 +66,15 @@ const store = (set,get) => ({
     setKnownWorkflow: (val) => set(state =>{
       state.knownWorkflow = val
       state.canvasOpacity=1-val
+      state.targetOpacity=1-val
     }),
     setPaperStatus: (val) => set(state =>{
       state.paperStatus = val
     }),
     resizeWindow: () => set(state=>{
       console.log('resized to: ', window.innerWidth, 'x', window.innerHeight)
-      var w = window.innerWidth*.98
-      var h = window.innerHeight*.92
+      var w = window.innerWidth*.63
+      var h = window.innerHeight*1.03
       //var k=16./9.
       var k=4./3.
       if( w > k*h)
@@ -198,17 +196,10 @@ const store = (set,get) => ({
         });   
       })
     }),
-    setParameter: (idx,value) => set(state=>{
-       state.parameters[idx].value = value
-       useRosStore.getState().paramTopic.publish({data:JSON.stringify(state.parameters)})
-     }),
-     publishStates: () => set(state=>{
-      useRosStore.getState().paramTopic.publish({data:JSON.stringify(state.parameters)})
-    }),
-     setParameters: (param) => set(state=>{
-       state.parameters=JSON.parse(param)}),
-     setCanvasOpacity: (val) => set(state=>{
-         state.canvasOpacity=val})
+    setCanvasOpacity: (val) => set(state=>{
+        state.canvasOpacity=val}),
+    setTargetOpacity: (val) => set(state=>{
+        state.targetOpacity=val})
 });
 
 const useAppStore = create(immer(store));
