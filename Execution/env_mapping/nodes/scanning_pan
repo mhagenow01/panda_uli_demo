@@ -22,6 +22,14 @@ import subprocess32
 class PandaReg:
     def __init__(self):
         rospy.init_node('panda_pan')
+        rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.storePandaStateTime)
+        self.robot_active = True
+
+    def storePandaStateTime(self,data):
+        if data.robot_mode == 1 or data.robot_mode == 2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
+            self.robot_active = True
+        else:
+            self.robot_active = False
 
     def linearInterpolation(self,start,end,val):
         return start + (end-start)*val
@@ -80,6 +88,7 @@ class PandaReg:
         # Sleep for Driver to Start #
         #############################
         rospy.sleep(3.5)
+        pub_rviz.publish(String("camera_driver_running"))
 
         ###################################
         # Run the registration sequence 
@@ -91,9 +100,10 @@ class PandaReg:
         # Up Down
         max_theta = 2 * np.pi
         for theta in np.arange(0, max_theta, 0.015):
-            
             if not rospy.is_shutdown():
-                R_cam = ScipyR.from_euler('XYZ', [0.0, -0.2*np.sin(theta), 0.0])
+                if not self.robot_active:
+                    return
+                R_cam = ScipyR.from_euler('XYZ', [0.0, -0.3*np.sin(theta), 0.0])
                 R_curr = R_start * R_cam
                 q = R_curr.as_quat()
                 hpose.pose.orientation.x = q[0]
@@ -114,8 +124,9 @@ class PandaReg:
         # Left Right
         max_theta = 2 * np.pi
         for theta in np.arange(0, max_theta, 0.015):
-            
             if not rospy.is_shutdown():
+                if not self.robot_active:
+                    return
                 R_cam = ScipyR.from_euler('XYZ', [-0.2*np.sin(theta), 0.0, 0.0])
                 R_curr = R_start * R_cam
                 q = R_curr.as_quat()
