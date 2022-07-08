@@ -46,6 +46,8 @@ class PaperChanger:
         rospy.Subscriber("/commands",String,self.on_command)
         #self._joint_pub = rospy.Publisher("/franka_ros_interface/motion_controller/arm/joint_commands",JointCommand,queue_size=2)
         self._joint_pub = rospy.Publisher("/franka_ros_interface/motion_controller/arm/joint_commands",JointCommand,queue_size=2)
+        self._pause_pub = rospy.Publisher("/execution/interrupt", String, queue_size=1)
+
         time.sleep(0.5)
 
     def on_state(self, msg):
@@ -86,6 +88,7 @@ class PaperChanger:
         return start + (end-start)*val
 
     def goToPaper(self):
+        self._pause_pub.publish("pause")
         try:
             # get desired pose
 
@@ -166,6 +169,7 @@ class PaperChanger:
             time.sleep(0.01)
         
         self.admittance_pub.publish(Bool(True))
+        self._pause_pub.publish("resume")
 
 
 if __name__ == "__main__":
