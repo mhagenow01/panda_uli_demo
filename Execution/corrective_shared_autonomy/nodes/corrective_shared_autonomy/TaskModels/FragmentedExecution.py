@@ -112,6 +112,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
+            print("Reach failed: ",pos,pos_error,quat_error)
             return False, None           
 
     except rospy.ServiceException as e:
@@ -266,7 +267,7 @@ def getReachable(trajectories, curr_mask, downsamp=1):
         # TODO: maybe think of a preliminary step as a keyframe extraction
         successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj,joint_poses) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
         for jj in range(0,np.shape(trajectories[ii])[1]):
-            erosion = 5
+            erosion = 1
             ind = int(jj/downsamp)
             tmp_success = 1
             for kk in range(ind-erosion,ind+erosion+1):
@@ -703,7 +704,7 @@ class FragmentedExecutionManager():
             self.fragmentedBehavior = None
 
             # update visualization
-            self.displayReachability(self.trajs)
+            self.displayReachability(self.trajs,self.downsamp)
 
 
     def clearReachability(self):

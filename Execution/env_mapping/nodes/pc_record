@@ -19,7 +19,7 @@ def mappingToggle(data):
     if data.data=="off":
         if lastcloud is not None:
             rospack = rospkg.RosPack()
-            path = rospack.get_path('env_mapping')+'/saved_clouds/pc_new.txt'
+            path = rospack.get_path('env_mapping')+'/saved_clouds/reachabilility3.txt'
             with open(path, 'w') as outfile:
                 lastcloud.serialize(outfile.buffer)
 
