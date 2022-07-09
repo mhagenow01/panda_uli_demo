@@ -25,7 +25,7 @@ class PaperStatus:
         self.health = 1.0
         self.k_int = 400.0 # 400 N/m stiffness for orbital paper interface
         self.r = 0.1524 # 6 in for orbital
-        self.w = 5e-7
+        self.w = 2e-5
 
         self.last_t = None
 
@@ -60,13 +60,13 @@ class PaperStatus:
             dt = new_time-self.last_t
             self.last_t = new_time
 
-            print(F,theta,dt)
+            # print(F,theta,dt)
             
             if F < 0:
                 delta_k = np.abs(F) / self.k_int
                 l = min(2*self.r,delta_k/np.abs(np.sin(theta)))
                 A = np.sqrt((2*self.r - l)*l)*(-self.r + l) + self.r**2 * 2*np.arcsin(np.sqrt(l/self.r)/np.sqrt(2))
-                print(l,np.pi*self.r**2,A)
+                # print(l,np.pi*self.r**2,A)
 
                 self.health += max(self.w*F/A*dt*self.health,-self.health) # force is negative, don't allow a health that makes it negative
 

@@ -9,6 +9,7 @@ __author__ = "Mike Hagenow"
 import rospy
 import time
 from std_msgs.msg import String, Float64
+from franka_core_msgs.msg import RobotState
 from hybrid_controller.msg import HybridPose
 from tf2_msgs.msg import TFMessage
 from scipy.spatial.transform import Rotation as ScipyR
@@ -23,6 +24,14 @@ class PandaReg:
     def __init__(self):
         rospy.init_node('panda_pan')
         rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.storePandaStateTime)
+        self.pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
+        self.pub_mapping = rospy.Publisher('/mappingToggle', String, queue_size=1)
+        self.pub_rviz = rospy.Publisher('rviz_triggers', String, queue_size=1)
+        self.pub_done = rospy.Publisher('/panda/pan', String, queue_size=1)
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
+
+        rospy.sleep(0.5)
         self.robot_active = True
 
     def storePandaStateTime(self,data):
@@ -34,23 +43,28 @@ class PandaReg:
     def linearInterpolation(self,start,end,val):
         return start + (end-start)*val
 
+    def done(self):
+        strDone = String()
+        strDone.data = "end"
+        self.pub_done.publish(strDone)
+        strDone.data = "scanningdone"
+        self.pub_rviz.publish(strDone)
+
+        time.sleep(0.5)
+        strMapping = String()
+        strMapping.data = "off"
+        self.pub_mapping.publish(strMapping)
+
     def runRR(self):
-        pub = rospy.Publisher('/panda/hybrid_pose', HybridPose, queue_size=1)
-        pub_mapping = rospy.Publisher('/mappingToggle', String, queue_size=1)
-        pub_rviz = rospy.Publisher('rviz_triggers', String, queue_size=1)
-        pub_done = rospy.Publisher('/panda/pan', String, queue_size=1)
-        tfBuffer = tf2_ros.Buffer()
-        listener = tf2_ros.TransformListener(tfBuffer)
-
-        rospy.sleep(0.5)
-
+        if not self.robot_active:
+            self.done()
         strMapping = String()
         strMapping.data = "on"
-        pub_mapping.publish(strMapping)
+        self.pub_mapping.publish(strMapping)
 
         strDone = String()
         strDone.data = "start"
-        pub_done.publish(strDone)
+        self.pub_done.publish(strDone)
 
         hpose = HybridPose()
         hpose.sel_vector = [1,1,1,1,1,1]
@@ -69,18 +83,19 @@ class PandaReg:
         try:
             # Get current pose from TF2
             # listener.waitForTransform('panda_link0', 'panda_ee', rospy.Time(), rospy.Duration(2.0))
-            trans = tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(4.0))
+            trans = self.tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(4.0))
             x = trans.transform.translation.x; y = trans.transform.translation.y; z = trans.transform.translation.z
             qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z
             qw = trans.transform.rotation.w
             starting = np.array([x, y, z])
 
             # rot point relative to EE
-            trans = tfBuffer.lookup_transform("panda_ee", "camera_base", rospy.Time(), rospy.Duration(4.0))
+            trans = self.tfBuffer.lookup_transform("panda_ee", "camera_base", rospy.Time(), rospy.Duration(4.0))
             rot_rel = np.array([trans.transform.translation.x, trans.transform.translation.y, trans.transform.translation.z])
 
         except Exception as e:
             print(str(e))
+            self.done()
             return
 
 
@@ -88,7 +103,7 @@ class PandaReg:
         # Sleep for Driver to Start #
         #############################
         rospy.sleep(3.5)
-        pub_rviz.publish(String("camera_driver_running"))
+        self.pub_rviz.publish(String("camera_driver_running"))
 
         ###################################
         # Run the registration sequence 
@@ -102,6 +117,7 @@ class PandaReg:
         for theta in np.arange(0, max_theta, 0.015):
             if not rospy.is_shutdown():
                 if not self.robot_active:
+                    self.done()
                     return
                 R_cam = ScipyR.from_euler('XYZ', [0.0, -0.3*np.sin(theta), 0.0])
                 R_curr = R_start * R_cam
@@ -116,7 +132,7 @@ class PandaReg:
                 hpose.pose.position.y = starting_offset[1] + ee_offset_temp[1]
                 hpose.pose.position.z = starting_offset[2] + ee_offset_temp[2]
 
-                pub.publish(hpose)
+                self.pub.publish(hpose)
                 time.sleep(0.01)
             else:
                 return
@@ -140,23 +156,14 @@ class PandaReg:
                 hpose.pose.position.y = starting_offset[1] + ee_offset_temp[1]
                 hpose.pose.position.z = starting_offset[2] + ee_offset_temp[2]
 
-                pub.publish(hpose)
+                self.pub.publish(hpose)
                 time.sleep(0.01)
             else:
                 return
 
         time.sleep(0.1)
+        self.done()
 
-        strDone = String()
-        strDone.data = "end"
-        pub_done.publish(strDone)
-        strDone.data = "scanningdone"
-        pub_rviz.publish(strDone)
-
-        time.sleep(0.5)
-        strMapping.data = "off"
-        pub_mapping.publish(strMapping)
-        time.sleep(2.0)
 
 if __name__ == "__main__":
     rigid = PandaReg()

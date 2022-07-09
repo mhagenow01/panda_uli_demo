@@ -2,9 +2,14 @@
 <launch>
     <!-- <include file="$(find actuation_group)/launch/Actuation.launch"/> -->
     <node pkg="actuation_group" type="actuation_group_launcher" name="actuation_group_launcher" output="screen"/>
+    
+    <!-- Sandpaper calc -->
+    <node pkg="diagnostics" type="paper_status" name="paper_status" output="screen"/>
+
     <node pkg="kinect_ros" type="kinect_toggler" name="kinect_toggler" output="screen"/>
     <node pkg="env_mapping" type="scan_toggler" name="scan_toggler" output="screen"/>
     <!-- <node pkg="input_corrections" type="fdonedzdcontroller" name="fdonedzdcontroller" output="screen"/> -->
     <include file="$(find teleop_twist_joy)/launch/teleop.launch"/>  
     <node pkg="input_corrections" type="joy_correction_driver" name="joy_correction_driver" output="screen"/>
+    <!-- <node pkg="input_corrections" type="rockr_driver" name="rockr_driver" output="screen"/> -->
 </launch>
