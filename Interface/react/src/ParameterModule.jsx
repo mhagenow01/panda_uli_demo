@@ -1,8 +1,8 @@
-import React, {useCallback} from 'react';
+import React, {useCallback,memo} from 'react';
 import useParamStore from './ParamStore';
 import { Grommet, List, Stack,Button, Text, Card, Grid, Box,CheckBox, Select, RangeInput } from 'grommet';
 
-export const ParameterModule = (props) => { 
+export const ParameterModule = memo((props) => { 
   const {idx} = props;
   const parameterInfo = useParamStore(useCallback(state=>state.parameters[idx],[idx]));
 
@@ -51,5 +51,6 @@ export const ParameterModule = (props) => {
       )}
       
     </Box>
-  )
+  )       
 }
+)
