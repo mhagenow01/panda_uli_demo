@@ -338,7 +338,7 @@ class ROSAffordances:
             # update the pose of the active object based on the correction
             twist_array = np.array([twist.linear.x, twist.linear.y, twist.linear.z,
             twist.angular.x, twist.angular.y, twist.angular.z])
-            twist_array = self.rotateCorrectionByCamera(twist_array)
+            #twist_array = self.rotateCorrectionByCamera(twist_array)
             self.engine.twist_active_object(twist_array)
             
             # update visualization

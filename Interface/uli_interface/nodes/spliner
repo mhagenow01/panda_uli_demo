@@ -133,6 +133,8 @@ class Spliner(object):
         self._camera_model = None
         self._learnedSegments = None
         self._scanning = False
+        self._downsamp = 40
+        self.resume = False # resume execution after paused
         self._path_pub = rospy.Publisher("/path",Path,queue_size = 1)
         self._ui_path_pub = rospy.Publisher("/ui/path",String,queue_size = 1)
         self._ui_feedback_pub = rospy.Publisher("/ui/feedback",String,queue_size = 1)
@@ -158,6 +160,7 @@ class Spliner(object):
         self._cam_info_sub = rospy.Subscriber("/k4a/depth_to_rgb/camera_info", CameraInfo, self.on_info)
         self._rviz_trigger_sub = rospy.Subscriber("/rviz_triggers", String, self.on_trigger)
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
+        self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
 
     def on_trigger(self, msg):
         if msg.data == "scan":
@@ -167,6 +170,9 @@ class Spliner(object):
         if msg.data == "scanningdone":
             self.register_depth()
             
+    def checkResume(self,data):
+        if data.data=='resume':
+            self.resume = True
 
     def on_state(self, msg):
         if msg.robot_mode == 1 or msg.robot_mode ==2: # idle or moving (https://frankaemika.github.io/libfranka/robot__state_8h.html#adfe059ae23ebbad59e421edaa879651a)
@@ -338,10 +344,22 @@ class Spliner(object):
         if l[0] == "execute":
             if self._learnedSegments is not None:
 
-                self._ui_feedback_pub.publish("2000;Executing")
+                # self._ui_feedback_pub.publish("2000;Executing")
                 model = DMPLWRhardcoded(verbose=True, dt=1.0/self._time_sampling)
-                model.executeModel(learnedSegments=self._learnedSegments, input_type='1dof')
-            
+                # model.executeModel(learnedSegments=self._learnedSegments, input_type='1dof')
+                doneExecution = False
+                segID=0; s=0
+                while not doneExecution:
+                    segID, s = model.executeModel(learnedSegments=self._learnedSegments, input_type='mdof', segID_start=segID, s_start=s)
+                    if segID==-1 and s==-1:
+                        doneExecution = True
+                    else:
+                        while not self.resume:
+                            print("waiting")
+                            time.sleep(0.5)
+                        self.resume = False
+
+                print("DONE EXECUTING")
                 self._ui_feedback_pub.publish("4;Finished executing")
 
                 self._events_pub.publish("motion_finished")
@@ -516,13 +534,36 @@ class Spliner(object):
                 state_val[8,j]=1
             state_vals.append(state_val)
 
-        temp_masks, trajs, _ = getFragmentedTraj(surfaceBSpline,state_names,state_vals,np.array([0,0,0,1]),np.zeros((3,)),3)
+        temp_masks, trajs, _ = getFragmentedTraj(surfaceBSpline,state_names,state_vals,np.array([0,0,0,1]),np.zeros((3,)),3,downsamp = self._downsamp)
         if self._horizontal:
             R_extra_tool = ScipyR.from_euler('x',-10,degrees=True)
+            R_x = ScipyR.from_euler('y',-10,degrees=True)
+            R_y = ScipyR.from_euler('x',10,degrees=True)
         else:
             R_extra_tool = ScipyR.from_euler('y',-10,degrees=True)
+            R_x = ScipyR.from_euler('x',-10,degrees=True)
+            R_y = ScipyR.from_euler('y',-10,degrees=True)
+
         q_extra = R_extra_tool.as_quat()
-        corrections = [0.0, 0.0, -5.0, q_extra[0], q_extra[1], q_extra[2], q_extra[3], -0.5, 0.0]
+        
+        q_x = R_x.as_quat()
+        q_y = R_y.as_quat()
+
+        corrections = []
+        # Orthogonal
+        if self._horizontal:
+            corrections.append(np.array([0.1, 0.0, 0., 0, 0, 0, 1, 0, 0.0]))
+        else:
+            corrections.append(np.array([0., -0.1, 0., 0, 0, 0, 1, 0, 0.0]))
+        # Abbrasiveness
+        corrections.append(np.array([0.0, 0.0, -5.0, 0, 0, 0, 1, -0.5, 0.0]))
+        # # y
+        # corrections.append(np.array([0., 0.1, 0., 0, 0, 0, 1, 0, 0.0]))
+        # tx
+        corrections.append(np.array([0.0, 0.0, 0.0, q_x[0], q_x[1], q_x[2], q_x[3], 0.0, 0.0]))
+        # ty
+        corrections.append(np.array([0.0, 0.0, 0.0, q_y[0], q_y[1], q_y[2], q_y[3], 0.0, 0.0]))
+        corrections.append(np.array([0.0, 0.0, 0.0, 0, 0, 0, 1, 0.0, 1.0]))
         fragmentedBehavior = constructConnectedTraj(surfaceBSpline,state_names,state_vals,temp_masks,corrections,self._time_sampling)
         return temp_masks,trajs,fragmentedBehavior
 
@@ -567,8 +608,9 @@ class Spliner(object):
         length = 1-2*margin
         us=[margin]
         vs=[margin]
+
         for i in range(n_passes):
-            x = margin if i%2 else (1-margin)
+            x = 1-margin
             y = margin+length*i/(n_passes-1)
             val = [x,y]
             if horizontal:
@@ -576,14 +618,13 @@ class Spliner(object):
             us.append(val[0])
             vs.append(val[1])
             if i != (n_passes-1):
-                x = margin if i%2 else (1-margin)
+                x = margin 
                 y = margin+length*(i+1)/(n_passes-1)
                 val = [x,y]
                 if horizontal:
                     val = [y,x]
                 us.append(val[0])
                 vs.append(val[1])
-                
         return us,vs
 
     def get_path(self):

@@ -25,7 +25,7 @@ class JoyCorrectionDriver(object):
         self._ax2_init = False
         self._ax5_init = False
 
-    def mapping(self,x,low=0.005,high=1.0):
+    def mapping(self,x,low=0.01,high=1):
         a = (np.log(high)-np.log(low))/0.9
         b = np.exp(np.log(low)-.1*a)
         return np.sign(x)*b*((np.exp(a*np.abs(x))-1))
@@ -36,12 +36,22 @@ class JoyCorrectionDriver(object):
             self._ax2_init = True
         if not self._ax2_init:
             ax[2]=1
-        if ax[5] != 0:
-            self._ax5_init = True
-        if not self._ax5_init:
-            ax[5]=1
+        # if ax[5] != 0:
+        #     self._ax5_init = True
+        # if not self._ax5_init:
+        #     ax[5]=1
         cor_temp = Float64MultiArray()
-        cor_temp.data = np.array([self.mapping((ax[2]-ax[5])/2)])
+        # Abbrasiveness
+        # cor_temp.data.append(np.array([self.mapping((ax[2]-ax[5])/2)]))
+        # x
+        cor_temp.data.append(np.array([self.mapping(ax[1])]))
+        # y
+        cor_temp.data.append(np.array([self.mapping(ax[0])]))
+        # tx
+        cor_temp.data.append(np.array([self.mapping(ax[3])]))
+        # ty
+        # cor_temp.data.append(np.array([self.mapping(ax[4])]))
+
         self._correction_pub.publish(cor_temp)
        
         button = float(msg.buttons[1])

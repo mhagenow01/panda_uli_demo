@@ -3,6 +3,7 @@
 import rospy
 import time
 from sensor_msgs.msg import Joy
+from std_msgs.msg import Float64,Float64MultiArray
 import sys
 import signal
 import numpy as np
@@ -11,7 +12,9 @@ class JoyRepub(object):
     def __init__(self):
         rospy.init_node('joy_repub')
         self._joy = None
-        self._joy_pub = rospy.Publisher('/joy', Joy, queue_size=1)
+        self._joy_pub = rospy.Publisher('/phone/joy', Joy, queue_size=1)
+        self._input_pub = rospy.Publisher('/zdinput/input', Float64MultiArray, queue_size=1)
+        self._button_pub = rospy.Publisher('/zdinput/button', Float64, queue_size=1)
         self._joy_sub = rospy.Subscriber('/ui/joy', Joy, self.on_joy)
         self._rate = rospy.Rate(10.0)
 
@@ -25,7 +28,18 @@ class JoyRepub(object):
                 ax = np.array(self._joy.axes)
                 buttons = np.array(self._joy.buttons)
                 if np.max(buttons)>0 or np.max(np.abs(ax))>0:
+                    #Add mode for zdinput
                     self._joy_pub.publish(self._joy)
+                msg = Float64MultiArray()
+                msg.data.append(ax[0])
+                msg.data.append(-ax[1])
+                msg.data.append(ax[2])
+                msg.data.append(-ax[3])
+                msg.data.append(buttons[7]-buttons[6])
+                msg.data.append(buttons[5]-buttons[4])
+                self._input_pub.publish(msg)
+                self._button_pub.publish(buttons[1])
+
             self._rate.sleep()
 
     def signal_handler(self, signal, frame):
