@@ -53,11 +53,11 @@ export const RPanel = (props) => {
               <Box justify={"center"} ><Text justify={"center"} size="3vh">Robot state</Text></Box>
               <Box alignSelf={"center"} background={{color:["#",d2hex(1-paperStatus),d2hex(paperStatus),"00"].join('')}} round={"large"} width="4vh" height={"4vh"}/>
               <Box justify={"center"} ><Text justify={"center"} size="3vh">Paper state</Text></Box>
-              <Button size="xsmall" alignSelf="center" label={<Box><Text size="3vh">Change Paper</Text></Box>} 
+              <Button size="xsmall" alignSelf="center" label={<Box><Text size="3vh">{paperChange}</Text></Box>} 
                     onClick={() => {
                       if(paperChange === "Change paper"){
                         console.log("true")
-                        setPaperChange("Return to position")
+                        setPaperChange("Return")
                         useRosStore.getState().commandTopic2.publish({data:"gotopaper"})                      
                       }
                       else{
@@ -71,7 +71,7 @@ export const RPanel = (props) => {
             <Tabs alignSelf="stretch" margin="none" onActive={(val) => {
               setKnownWorkflow(val)
               }}> 
-              <Tab title={<Box><Text size="4vh">Unknown Object</Text></Box>}>
+              <Tab title={<Box><Text size="3vh">Unknown Object</Text></Box>}>
                 <Box
                 round="medium"
                 pad="xsmall"
@@ -84,10 +84,10 @@ export const RPanel = (props) => {
                 >
                   <Box>
                     <Card background="light-1">
-                      <CardHeader pad="small" background="light-2">
-                          <Text alignSelf="center" color="#9b0000" size="3vh">Properties</Text>
+                      <CardHeader pad="xxsmall" background="light-2">
+                          <Text alignSelf="center" color="#9b0000" size="4vh">Properties</Text>
                       </CardHeader>
-                      <CardBody pad="small">
+                      <CardBody pad="xxsmall">
                       {parameters.map((button,idx) => (
                          <ParameterModule param={button} key={idx} idx={idx}/>
                       ))
@@ -111,7 +111,7 @@ export const RPanel = (props) => {
                   </Box> 
                 </Box>
               </Tab>
-              <Tab title={<Box><Text size="4vh">Known Object</Text></Box>}>
+              <Tab title={<Box><Text size="3vh">Known Object</Text></Box>}>
                 <Box
                   round="medium"
                   align="center"
@@ -142,9 +142,10 @@ export const RPanel = (props) => {
                         console.log(computed_traj)
                         if(computed_traj)
                           sendModel("execute"); //Waiting for scanningdone
-                        else
+                        else{
                           sendObject("on")
-                        setComputing(true)
+                          setComputing(true)
+                        }
                       }} />
                   </Box>
               </Tab>

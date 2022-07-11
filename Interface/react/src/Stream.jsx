@@ -20,9 +20,11 @@ export const Stream = (props) => {
             src={imagedata}
             style={{
                 width: maxWidth+'px',
-                height: maxHeight+'px',
+                height: 0.885*maxHeight+'px',
                 //height: window.innerHeight,
-                objectFix: 'cover',
+                objectFit: 'cover',
+                objectPosition: "top",
+                top: 0,
                 zIndex: 1,
             }}
         />

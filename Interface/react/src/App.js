@@ -155,7 +155,7 @@ function App() {
                 opacity: .9
               }}
               round="medium"
-              width="large"
+              width="small"
               pad="medium"
               alignContent='center'
               opacity={.4}

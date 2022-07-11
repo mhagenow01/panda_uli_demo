@@ -14,7 +14,7 @@ const store = (set,get) => ({
     paperStatus: 0.0,
     paperChange: "Change paper",
     timer: 0,
-    targetOpacity:0.,
+    targetOpacity:1.,
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],

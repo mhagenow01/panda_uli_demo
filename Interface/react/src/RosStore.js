@@ -27,7 +27,12 @@ const store = (set) => ({
             width : useAppStore.getState().imageWidth,
             height : useAppStore.getState().imageHeight,
             antialias : true,
-            background : "#f8f8f8"
+            background : "#f8f8f8",
+            cameraPose:{
+                x : 1,
+                y : 1,
+                z : 1
+              }
 
         });
 
@@ -48,6 +53,13 @@ const store = (set) => ({
         //     path: process.env.PUBLIC_URL + 'assets/',
         //     rootObject : viewer.scene
         // });
+        var markerClient = new ROS3D.MarkerArrayClient({
+            ros : ros,
+            tfClient : tfClient,
+            topic : '/reachabilitymap',
+            path: process.env.PUBLIC_URL + 'assets/',
+            rootObject : viewer.scene
+        });
         var markerClient2 = new ROS3D.MarkerArrayClient({
             ros : ros,
             tfClient : tfClient,

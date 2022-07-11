@@ -33,6 +33,7 @@ import ros_numpy
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import Image, PointCloud2, CameraInfo, JointState, CompressedImage,PointCloud2
 from geometry_msgs.msg import TransformStamped, PoseStamped, Point, Pose, PoseArray, Quaternion, Twist, Vector3, PointStamped
+from visualization_msgs.msg import MarkerArray
 from std_msgs.msg import String
 from nav_msgs.msg import Path
 from scipy.spatial.transform import Slerp
@@ -50,6 +51,7 @@ from scipy.spatial.transform import Rotation as ScipyR
 from franka_core_msgs.msg import RobotState
 
 from corrective_shared_autonomy.TaskModels.FragmentedExecution import checkReachabilityOfPoses
+
 
 REFERENCE_FRAME='panda_link0'
 CAMERA_FRAME='rgb_camera_link'
@@ -98,36 +100,6 @@ class Spliner(object):
         self._camera_model = None
         self._bridge = CvBridge()
         self._depth_stale = True
-        # self._model = image_geometry.PinholeCameraModel()
-        # camInfo = CameraInfo()
-        # camInfo.header.frame_id="camera1"
-        # camInfo.height = 1536
-        # camInfo.width = 2048
-        # camInfo.distortion_model = "rational_polynomial"
-        # camInfo.D = [0.5248579382896423, -2.5943498611450195, 0.0008818571805022657, -0.000306136003928259, 1.4509135484695435, 0.4030783474445343, -2.42022705078125, 1.3811763525009155]
-        # camInfo.K = [976.9754638671875, 0.0, 1018.8711547851562, 0.0, 976.9026489257812, 780.8445434570312, 0.0, 0.0, 1.0]
-        # camInfo.R = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
-        # camInfo.P = [976.9754638671875, 0.0, 1018.8711547851562, 0.0, 0.0, 976.9026489257812, 780.8445434570312, 0.0, 0.0, 0.0, 1.0, 0.0]
-        # self._model.fromCameraInfo(camInfo)
-
-        # self._static_br = tf2_ros.StaticTransformBroadcaster()
-        # self._br =tf2_ros.TransformBroadcaster()
-        # static_transformStamped = TransformStamped()
-
-        # static_transformStamped.header.stamp = rospy.Time.now()
-        # static_transformStamped.header.frame_id = REFERENCE_FRAME
-        # static_transformStamped.child_frame_id = "camera_base"
-
-        # static_transformStamped.transform.translation.x = 0
-        # static_transformStamped.transform.translation.y = 0
-        # static_transformStamped.transform.translation.z = 1
-
-        # quat = tf.transformations.quaternion_from_euler(np.pi,np.pi/2,0)
-        # static_transformStamped.transform.rotation.x = quat[0]
-        # static_transformStamped.transform.rotation.y = quat[1]
-        # static_transformStamped.transform.rotation.z = quat[2]
-        # static_transformStamped.transform.rotation.w = quat[3]
-        # self._static_br.sendTransform(static_transformStamped)
 
         self._depth = None
         self._camera_model = None
@@ -161,14 +133,45 @@ class Spliner(object):
         self._rviz_trigger_sub = rospy.Subscriber("/rviz_triggers", String, self.on_trigger)
         self._ui_param_sub = rospy.Subscriber("/ui/parameters", String, self.on_param)
         self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
+        self._reach_map_sub = rospy.Subscriber("/reachabilitymap", MarkerArray, self.on_map)
+
+
+    def on_map(self, msg):
+        if len(msg.markers) == 0:
+            return
+        print("got map")
+        good = []
+        bad = []
+        print(len(msg.markers))
+        for marker in msg.markers:
+            pose = PoseStamped()
+            pose.header.frame_id=REFERENCE_FRAME
+            pose.pose = marker.pose
+            # print(pose)
+            coord = self.get_pixel_from_pose(pose)
+            if coord is None:
+                continue
+            coord=["{:.3f}".format(coord[0]/self._width),"{:.3f}".format(coord[1]/self._height)]
+            if marker.color.r < .8:
+                good.append(','.join(coord))
+            else:
+                bad.append(','.join(coord))
+        
+        self._ui_reach_pub.publish("good:"+';'.join(good))
+        rospy.sleep(0.1)
+        self._ui_reach_pub.publish("bad:"+';'.join(bad))
 
     def on_trigger(self, msg):
         if msg.data == "scan":
+            self._ui_feedback_pub.publish("4;Loading camera driver")
             self._scanning = True
             self._depth_sub.unregister()
             self._corners_sub.unregister()
+        if msg.data == "camera_driver_running":
+            self._ui_feedback_pub.publish("10;Panning")
         if msg.data == "scanningdone":
             self.register_depth()
+            self._ui_feedback_pub.publish("4;Scanning done")
             
     def checkResume(self,data):
         if data.data=='resume':
@@ -211,6 +214,7 @@ class Spliner(object):
             self._pitch = int(pitch)
         else:
             self._pitch = 0
+
         velocity = self.get_param("speed")
         if velocity is not None:
             self._velocity = int(velocity)/1000.
@@ -640,7 +644,7 @@ class Spliner(object):
         path.header.frame_id = REFERENCE_FRAME
         for i,segment in enumerate(self._mask):
             for j,val in enumerate(segment):
-                if val:
+                if j%self._downsamp == 0 and  val:
                     pose = PoseStamped()
                     pose.header.frame_id = REFERENCE_FRAME
 

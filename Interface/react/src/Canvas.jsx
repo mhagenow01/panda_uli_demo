@@ -28,7 +28,7 @@ export const Canvas = (props) => {
     };
     const handleMove = (e) => {
         e.target.attrs["x"]=Math.min(Math.max(e.target.attrs["x"],0),maxWidth)
-        e.target.attrs["y"]=Math.min(Math.max(e.target.attrs["y"],0),maxHeight)
+        e.target.attrs["y"]=Math.min(Math.max(e.target.attrs["y"],0),0.885*maxHeight)
         setCorner(e.target.attrs["cornerId"],e.target.attrs["x"],e.target.attrs["y"])
         corners.map((corner) => {
           return {

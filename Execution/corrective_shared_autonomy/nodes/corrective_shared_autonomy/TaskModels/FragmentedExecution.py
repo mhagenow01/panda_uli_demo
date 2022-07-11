@@ -615,7 +615,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
 
     #############
 
-def circ_marker(index, pos, size, color=[0.0, 1.0, 0.0], frame="map"):
+def circ_marker(index, pos, size, color=[0.0, 1.0, 0.0], frame="panda_link0"):
     """ Creates circular markers on points of interest """
     marker = Marker()
     marker.header.frame_id = frame
@@ -634,7 +634,7 @@ def circ_marker(index, pos, size, color=[0.0, 1.0, 0.0], frame="map"):
     marker.scale.x = size
     marker.scale.y = size
     marker.scale.z = size
-    marker.color.a = 0.9
+    marker.color.a = 1
     marker.color.r = color[0]
     marker.color.g = color[1]
     marker.color.b = color[2]
