@@ -112,7 +112,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
-            print("Reach failed: ",pos,pos_error,quat_error)
+            # print("Reach failed: ",pos,pos_error,quat_error)
             return False, None           
 
     except rospy.ServiceException as e:
@@ -266,13 +266,33 @@ def getReachable(trajectories, curr_mask, downsamp=1):
         # TODO: base this off of distance -- tough to do when it is parallelized
         # TODO: maybe think of a preliminary step as a keyframe extraction
         successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj,joint_poses) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
+
+        # Dilation of success array
+        dilation = 1
+        successes_new = np.copy(successes)
+        for jj in range(0,len(successes)):
+            # if any around are successful, make successful
+            tmp_success = 0
+            for kk in range(jj-dilation,jj+dilation+1):
+                if kk>0 and kk<len(successes):
+                    tmp_success = int(successes[kk] or tmp_success)
+            successes_new[jj]=tmp_success      
+
+        # print("\n\nSUCCESSES")
+        # print(successes)
+        # print("\n\nSUCCESSESNEW")
+        # print(successes_new)
+    
+        
+        # Erosion of success array applied directly to trajectory
+        erosion = 3
         for jj in range(0,np.shape(trajectories[ii])[1]):
-            erosion = 1
             ind = int(jj/downsamp)
             tmp_success = 1
+            # if any around are unsuccessful, make unsuccessful
             for kk in range(ind-erosion,ind+erosion+1):
-                if kk>0 and kk<len(successes):
-                    tmp_success = successes[kk] * tmp_success
+                if kk>0 and kk<len(successes_new):
+                    tmp_success = successes_new[kk] * tmp_success
             taskmask[ii][jj]=tmp_success
 
     return taskmask
