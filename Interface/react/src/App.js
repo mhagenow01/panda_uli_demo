@@ -123,9 +123,9 @@ function App() {
     full={true}
       theme={theme}
       >
-      <Box height='100vh' width='100vw' background="#9b0000">      
+      <Box height='100vh' width='100vw' direction="row" background="#9b0000">      
         {/* <GamepadHandle/> */}
-        <Tabs justify="start" onActive={(val) => {
+        <Tabs width="70vw" justify="start" onActive={(val) => {
           if(val ==1)
           setTimeout(function() { //Start the timer
             show3D()
@@ -142,30 +142,28 @@ function App() {
             <View/>
           </Tab>
         </Tabs>
-        <Layer responsive={false} plain={true} modal={false} position="right">
-          <RPanel/>
-        </Layer>
+        <RPanel/>
         <Layer responsive={false} plain={true} modal={false} position="top">
-        <Box
-          radius="small"
-          pad="medium"
-        >
-        <Box
-          border={{ color: 'brand', size: 'xsmall' }}
-          background={{
-            color: "light-3",
-            opacity: .9
-          }}
-          round="medium"
-          width="large"
-          pad="medium"
-          alignContent='center'
-          opacity={.4}
-          hidden={feedback ===""}
-        >
-          <Text size="3vh" alignSelf='center'>{feedback}</Text>
-      </Box>
-        </Box>
+          <Box
+            radius="small"
+            pad="medium"
+          >
+            <Box
+              border={{ color: 'brand', size: 'xsmall' }}
+              background={{
+                color: "light-3",
+                opacity: .9
+              }}
+              round="medium"
+              width="small"
+              pad="medium"
+              alignContent='center'
+              opacity={.4}
+              hidden={feedback ===""}
+            >
+              <Text size="3vh" alignSelf='center'>{feedback}</Text>
+          </Box>
+          </Box>
         </Layer>
       </Box>
     </Grommet>

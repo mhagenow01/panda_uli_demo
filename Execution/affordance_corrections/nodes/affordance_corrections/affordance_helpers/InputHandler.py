@@ -42,7 +42,7 @@ class InputHandler:
             rospy.Subscriber("/rviz/artic", Int8, self.teleopRvizArtic)
         elif (input_method=="phone"):
             ''' Mode 3 is the gamepad on the phone '''
-            rospy.Subscriber("/joy", Joy, self.GamePadParse)
+            rospy.Subscriber("/phone/joy", Joy, self.GamePadParse)
         else:
             ''' default back to teleop'''
             rospy.Subscriber("/rviz/teleop", Twist, self.teleopRvizParse)
@@ -56,14 +56,14 @@ class InputHandler:
     def GamePadParse(self, msg):
         ax = np.array(msg.axes)
 
-        self.twist.linear.x = self.mapping(ax[1])
-        self.twist.linear.y = self.mapping(ax[0])
-        self.twist.angular.x = self.mapping(-ax[2],low=.01,high=1)
-        self.twist.angular.y = self.mapping(ax[3],low=.01,high=1)
+        self.twist.linear.x = -.2*self.mapping(ax[1])
+        self.twist.linear.y = -.2*self.mapping(ax[0])
+        self.twist.angular.x = -5*self.mapping(-ax[2],low=.01,high=1)
+        self.twist.angular.y = -5*self.mapping(ax[3],low=.01,high=1)
         if msg.buttons[4]:
-            self.twist.angular.z = -np.pi/4
+            self.twist.angular.z = -np.pi
         elif msg.buttons[5]:
-            self.twist.angular.z = np.pi/4
+            self.twist.angular.z = np.pi
         else:
             self.twist.angular.z = 0
         if msg.buttons[6]:

@@ -28,7 +28,7 @@ class ExecuteROS:
         self.orbital_wear_pub = rospy.Publisher('/panda/orbital_wear', String, queue_size=1)
         self.valve_pub = rospy.Publisher('/valvestate',Int32,queue_size=1)
         self.correction_pub = rospy.Publisher('/csacorrection',Float64MultiArray,queue_size=1)
-        self.input = np.zeros((3,))
+        self.input = np.zeros((7,))
         self.input_button = 0.0
         self.input_tx = input_tx # if the transform should be further rotated
 

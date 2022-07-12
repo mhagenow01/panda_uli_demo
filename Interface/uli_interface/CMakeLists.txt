@@ -106,6 +106,7 @@ catkin_install_python(PROGRAMS
     nodes/pc_publish
     nodes/saver
     nodes/publisher
+    nodes/joy_republisher
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
