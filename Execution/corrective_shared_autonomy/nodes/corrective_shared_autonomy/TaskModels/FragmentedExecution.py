@@ -112,7 +112,7 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
-            # print("Reach failed: ",pos,pos_error,quat_error)
+            # print("Reach failed: ",pos,quat,pos_error,quat_error)
             return False, None           
 
     except rospy.ServiceException as e:
@@ -234,7 +234,12 @@ def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_t
         # if success and success2 and success3 and success4 and success5 and success6 and success7:
         if success:
             return 1
-    return 0
+        else:
+            return 0
+    elif curr_mask[ii][jj]==2:
+        return 2
+    else:
+        return 0
     
 # NOTE: this assumes that the kdlik service is running
 def getReachable(trajectories, curr_mask, downsamp=1):
@@ -274,9 +279,11 @@ def getReachable(trajectories, curr_mask, downsamp=1):
             # if any around are successful, make successful
             tmp_success = 0
             for kk in range(jj-dilation,jj+dilation+1):
-                if kk>0 and kk<len(successes):
+                if kk>0 and kk<len(successes) and successes[kk]:
                     tmp_success = int(successes[kk] or tmp_success)
-            successes_new[jj]=tmp_success      
+            successes_new[jj]=tmp_success
+            if successes[jj]==2:
+                successes_new[jj]=2    
 
         # print("\n\nSUCCESSES")
         # print(successes)
@@ -285,15 +292,18 @@ def getReachable(trajectories, curr_mask, downsamp=1):
     
         
         # Erosion of success array applied directly to trajectory
-        erosion = 3
+        erosion = 8
         for jj in range(0,np.shape(trajectories[ii])[1]):
             ind = int(jj/downsamp)
             tmp_success = 1
             # if any around are unsuccessful, make unsuccessful
             for kk in range(ind-erosion,ind+erosion+1):
-                if kk>0 and kk<len(successes_new):
+                if kk>0 and kk<len(successes_new) and successes_new[kk]!=2:
                     tmp_success = successes_new[kk] * tmp_success
             taskmask[ii][jj]=tmp_success
+            
+            if successes_new[ind]==2:
+                taskmask[ii][jj]=0 # already done is treated in mask as unreachable
 
     return taskmask
 
@@ -373,7 +383,9 @@ def getFragmentedTraj(surface,state_names,trajs,q_surf,t_surf,min_length,curr_ma
     ##########################################
     # Step 1: cull based on reachability     #
     ##########################################
+    startt = time.time()
     mask = getReachable(pose_trajs,curr_mask,downsamp)
+    print("Get Reachable time: ",time.time()-startt)
 
     ##########################################
     # Step 1.5: look at pathwise solution    #
@@ -496,7 +508,7 @@ def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool
     
     return segment
 
-def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel, tool_offset_start, tool_offset_end):
+def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_end,starting_coords,ending_coords,vel_lin, vel_ang, tool_offset_start, tool_offset_end):
     retract_pt, n_hat1, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(starting_coords[0], starting_coords[1])
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat1.reshape((3,1))]))
     q_ret = (R_surf * R_tool_surf_start).as_quat()
@@ -505,7 +517,13 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat2.reshape((3,1))]))
     q_app = (R_surf * R_tool_surf_end).as_quat()
 
-    time = np.linalg.norm(approach_pt-retract_pt) / vel
+    ang = ang_btwn_quats(q_ret,q_app)
+
+    time_lin = np.linalg.norm(approach_pt-retract_pt) / vel_lin
+    time_ang = np.abs(ang) / vel_ang
+
+    print("Time lin: ", time_lin, " time ang: ",time_ang)
+    time = max(time_lin,time_ang)
 
     segment = HybridSegment()
     segment.hybrid = False
@@ -538,8 +556,9 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
 def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per_sec):
     # TODO: this should actually also consider reachability
     segments = []
-    vel_between = 0.05
-    vel_appret = 0.03
+    max_lin_vel_between = 0.05
+    max_ang_vel_between = 0.05
+    vel_appret = 0.02
     
     trajs_inds = getContMask(mask) # get start and end samples for each continuous segment
 
@@ -581,7 +600,7 @@ def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per
 
             # Generate in between passes if this is not the first overall pass
             if last_uv is not None:
-                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], vel_between, last_tool_offset, tool_offset_app)
+                segmentTemp = gen_btw_passes(surface, samps_per_sec, last_R_tool_surf, R_tool_surf_app,last_uv,[starting_u, starting_v], max_lin_vel_between, max_ang_vel_between, last_tool_offset, tool_offset_app)
                 segments.append(segmentTemp)
 
             # Generate approach
@@ -650,7 +669,6 @@ class FragmentedExecutionManager():
         self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
         self.pathmarkerarraypub = rospy.Publisher("/reachabilitymap", MarkerArray, queue_size =1, latch = True)
         self.readtriggers = rospy.Subscriber("rviz_triggers", String, self.readTriggers)
-        # TODO: plan -> execute
         self.model_name = ''
         self.min_length = 40
         self.dt = 40
@@ -669,8 +687,7 @@ class FragmentedExecutionManager():
             self.resume = True
 
     def readTriggers(self,data):
-        if data.data=='deleteactive':
-            self.resetExecution()
+        if data.data=='deleteactive' or data.data=='scan':
             self.clearReachability()
         if data.data=='resetexec':
             self.model_name = ''
