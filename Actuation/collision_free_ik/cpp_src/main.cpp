@@ -48,7 +48,7 @@ void poseToArray(const geometry_msgs::Pose& msg, array<double, 7>& trans) {
 
 // Function actually calls IK
 // Allows to dictate whether or not to do the underconstrained formulation
-void solveIK(const geometry_msgs::PoseStamped::ConstPtr& msg, bool underconstrained, tf2_ros::TransformBroadcaster* br, array<double, 7>& trans, vector<double> current_q, vector<string> joint_names, ros::Publisher* pub){
+void solveIK(const geometry_msgs::PoseStamped::ConstPtr& msg, bool underconstrained, tf2_ros::TransformBroadcaster* br, array<double, 7>& trans, vector<double> current_q, vector<string> joint_names, ros::Publisher* pub, ros::Publisher* ikoutpub){
         auto pose = msg->pose;
         string frame = msg->header.frame_id;
 
@@ -91,6 +91,18 @@ void solveIK(const geometry_msgs::PoseStamped::ConstPtr& msg, bool underconstrai
             transformStamped.transform.rotation.z = trans_return[5];
             transformStamped.transform.rotation.w = trans_return[6];
 
+            geometry_msgs::PoseStamped ikouttemp;
+            ikouttemp.header.stamp = ros::Time::now();
+            ikouttemp.header.frame_id = "panda_link0";
+            ikouttemp.pose.position.x = trans_return[0];
+            ikouttemp.pose.position.y = trans_return[1];
+            ikouttemp.pose.position.z = trans_return[2];
+            ikouttemp.pose.orientation.x = trans_return[3];
+            ikouttemp.pose.orientation.y = trans_return[4];  
+            ikouttemp.pose.orientation.z = trans_return[5];  
+            ikouttemp.pose.orientation.w = trans_return[6];  
+
+            ikoutpub->publish(ikouttemp);
             br->sendTransform(transformStamped);
         } else {
             ROS_WARN("Couldn't do some IK");
@@ -192,6 +204,7 @@ int main(int argc, char** argv) {
     ros::ServiceServer service = n.advertiseService("/collision_free_ik/solve_ik", solveIKSrv);
     
     ros::Publisher pub = n.advertise<franka_core_msgs::JointCommand>("out", 1);
+    ros::Publisher ikoutpub = n.advertise<geometry_msgs::PoseStamped>("ik_output", 1);
     array<double, 7> trans = array<double, 7>();
 
     ros::Subscriber joint_states_sub = n.subscribe<sensor_msgs::JointState>(
@@ -222,11 +235,11 @@ int main(int argc, char** argv) {
 
 
     ros::Subscriber sub_underconstrained = n.subscribe<geometry_msgs::PoseStamped>("in_underconstrained", 1, [&](const geometry_msgs::PoseStamped::ConstPtr& msg) {
-        solveIK(msg,true, &br, trans, current_q, joint_names, &pub); // underconstrained
+        solveIK(msg,true, &br, trans, current_q, joint_names, &pub, &ikoutpub); // underconstrained
     });
 
     ros::Subscriber sub = n.subscribe<geometry_msgs::PoseStamped>("in", 1, [&](const geometry_msgs::PoseStamped::ConstPtr& msg) {
-        solveIK(msg,false, &br, trans, current_q, joint_names, &pub); // not underconstrained
+        solveIK(msg,false, &br, trans, current_q, joint_names, &pub, &ikoutpub); // not underconstrained
     });
 
     ros::spin();
