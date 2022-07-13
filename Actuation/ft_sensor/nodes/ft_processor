@@ -8,7 +8,7 @@ __author__ = "Mike Hagenow"
 
 import rospy
 import time
-from std_msgs.msg import String, Float64, Int32
+from std_msgs.msg import String, Float64, Int32, Bool
 from geometry_msgs.msg import Wrench, Pose
 from sensor_msgs.msg import PointCloud2, JointState
 from hybrid_controller.msg import HybridPose
@@ -59,6 +59,7 @@ class FTProcessor:
         self.last_x = np.zeros((6,))
 
         self.ft_comp_pub = rospy.Publisher("/ft/wrench", Wrench, queue_size =1, latch = False)
+        self.bias_pub = rospy.Publisher("/ft/bias", Bool, queue_size =1, latch = False)
         rospy.Subscriber("/ft/wrench_raw", Wrench, self.processNewFT, queue_size=1)
         rospy.Subscriber("/panda/ee_mass", Float64, self.setupToolMass)
         rospy.Subscriber("/joint_states", JointState, self.recordJointVelocity)
@@ -153,6 +154,7 @@ class FTProcessor:
                 
                 # check for autobiasing
                 self.checkBias()
+                self.bias_pub.publish(Bool(self.sensorbiased))
                 
                 rate.sleep()
 
