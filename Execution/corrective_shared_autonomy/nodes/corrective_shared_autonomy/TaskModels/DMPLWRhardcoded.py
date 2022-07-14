@@ -721,7 +721,7 @@ class DMPLWRhardcoded:
         #############################
         # Execute the learned model #
         #############################
-        rosExecution = ExecuteROS(input_tx=self.input_tx, task_R=R_surface, task_t=t_surface)
+        self.rosExecution = ExecuteROS(input_tx=self.input_tx, task_R=R_surface, task_t=t_surface)
 
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
@@ -732,16 +732,26 @@ class DMPLWRhardcoded:
         # go to replay start (might be in the middle of a behavior)
         initial_segment = True
         start_val_temp = self.getStartValue(s_start,learnedSegments[segID_start])
-        rosExecution.goToReplayStart(s_start,learnedSegments[segID_start].state_names,start_val_temp,learnedSegments[segID_start].surface,tfBuffer,listener)
+        self.rosExecution.goToReplayStart(s_start,learnedSegments[segID_start].state_names,start_val_temp,learnedSegments[segID_start].surface,tfBuffer,listener)
 
         delta_s = 1.0
-
-        
 
         # replay through each of the segments
         segID = segID_start # default 0 but can start partially through execution
         while segID < num_segments:
             segment, num_states, ddX, dX, X, s, ddY, dY, Y = self.setupSegment(learnedSegments, segID, from_back=False, initial_segment=initial_segment, s_start=s_start, start_val_temp = start_val_temp)
+            
+            # Confirm that the actual system has reached the approximate desired state
+            pos_error = 0.02
+            quat_error = 0.175 # 10 deg
+
+            # Quit if the robot isn't active anymore or if the behavior is paused
+            if not self.rosExecution.robotActive() or self.rosExecution.isInterrupted():
+                self.rosExecution.shutdown()
+                return segID, s
+
+            self.rosExecution.checkCloseToSegmentStart(X,segment.surface,segment.state_names,pos_error,quat_error,tfBuffer,listener)
+            
             Z = X
             initial_segment = False
 
@@ -751,11 +761,11 @@ class DMPLWRhardcoded:
                 surface = None
 
             while np.ceil(s) < segment.num_samples:
-                input_vals, input_button = rosExecution.getZDInput()
+                input_vals, input_button = self.rosExecution.getZDInput()
 
                 # Quit if the robot isn't active anymore or if the behavior is paused
-                if not rosExecution.robotActive() or rosExecution.isInterrupted():
-                    rosExecution.shutdown()
+                if not self.rosExecution.robotActive() or self.rosExecution.isInterrupted():
+                    self.rosExecution.shutdown()
                     return segID, s
 
                 correction = self.getCorrection(segment.corrections,input_type,input_vals,segment.state_names,s,surface,Z,dX)
@@ -767,7 +777,7 @@ class DMPLWRhardcoded:
             
                 # Send to robot (converting if necessary)
 
-                rosExecution.execute_states(segment.state_names, Z, surface,correction)
+                self.rosExecution.execute_states(segment.state_names, Z, surface,correction)
 
                 # print("s: ", s, " ", segID)
                 if 'theta_qx' in segment.state_names:
