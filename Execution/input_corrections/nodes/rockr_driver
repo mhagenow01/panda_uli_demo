@@ -41,14 +41,15 @@ class RockrDriver():
                 #temp = np.array(int(serialString.decode('ascii'))).astype('uint32')
                 # Print the contents of the serial data
                 try:
-                    # print('bytes:',serialString)
-                    # int_val = int.from_bytes(serialString[len(serialString)-6:len(serialString)-2], byteorder='little', signed = False)
-                    int_val = struct.unpack('<I',serialString[len(serialString)-6:len(serialString)-2])[0]
+                    button_val = struct.unpack('<I',serialString[len(serialString)-6:len(serialString)-2])[0]
+                    int_val = struct.unpack('<I',serialString[len(serialString)-10:len(serialString)-6])[0]
                     conv_val = (float(int_val)-40000.)/30000. # megh added 40k offset to encoder count, range is ~ +/-30k
-                    
+
+
                     input_temp = Float64MultiArray()
                     input_temp.data = np.array([conv_val])
                     self._correction_pub.publish(input_temp)
+                    self._button_pub.publish(Float64(1.0-float(button_val)))
 
                 except Exception as e:
                     print(e)
