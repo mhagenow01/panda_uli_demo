@@ -18,8 +18,9 @@ import tf2_ros
 class EEPoseChecker:
     def __init__(self):
         rospy.init_node('eeposechecker')
-        self.mag_dist_pub = rospy.Publisher('/pose_error/mag_dist', Float64, queue_size=1)
-        self.mag_ang_pub = rospy.Publisher('/pose_error/mag_ang', Float64, queue_size=1)
+        self.mag_dist_pub = rospy.Publisher('/diagnostics/pose_error/mag_dist', Float64, queue_size=1)
+        self.mag_ang_pub = rospy.Publisher('/diagnostics/pose_error/mag_ang', Float64, queue_size=1)
+        self.actual_ee_pub = rospy.Publisher('/diagnostics/pose_actual', PoseStamped, queue_size=1)
 
         tfBuffer = tf2_ros.Buffer()
         listener = tf2_ros.TransformListener(tfBuffer)
@@ -46,6 +47,17 @@ class EEPoseChecker:
                 self.ikout.orientation.z = trans.transform.rotation.z
                 self.ikout.orientation.w = trans.transform.rotation.w
                 self.gotIKout = True
+
+                # Also, try to republish actual pose from tf as a pose stamped
+                trans = tfBuffer.lookup_transform('panda_link0', 'panda_ee', rospy.Time())
+                poset = PoseStamped()
+                post = trans.transform.translation
+                rott = trans.transform.rotation
+                poset.header.frame_id = "panda_link0"
+                poset.header.stamp = rospy.Time.now()
+                poset.pose.position = Point(x = post.x, y = post.y, z = post.z)
+                poset.pose.orientation = Quaternion(w = rott.w, x = rott.x, y = rott.y, z = rott.z)
+
             except Exception as e:
                 print(e)
 
