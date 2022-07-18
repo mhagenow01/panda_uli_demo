@@ -17,6 +17,7 @@ from corrective_shared_autonomy.Execution.ExecuteROS import ExecuteROS
 from scipy.spatial.transform import Rotation as R
 from scipy import signal
 from scipy import interpolate
+from std_msgs.msg import String
 import rospy
 import rospkg
 import pickle
@@ -230,6 +231,8 @@ class DMPLWRhardcoded:
         self.verbose = verbose
 
         self.input_tx = input_tx
+
+        self.events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
 
         self.create_var_range_dictionary()
 
@@ -712,6 +715,7 @@ class DMPLWRhardcoded:
 
 
     def executeModel(self,learnedSegments = None, model_pkl_file = '',R_surface = np.array([0, 0, 0, 1]),t_surface = np.zeros((3,)),input_type="none", segID_start=0, s_start=0.0):
+        self.events_pub.publish("motion_start")
         #############################
         # Load model                #
         #############################
@@ -809,6 +813,8 @@ class DMPLWRhardcoded:
                 rate.sleep()
 
             segID = segID + 1
+
+        self.events_pub.publish("motion_finished")
 
         return -1, -1 # segID is -1 and s is -1 if successful
 
