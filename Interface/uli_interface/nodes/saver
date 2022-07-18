@@ -11,7 +11,7 @@ bridge = CvBridge()
 rospack = rospkg.RosPack()
 
 def callback(msg,name):
-    print("Received an image!")
+    print("Received a "+name+"!")
     path = rospack.get_path('uli_interface')+'/saved_msgs/'+name+".txt"
 
     with open(path, 'w') as outfile:
@@ -19,9 +19,10 @@ def callback(msg,name):
 
 def listener():
     rospy.init_node('image_saver')
-    callback(rospy.wait_for_message("/k4a/rgb/image_raw/compressed",CompressedImage),"rgb")
-    callback(rospy.wait_for_message("/k4a/depth_to_rgb/image_raw/compressed",CompressedImage),"depth")
-    callback(rospy.wait_for_message("/k4a/depth_to_rgb/camera_info",CameraInfo),"info")
+    callback(rospy.wait_for_message("/k4a/rgb/image_raw/compressed",CompressedImage),"rgb_flat")
+    callback(rospy.wait_for_message("/k4a/depth_to_rgb/image_raw/compressed",CompressedImage),"depth_flat")
+    callback(rospy.wait_for_message("/k4a/depth_to_rgb/camera_info",CameraInfo),"info_flat")
+    callback(rospy.wait_for_message("/k4a/points2",PointCloud2),"cloud_flat")
 
 if __name__ == '__main__':
     listener()
