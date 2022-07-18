@@ -48,6 +48,8 @@ export const Canvas = (props) => {
         var y=e.evt["clientY"]
         if (x<maxWidth && y < maxHeight)
           useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+          setRvizMode(1)
+          setFeedback("20;Align Piece")
       }
       else{ // Touch event
         var x=e.evt.changedTouches[0]["clientX"]
