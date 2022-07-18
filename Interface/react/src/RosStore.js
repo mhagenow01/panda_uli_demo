@@ -29,12 +29,13 @@ const store = (set) => ({
             antialias : true,
             background : "#f8f8f8",
             cameraPose:{
-                x : 1,
-                y : 1,
-                z : 1
+                x : -.1,
+                y : 0,
+                z : 3
               }
-
         });
+        viewer.cameraControls.rotateRight(0)
+        viewer.cameraControls.rotateDown(1)
 
         viewer.addObject(new Grid());
         var tfClient = new ROSLIB.TFClient({
@@ -46,13 +47,6 @@ const store = (set) => ({
           });
       
         //   Setup the marker client.
-        // var markerClient = new ROS3D.MarkerArrayClient({
-        //     ros : ros,
-        //     tfClient : tfClient,
-        //     topic : '/reachabilitymap',
-        //     path: process.env.PUBLIC_URL + 'assets/',
-        //     rootObject : viewer.scene
-        // });
         var markerClient = new ROS3D.MarkerArrayClient({
             ros : ros,
             tfClient : tfClient,
@@ -67,6 +61,13 @@ const store = (set) => ({
             path: process.env.PUBLIC_URL + 'assets/',
             rootObject : viewer.scene
         });
+
+        // var pandaPoseClient = new ROS3D.Pose({
+        //     ros : ros,
+        //     tfClient : tfClient,
+        //     topic : '/panda/pose_nohybrid',
+        //     rootObject : viewer.scene
+        // });
 
         var urdfClient = new UrdfClient({
             ros : ros,
@@ -123,7 +124,7 @@ const store = (set) => ({
             name: 'interaction_events',
             messageType: 'std_msgs/String'
         });
-        
+
         const objTopic = new ROSLIB.Topic({
             ros: ros,
             name: 'getObjPose',
@@ -169,6 +170,12 @@ const store = (set) => ({
 		const pathTopic = new ROSLIB.Topic({
 			ros: ros,
 			name: '/ui/path',
+			messageType: 'std_msgs/String',
+		});
+
+		const pauseTopic = new ROSLIB.Topic({
+			ros: ros,
+			name: '/execution/interrupt',
 			messageType: 'std_msgs/String',
 		});
 
@@ -231,7 +238,7 @@ const store = (set) => ({
         paperTopic.subscribe((msg)=>useAppStore.getState().setPaperStatus(msg.data));
         rvizTopic.subscribe((msg)=>useAppStore.getState().receivedRviz(msg.data));
         talkerTopic.subscribe((msg)=>useAppStore.getState().addMessage(msg.data));
-        eventTopic.subscribe((msg)=>useAppStore.getState().setCanvasOpacity(1));
+        eventTopic.subscribe((msg)=>useAppStore.getState().handleEvent(msg.data));
         setParamTopic.subscribe((msg)=>useParamStore.getState().setParameters(msg.data));
         ros.connect();
         useAppStore.getState().resizeWindow();
@@ -250,6 +257,7 @@ const store = (set) => ({
             objTopic:objTopic,
             modelTopic:modelTopic,
             commandTopic2:commandTopic2,
+            pauseTopic:pauseTopic,
         };
     })
 });
