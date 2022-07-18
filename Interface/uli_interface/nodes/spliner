@@ -133,7 +133,6 @@ class Spliner(object):
         self._pattern = "None"
 
         self._depth_sub = None
-        self._corners_sub = None
 
         self._bias_sub = rospy.Subscriber("/ft/bias", Bool, self.on_bias)
         self._robot_state_sub = rospy.Subscriber("/franka_ros_interface/custom_franka_state_controller/robot_state", RobotState, self.on_state)
@@ -178,7 +177,6 @@ class Spliner(object):
             self._ui_feedback_pub.publish("8;Loading camera driver")
             self._scanning = True
             self._depth_sub.unregister()
-            self._corners_sub.unregister()
         if msg.data == "camera_driver_running":
             self._ui_feedback_pub.publish("10;Scanning")
         if msg.data == "scanningdone":

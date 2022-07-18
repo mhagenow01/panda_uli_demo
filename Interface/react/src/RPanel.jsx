@@ -147,16 +147,29 @@ export const RPanel = (props) => {
                       onClick={() => {
                         sendTrigger("deleteactive"); 
                       }} />
-                    <Button size="large" label={<Box><Text size="4vh">Change Model</Text></Box>} 
+                    {/* <Button size="large" label={<Box><Text size="4vh">Change Model</Text></Box>} 
                       onClick={() => {
                         sendTrigger("toggleactive"); 
-                      }} />
-                    <Button size="large" disabled={computing} label={<Box><Text size="4vh">{computed_traj?"Execute Trajectory":"Compute Trajectory"}</Text></Box>} 
+                      }} /> */}
+                    <Button size="large" disabled={computing} label={<Box><Text size="4vh">{computed_traj?executeState:"Compute Trajectory"}</Text></Box>} 
                       onClick={() => {
                         console.log(computed_traj)
                         if(computed_traj){
-                          sendModel("execute"); //Waiting for scanningdone
-                          setFeedback("200;Executing behavior")
+                          if(executeState==="Execute"){
+                            sendModel("execute");
+                            setCanvasOpacity(0);
+                            setExecuteState("Pause")
+                            setFeedback("200;Executing behavior")
+                          }
+                          if(executeState==="Pause"){
+                            useRosStore.getState().pauseTopic.publish({data:"pause"})                      
+                            setExecuteState("Resume")
+                          }
+                          if(executeState==="Resume"){
+                            sendMessage("resume")
+                            setExecuteState("Pause")
+                          }
+                          // sendModel("execute"); //Waiting for scanningdone
                         }
                         else{
                           sendObject("on")
