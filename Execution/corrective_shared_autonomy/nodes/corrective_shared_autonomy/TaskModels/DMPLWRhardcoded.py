@@ -746,7 +746,7 @@ class DMPLWRhardcoded:
             segment, num_states, ddX, dX, X, s, ddY, dY, Y = self.setupSegment(learnedSegments, segID, from_back=False, initial_segment=initial_segment, s_start=s_start, start_val_temp = start_val_temp)
             
             # Confirm that the actual system has reached the approximate desired state
-            pos_error = 0.02
+            pos_error = 0.04
             quat_error = 0.175 # 10 deg
 
             # Quit if the robot isn't active anymore or if the behavior is paused
