@@ -754,7 +754,8 @@ class DMPLWRhardcoded:
                 self.rosExecution.shutdown()
                 return segID, s
 
-            self.rosExecution.checkCloseToSegmentStart(X,segment.surface,segment.state_names,pos_error,quat_error,tfBuffer,listener)
+            if segID>1 and not learnedSegments[segID-1].hybrid:
+                self.rosExecution.checkCloseToSegmentStart(X,segment.surface,segment.state_names,pos_error,quat_error,tfBuffer,listener)
             
             Z = X
             initial_segment = False
