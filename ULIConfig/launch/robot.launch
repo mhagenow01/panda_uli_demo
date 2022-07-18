@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+    <node pkg="actuation_group" type="actuation_group_launcher" name="actuation_group_launcher" output="screen"/>
+    <node pkg="kinect_ros" type="kinect_toggler" name="kinect_toggler" output="screen"/>
+    <node pkg="env_mapping" type="scan_toggler" name="scan_toggler" output="screen"/>
+    <!-- Sandpaper calc -->
+    <node pkg="diagnostics" type="paper_status" name="paper_status" output="screen"/>
+</launch>
