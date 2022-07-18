@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <arg name="sim" default="false"/>
+    <arg name="solo" default="true"/>
     <arg name="rviz" default="false"/>
+    <arg name="use_phone_corrections" default="true"/>
     <arg name="node_start_delay" default="3.0" />  
 
 
@@ -20,11 +22,15 @@
 
     </group>
 
+    <group if="$(arg solo)">
+        <node pkg="uli_interface" type="joy_republisher" name="joy_republisher" output="screen"/>
+        <param name="use_phone_corrections" value="$(arg use_phone_corrections)"/>
+    </group>
+
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
     
     <node pkg="corrective_shared_autonomy" type="kdlik" name="kdlik" output="screen"/>
     <node pkg="uli_interface" type="spliner" name="spliner" output="screen"/>
-    <node pkg="uli_interface" type="joy_republisher" name="joy_republisher" output="screen"/>
     <node pkg="uli_interface" type="param_handler" name="param_handler" output="screen"/>
     <node pkg="corrective_shared_autonomy" type="paper_changer.py" name="paper_changer" output="screen"/>
     <node pkg="corrective_shared_autonomy" type="resetter.py" name="resetter" output="screen"/>

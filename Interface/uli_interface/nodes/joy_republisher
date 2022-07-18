@@ -10,7 +10,6 @@ import numpy as np
 
 class JoyRepub(object):
     def __init__(self):
-        rospy.init_node('joy_repub')
         self._joy = None
         self._mode = "registration"
         self._joy_pub = rospy.Publisher('/phone/joy', Joy, queue_size=1)
@@ -20,6 +19,8 @@ class JoyRepub(object):
         self._mode_sub = rospy.Subscriber('/executeModel', String, self.on_execute)
         self._ui_sub = rospy.Subscriber('/ui/commands', String, self.on_ui)
         self._rate = rospy.Rate(10.0)
+
+        self._use_phone_corrections = rospy.get_param("/use_phone_corrections")
 
     def on_joy(self, msg):
         self._joy = msg
@@ -38,7 +39,7 @@ class JoyRepub(object):
             if self._joy is not None:
                 ax = np.array(self._joy.axes)
                 buttons = np.array(self._joy.buttons)
-                if self._mode == "execute":
+                if self._mode == "execute" and self._use_phone_corrections:
                     msg = Float64MultiArray()
                     msg.data.append(ax[0])
                     msg.data.append(-ax[1])
@@ -58,7 +59,7 @@ class JoyRepub(object):
         sys.exit()
 
 if __name__ == "__main__":
-    rospy.init_node('joy_repub')
+    rospy.init_node('joy_republisher')
     joy_repub = JoyRepub()
     signal.signal(signal.SIGINT, joy_repub.signal_handler)
     joy_repub.run()
