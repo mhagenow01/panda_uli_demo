@@ -138,12 +138,12 @@ export const RPanel = (props) => {
                   width="40vw"
                   pad="small"
                   >
-                    <Button size="large" disabled={scanning} label={<Box><Text size="4vh">Run Scan</Text></Box>} 
+                    <Button size="xxlarge" disabled={scanning} label={<Box><Text size="4vh">Run Scan</Text></Box>} 
                       onClick={() => {
                         sendTrigger("scan"); //Waiting for scanningdone
                         setScanning(true)
                       }} />
-                    <Button size="large" label={<Box><Text size="4vh">Delete Object</Text></Box>} 
+                    <Button size="xxlarge" label={<Box><Text size="4vh">Delete Object</Text></Box>} 
                       onClick={() => {
                         sendTrigger("deleteactive"); 
                       }} />
@@ -151,7 +151,7 @@ export const RPanel = (props) => {
                       onClick={() => {
                         sendTrigger("toggleactive"); 
                       }} /> */}
-                    <Button size="large" disabled={computing} label={<Box><Text size="4vh">{computed_traj?executeState:"Compute Trajectory"}</Text></Box>} 
+                    <Button size="xxlarge" disabled={computing} label={<Box><Text size="4vh">{computed_traj?executeState:"Compute Trajectory"}</Text></Box>} 
                       onClick={() => {
                         console.log(computed_traj)
                         if(computed_traj){
@@ -166,7 +166,7 @@ export const RPanel = (props) => {
                             setExecuteState("Resume")
                           }
                           if(executeState==="Resume"){
-                            sendMessage("resume")
+                            useRosStore.getState().pauseTopic.publish({data:"resume"})                      
                             setExecuteState("Pause")
                           }
                           // sendModel("execute"); //Waiting for scanningdone
