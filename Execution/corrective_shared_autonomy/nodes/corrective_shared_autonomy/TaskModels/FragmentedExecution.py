@@ -81,53 +81,35 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
         if (pos_error<pos_tol and quat_error<quat_tol):
             return True, np.array(resp.soln_joints.data)
         else: 
-            # pos_errors = ""
-            # quat_errors = ""
-            # for ii in range(0,5):
-            #     resp = ik_soln(des_pose,joint_poses,Bool(local),Bool(underconstrained))
-            #     # print("Time: ",time.time()-startt)
-            #     # print(resp)
-
-            #     # convert response to numpy
-            #     soln_pos = resp.soln_pose.position
-            #     soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
-            #     soln_quat = resp.soln_pose.orientation
-            #     soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
-
-            #     print(type(np.linalg.norm(soln_pos_np-pos)), type(ang_btwn_quats(quat, soln_quat_np, underconstrained)))
-            #     pos_errors += (str(np.linalg.norm(soln_pos_np-pos))+" ")
-            #     quat_errors += (str(ang_btwn_quats(quat, soln_quat_np, underconstrained)) + " ")
-            
-            #     print("FAILEDMH -- pos: ",pos_error,"quat: ",quat_error,"---",pos_errors,"---",quat_errors)
-
             # #####################################################################################
             # # Can optionally run KDLIK if CFIK fails, but probably won't find poses often      #
             # ######################################################################################
             # # print("err: ",pos_error, quat_error)
-            # rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
-            # ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
-            # jnames = []
-            # for ii in range(0,len(jointnames)):
-            #     jnames.append(String(jointnames[ii]))
+            rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
+            ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
+            jnames = []
+            for ii in range(0,len(jointnames)):
+                jnames.append(String(jointnames[ii]))
 
-            # urdf_file = String()
-            # urdf_file.data = urdf
-            # base = String()
-            # base.data = baselink
-            # ee = String()
-            # ee.data = eelink
+            urdf_file = String()
+            urdf_file.data = urdf
+            base = String()
+            base.data = baselink
+            ee = String()
+            ee.data = eelink
 
-            # resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
-            # soln_pos = resp.soln_pose.position
-            # soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
-            # soln_quat = resp.soln_pose.orientation
-            # soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+            resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
+            soln_pos = resp.soln_pose.position
+            soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+            soln_quat = resp.soln_pose.orientation
+            soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
 
-            # pos_error2 = np.linalg.norm(soln_pos_np-pos)
-            # quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
-            # if (pos_error2<pos_tol and quat_error2<quat_tol):
-            #     # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
-            #     return True, np.array(resp.soln_joints.data)
+            pos_error2 = np.linalg.norm(soln_pos_np-pos)
+            quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
+            if (pos_error2<pos_tol and quat_error2<quat_tol):
+                # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
+                print("KDL succeeded, but not our IK for pos:",des_pose)
+                return True, np.array(resp.soln_joints.data)
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
