@@ -116,6 +116,7 @@ class Spliner(object):
         self._events_pub = rospy.Publisher("/interaction_events",String,queue_size = 1)
         self._points_pub = rospy.Publisher("/clicked_point",PointStamped,queue_size = 1)
         self._pose_pub = rospy.Publisher("/checked_poses", PoseArray,queue_size=1)
+        
 
         # self._pose_pub2 = rospy.Publisher("/_poses", PoseArray,queue_size=1)
 
@@ -142,18 +143,20 @@ class Spliner(object):
         self.resumeexec = rospy.Subscriber("/execution/interrupt", String, self.checkResume)
         self._reach_map_sub = rospy.Subscriber("/reachabilitymap", MarkerArray, self.on_map)
         self._command_sub = rospy.Subscriber("/ui/commands",String, self.on_command)
+        self._command_sub = rospy.Subscriber("/commands",String, self.on_command2)
 
 
     def on_bias(self, msg):
         self._biased = msg.data
 
     def on_map(self, msg):
+        return
         if len(msg.markers) == 0:
             return
         print("got map")
         good = []
         bad = []
-        print(len(msg.markers))
+        # print(msg.markers)
         for marker in msg.markers:
             pose = PoseStamped()
             pose.header.frame_id=REFERENCE_FRAME
@@ -289,6 +292,10 @@ class Spliner(object):
         self._reach_thread = None
         self._ui_feedback_pub.publish("4;Reach computed")
 
+    def on_command2(self,msg):
+        if msg.data == "reset":
+            self._abort = True
+
     def on_command(self,msg):
         print(msg.data)
         l = msg.data.split(":")
@@ -390,12 +397,12 @@ class Spliner(object):
                 # model.executeModel(learnedSegments=self._learnedSegments, input_type='1dof')
                 doneExecution = False
                 segID=0; s=0
-                while not doneExecution and not self._abort:
+                while not doneExecution:# and not self._abort:
                     segID, s = model.executeModel(learnedSegments=self._learnedSegments, input_type='mdof', segID_start=segID, s_start=s)
                     if segID==-1 and s==-1:
                         doneExecution = True
                     else:
-                        while not self.resume or not self._abort:
+                        while not self.resume:# or not self._abort:
                             print("waiting")
                             time.sleep(0.5)
                         self.resume = False
@@ -569,8 +576,8 @@ class Spliner(object):
 
                 
 
-            starting = [us[2*i], vs[2*i],self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3], 1, 1, -self._pitch/150. if not self._horizontal else 0., self._pitch/150. if self._horizontal else 0., 0]
-            ending = [us[2*i+1], vs[2*i+1],self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3], 1, 1, -self._pitch/150. if not self._horizontal else 0., self._pitch/150. if self._horizontal else 0., 0]
+            starting = [us[2*i], vs[2*i],self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3], 1, 1, -self._pitch/100. if not self._horizontal else 0., self._pitch/100. if self._horizontal else 0., 0]
+            ending = [us[2*i+1], vs[2*i+1],self._force, q_ts[0], q_ts[1], q_ts[2], q_ts[3], 1, 1, -self._pitch/100. if not self._horizontal else 0., self._pitch/100. if self._horizontal else 0., 0]
 
             if self._pattern is None or self._pattern == "None":
                 orig_vals = interpMultD(starting,ending,samps,quat_vars=[3])
