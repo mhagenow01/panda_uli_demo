@@ -29,13 +29,24 @@ const store = (set) => ({
             antialias : true,
             background : "#f8f8f8",
             cameraPose:{
-                x : -.1,
+                x : -.05,
                 y : 0,
-                z : 3
+                z : 1.
               }
         });
+        viewer.cameraControls.center.addVectors({
+            x : .7,
+            y : 0,
+            z : .1
+          },{
+            x : .0,
+            y : 0,
+            z : 0.
+          })
+          viewer.cameraControls.update();
+          viewer.cameraControls.camera.updateMatrixWorld();
         viewer.cameraControls.rotateRight(0)
-        viewer.cameraControls.rotateDown(1)
+        viewer.cameraControls.rotateDown(.4)
 
         viewer.addObject(new Grid());
         var tfClient = new ROSLIB.TFClient({
@@ -69,12 +80,12 @@ const store = (set) => ({
         //     rootObject : viewer.scene
         // });
 
-        var urdfClient = new UrdfClient({
-            ros : ros,
-            tfClient : tfClient,
-            path : process.env.PUBLIC_URL + 'assets/',
-            rootObject : viewer.scene,
-        });
+        // var urdfClient = new UrdfClient({
+        //     ros : ros,
+        //     tfClient : tfClient,
+        //     path : process.env.PUBLIC_URL + 'assets/',
+        //     rootObject : viewer.scene,
+        // });
 
         var _rgb_lut = new Float32Array(256);
         for (var i = 0; i < 256; i++) {

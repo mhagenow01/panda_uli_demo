@@ -232,7 +232,7 @@ const store = (set,get) => ({
         state.targetOpacity=val}),
     handleEvent: (val) => set(state=>{
       if(val === "motion_finished"){
-        state.canvasOpacity(1) 
+        state.canvasOpacity = 1 
         state.executeState = "Execute"
       }
     })

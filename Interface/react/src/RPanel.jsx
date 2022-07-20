@@ -138,7 +138,7 @@ export const RPanel = (props) => {
                   width="40vw"
                   pad="small"
                   >
-                    <Button size="xxlarge" disabled={scanning} label={<Box><Text size="4vh">Run Scan</Text></Box>} 
+                    <Button size="xxlarge" disabled={robotStatus!="green" || scanning} label={<Box><Text size="4vh">Run Scan</Text></Box>} 
                       onClick={() => {
                         sendTrigger("scan"); //Waiting for scanningdone
                         setScanning(true)

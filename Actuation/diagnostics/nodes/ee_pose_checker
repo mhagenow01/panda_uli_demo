@@ -57,6 +57,7 @@ class EEPoseChecker:
                 poset.header.stamp = rospy.Time.now()
                 poset.pose.position = Point(x = post.x, y = post.y, z = post.z)
                 poset.pose.orientation = Quaternion(w = rott.w, x = rott.x, y = rott.y, z = rott.z)
+                self.actual_ee_pub.publish(poset)
 
             except Exception as e:
                 print(e)

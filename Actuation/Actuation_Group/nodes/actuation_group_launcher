@@ -43,6 +43,7 @@ class ActuationLauncher:
             self.relaunch_state = 1 # pending reset of e-stop
         if self.relaunch_state == 1 and data.robot_mode == 1:
             self.relaunch_state = 0
+            time.sleep(0.5)
             self.startActuation()
 
     def startActuation(self):

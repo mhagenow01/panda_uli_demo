@@ -34,7 +34,7 @@ class HybridController:
         self.mode = HybridMode.Hybrid
         # self.mode = HybridMode.Passthrough
         self.samprate = 100.0
-        self.gain_lin = 0.002
+        self.gain_lin = 0.001
         self.gain_ang = 0.1
         self.admittance = True
         self.lin_stiffness = np.array([700.0, 700.0, 700.0])

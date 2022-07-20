@@ -9,6 +9,7 @@ __author__ = "Mike Hagenow"
 import rospy
 import time
 from std_msgs.msg import String, Float64
+from sensor_msgs.msg import CompressedImage
 from franka_core_msgs.msg import RobotState
 from hybrid_controller.msg import HybridPose
 from tf2_msgs.msg import TFMessage
@@ -102,7 +103,8 @@ class PandaReg:
         #############################
         # Sleep for Driver to Start #
         #############################
-        rospy.sleep(3.5)
+        rospy.wait_for_message("/k4a/rgb/image_rect/compressed",CompressedImage)
+        rospy.sleep(1.0)
         self.pub_rviz.publish(String("camera_driver_running"))
 
         ###################################
