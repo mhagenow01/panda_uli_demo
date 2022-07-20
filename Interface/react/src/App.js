@@ -7,7 +7,6 @@ import {Canvas} from './Canvas';
 import {TopBar} from './TopBar';
 import {BotBar} from './BotBar';
 import {View} from './3Dview';
-import {GamepadHandle} from './Gamepad';
 import Gamepad from 'react-gamepad'
 import { Grommet, List, Stack,Button, TextInput, Card, Grid, Box, Text, CheckBox,Tabs, Tab, Layer } from 'grommet';
 import styled from "styled-components";
@@ -17,10 +16,11 @@ import useRosStore from './RosStore';
 function App() {
   
   const [show3D] = useRosStore(state=>([state.show3D])) 
-  const [feedback] = useAppStore(state=>([state.feedback])) 
+  const [feedback,rvizMode,setRvizMode] = useAppStore(state=>([state.feedback,state.rvizMode,state.setRvizMode])) 
   const primaryColor="#9b0000"
   const theme = {
     name: 'UW-sanding',
+    //full: true,
     rounding: 4,
     defaultMode: 'dark',
     global: {
@@ -125,12 +125,8 @@ function App() {
       >
       <Box height='100vh' width='100vw' direction="row" background="#9b0000">      
         {/* <GamepadHandle/> */}
-        <Tabs width="70vw" justify="start" onActive={(val) => {
-          if(val ==1)
-          setTimeout(function() { //Start the timer
-            show3D()
-            }.bind(this), 10)
-          
+        <Tabs width="70vw" justify="start" activeIndex={rvizMode} onActive={(val) => {
+          setRvizMode(val)
           }}>
           <Tab title={<Box><Text size="2vh">Camera View</Text></Box>}>
             <Stack>
@@ -155,13 +151,13 @@ function App() {
                 opacity: .9
               }}
               round="medium"
-              width="small"
+              width="medium"
               pad="medium"
               alignContent='center'
               opacity={.4}
               hidden={feedback ===""}
             >
-              <Text size="3vh" alignSelf='center'>{feedback}</Text>
+              <Text size="4vh" alignSelf='center'>{feedback}</Text>
           </Box>
           </Box>
         </Layer>

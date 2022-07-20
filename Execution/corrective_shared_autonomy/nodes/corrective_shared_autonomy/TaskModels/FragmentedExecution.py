@@ -85,34 +85,63 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
             # # Can optionally run KDLIK if CFIK fails, but probably won't find poses often      #
             # ######################################################################################
             # # print("err: ",pos_error, quat_error)
-            # rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
-            # ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
-            # jnames = []
-            # for ii in range(0,len(jointnames)):
-            #     jnames.append(String(jointnames[ii]))
+            rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
+            ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
+            jnames = []
+            for ii in range(0,len(jointnames)):
+                jnames.append(String(jointnames[ii]))
 
-            # urdf_file = String()
-            # urdf_file.data = urdf
-            # base = String()
-            # base.data = baselink
-            # ee = String()
-            # ee.data = eelink
+            urdf_file = String()
+            urdf_file.data = urdf
+            base = String()
+            base.data = baselink
+            ee = String()
+            ee.data = eelink
 
-            # resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
-            # soln_pos = resp.soln_pose.position
-            # soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
-            # soln_quat = resp.soln_pose.orientation
-            # soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+            resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
+            soln_pos = resp.soln_pose.position
+            soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+            soln_quat = resp.soln_pose.orientation
+            soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
 
-            # pos_error2 = np.linalg.norm(soln_pos_np-pos)
-            # quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
-            # if (pos_error2<pos_tol and quat_error2<quat_tol):
-            #     # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
-            #     return True, np.array(resp.soln_joints.data)
+            pos_error2 = np.linalg.norm(soln_pos_np-pos)
+            quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
+            if (pos_error2<pos_tol and quat_error2<quat_tol):
+                # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
+                print("KDL succeeded, but not our IK for pos:",des_pose)
+                return True, np.array(resp.soln_joints.data)
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
-            # print("Reach failed: ",pos,quat,pos_error,quat_error)
+            # if pos[0]<0.7:
+            #     pos_errors = ""
+            #     quat_errors = ""
+            #     for ii in range(0,5):
+            #         des_pose_2 = copy.deepcopy(des_pose)
+            #         des_pose_2.position.x = des_pose_2.position.x + 0.02*(0.5 - np.random.random())
+            #         des_pose_2.position.y = des_pose_2.position.y + 0.02*(0.5 - np.random.random())
+            #         des_pose_2.position.z = des_pose_2.position.z + 0.02*(0.5 - np.random.random())
+            #         resp = ik_soln(des_pose_2,joint_poses,Bool(local),Bool(underconstrained))
+            #         # print("Time: ",time.time()-startt)
+            #         # print(resp)
+
+            #         # convert response to numpy
+            #         soln_pos = resp.soln_pose.position
+            #         soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+            #         soln_quat = resp.soln_pose.orientation
+            #         soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+
+            #         pos_error_temp = np.linalg.norm(soln_pos_np-pos)
+            #         quat_error_temp = ang_btwn_quats(quat, soln_quat_np, underconstrained)
+
+            #         if (pos_error<pos_tol and quat_error<quat_tol):
+            #             print("Saved by random: ",pos,quat,pos_error,quat_error,"--",pos_errors," ",quat_errors)
+            #             return True, np.array(resp.soln_joints.data) 
+
+            #         pos_errors += (str(np.linalg.norm(soln_pos_np-pos))+" ")
+            #         quat_errors += (str(float(ang_btwn_quats(quat, soln_quat_np, underconstrained))) + " ")
+                
+            #     print("Not random saved: ",pos,quat,pos_error,quat_error,"--",pos_errors," ",quat_errors)
             return False, None           
 
     except rospy.ServiceException as e:
@@ -273,7 +302,7 @@ def getReachable(trajectories, curr_mask, downsamp=1):
         successes = Parallel(n_jobs=10, backend='loky')(delayed(checkDoneAndReachability)(trajectories[ii][0:3,jj].flatten(), trajectories[ii][3:7,jj].flatten(), urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,curr_mask, ii,jj,joint_poses) for jj in range(0,np.shape(trajectories[ii])[1],downsamp))
 
         # Dilation of success array
-        dilation = 1
+        dilation = 2
         successes_new = np.copy(successes)
         for jj in range(0,len(successes)):
             # if any around are successful, make successful
@@ -292,7 +321,7 @@ def getReachable(trajectories, curr_mask, downsamp=1):
     
         
         # Erosion of success array applied directly to trajectory
-        erosion = 8
+        erosion = 11
         for jj in range(0,np.shape(trajectories[ii])[1]):
             ind = int(jj/downsamp)
             tmp_success = 1
@@ -434,8 +463,8 @@ def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[], super_pos_vars =
         for jj in range(0,len(super_pos_vars)):
             amp = super_pos_amp[jj]
             freq = super_pos_freq[jj]
-            added_sine[super_pos_vars[jj]] = np.sin(np.pi*float(ii)/num_pts)*amp*np.sin(freq*float(ii)/2*np.pi)
-            added_sine[super_pos_vars[jj]+1] = np.sin(np.pi*float(ii)/num_pts)*amp*np.cos(freq*float(ii)/2*np.pi)
+            added_sine[super_pos_vars[jj]] = np.power(np.sin(np.pi*float(ii)/num_pts),0.2)*amp*np.sin(freq*float(ii)/2*np.pi)
+            added_sine[super_pos_vars[jj]+1] = np.power(np.sin(np.pi*float(ii)/num_pts),0.2)*amp*np.cos(freq*float(ii)/2*np.pi)
         c_i = float(ii)/float(num_pts) # interpolation coefficient
         vals.append(list(c_i*(e-s)+s+a for s,e,a in zip(starting_vals,ending_vals,added_sine)))
     
@@ -457,7 +486,7 @@ def interpMultD(starting_vals,ending_vals,num_pts,quat_vars=[], super_pos_vars =
     return vals.T # num vars x num_samples
 
 def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,tool_offset):
-    approach_dists = [0.1, 0.01]
+    approach_dists = [0.05, 0.01]
     time = np.abs(approach_dists[0]-approach_dists[1]) / vel
     
     segment = HybridSegment()
@@ -484,7 +513,7 @@ def gen_approach(surfaceBSpline,samps_per_sec,R_tool_surf,starting_coords,vel,to
     return segment
 
 def gen_retract(surfaceBSpline,samps_per_sec,R_tool_surf,ending_coords,vel, tool_offset):
-    retraction_dists = [0.01, 0.1]
+    retraction_dists = [0.01, 0.05]
     time = np.abs(retraction_dists[0]-retraction_dists[1]) / vel
 
     segment = HybridSegment()
@@ -538,7 +567,7 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
     orig_vals[7,:] = 1.0
     for ii in range(segment.num_samples):
         r, n_hat, r_u_norm, r_v_norm = surfaceBSpline.calculate_surface_point(uvs[0,ii],uvs[1,ii])
-        orig_vals[0:3,ii] = r + 0.10 * n_hat 
+        orig_vals[0:3,ii] = r + 0.05 * n_hat 
         R_surf = ScipyR.from_matrix(np.hstack([r_u_norm.reshape((3,1)), r_v_norm.reshape((3,1)), n_hat.reshape((3,1))]))
         orig_vals[3:7,ii] = (R_surf * R_tool_surf_end).as_quat()
 
@@ -556,9 +585,9 @@ def gen_btw_passes(surfaceBSpline,samps_per_sec,R_tool_surf_start,R_tool_surf_en
 def constructConnectedTraj(surface,state_names,states,mask,corrections,samps_per_sec):
     # TODO: this should actually also consider reachability
     segments = []
-    max_lin_vel_between = 0.05
-    max_ang_vel_between = 0.05
-    vel_appret = 0.02
+    max_lin_vel_between = 0.08
+    max_ang_vel_between = 0.08
+    vel_appret = 0.04
     
     trajs_inds = getContMask(mask) # get start and end samples for each continuous segment
 
@@ -673,7 +702,7 @@ class FragmentedExecutionManager():
         self.min_length = 40
         self.dt = 40
         self.downsamp = 40
-        self.plotting_size = 0.01
+        self.plotting_size = 0.02
         self.max_num_traj_pts = 0
         self.fragmentedBehavior = None
         self.resume = False # resume execution after paused

@@ -46,6 +46,16 @@ class ExecuteROS:
         rospy.Subscriber("/execution/interrupt", String, self.checkInterrupt)
         time.sleep(0.5)
 
+    def ang_btwn_quats(self,q1,q2, underconstrained=False):
+        # assumes xyzw notation
+        R_1 = R.from_quat(q1)
+        R_2 = R.from_quat(q2)
+        if underconstrained:
+            ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec()[0:2]) # ignore z if underconstrained
+        else:
+            ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec())
+        return ang_diff
+
     def storeZDInput(self, data):
         input_temp = np.array(data.data)
         if len(input_temp)==3: # if 3d, apply input transform (e.g., Force dimension)
@@ -140,7 +150,8 @@ class ExecuteROS:
 
                 return hpose
 
-            except:
+            except Exception as e:
+                print(e)
                 return None
 
         elif ("u" in state_names):
@@ -222,6 +233,43 @@ class ExecuteROS:
             hpose.constraint_frame = constraint_frame_ros
 
             return hpose
+
+    def checkCloseToSegmentStart(self,starting_state,surface,state_names,pos_error,quat_error,tfBuffer,listener):
+        closeenough = False
+
+        # get desired
+        hpose_des = self.getRobotStateToExecute(state_names,starting_state,surface)
+
+        if np.min(hpose_des.sel_vector)==0: # hybrid
+            Rcf = R.from_quat([hpose_des.constraint_frame.x, hpose_des.constraint_frame.y, hpose_des.constraint_frame.z, hpose_des.constraint_frame.w])
+            pos_global = Rcf.apply([hpose_des.pose.position.x, hpose_des.pose.position.y, hpose_des.pose.position.z])
+            R_local = R.from_quat([hpose_des.pose.orientation.x, hpose_des.pose.orientation.y, hpose_des.pose.orientation.z, hpose_des.pose.orientation.w])
+            quat_global = (Rcf * R_local).as_quat()
+        else:
+            pos_global = np.array([hpose_des.pose.position.x, hpose_des.pose.position.y, hpose_des.pose.position.z])
+            quat_global = np.array([hpose_des.pose.orientation.x, hpose_des.pose.orientation.y, hpose_des.pose.orientation.z, hpose_des.pose.orientation.w])
+
+        rate = rospy.Rate(5) # Hz
+        while not closeenough:
+            # current robot
+            try:
+                trans = tfBuffer.lookup_transform("panda_link0", "panda_ee", rospy.Time(), rospy.Duration(1.0))
+                x = trans.transform.translation.x; y = trans.transform.translation.y; z = trans.transform.translation.z
+                qx = trans.transform.rotation.x; qy = trans.transform.rotation.y; qz = trans.transform.rotation.z
+                qw = trans.transform.rotation.w
+                
+                # check if close enough
+                curr_pos_error = np.linalg.norm(pos_global-np.array([x,y,z]))
+                curr_quat_error = self.ang_btwn_quats(np.array([qx,qy,qz,qw]),quat_global,underconstrained=hpose_des.underconstrained.data)
+
+                print("CCE: ",curr_pos_error, curr_quat_error)
+                if curr_pos_error <= pos_error and curr_quat_error <=quat_error:
+                    closeenough = True
+                rate.sleep()
+            except Exception as e:
+                print(str(e))
+                rate.sleep()
+        return
 
     def execute_states(self,state_names,state_vals,surface,correction):
         # Publish Correction

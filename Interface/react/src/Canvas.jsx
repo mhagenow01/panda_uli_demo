@@ -6,8 +6,8 @@ import useRosStore from './RosStore';
 import Konva from 'konva';
 
 export const Canvas = (props) => {
-    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach,targetOpacity] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach,state.targetOpacity]);
-    const [maxWidth,maxHeight] = useAppStore(state=>[state.imageWidth, state.imageHeight])
+    var [corners,path,canvasOpacity,spline,good,bad,imageWidth,knownWorkflow,clearReach,targetOpacity,pathComputed,setPathComputed] = useAppStore(state=>[state.corners,state.path,state.canvasOpacity,state.spline,state.good,state.bad,state.imageWidth,state.knownWorkflow,state.clearReach,state.targetOpacity,state.pathComputed,state.setPathComputed]);
+    const [maxWidth,maxHeight,setRvizMode,setFeedback,setReachComputed] = useAppStore(state=>[state.imageWidth, state.imageHeight,state.setRvizMode,state.setFeedback,state.setReachComputed])
     const setCorner = useAppStore(state=>state.setCorner)
 
     Konva.pixelRatio = 1;
@@ -25,11 +25,14 @@ export const Canvas = (props) => {
     const handleDragStart = (e) => {
       useRosStore.getState().commandTopic.publish({data:"stop_reach:"})
       clearReach()
+      setReachComputed(false)
     };
     const handleMove = (e) => {
         e.target.attrs["x"]=Math.min(Math.max(e.target.attrs["x"],0),maxWidth)
         e.target.attrs["y"]=Math.min(Math.max(e.target.attrs["y"],0),0.885*maxHeight)
         setCorner(e.target.attrs["cornerId"],e.target.attrs["x"],e.target.attrs["y"])
+        setPathComputed(false)
+        console.log(pathComputed)
         corners.map((corner) => {
           return {
             ...corner
@@ -44,14 +47,20 @@ export const Canvas = (props) => {
         var x=e.evt["clientX"]
         var y=e.evt["clientY"]
         if (x<maxWidth && y < maxHeight)
-        useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+          useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+          setRvizMode(1)
+          setFeedback("20;Align Piece")
       }
-      else{
+      else{ // Touch event
         var x=e.evt.changedTouches[0]["clientX"]
         var y=e.evt.changedTouches[0]["clientY"]
-        if (x<maxWidth && y < maxHeight)
-        useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
-
+        console.log("touch")
+        if (x<maxWidth && y < maxHeight){
+          useRosStore.getState().commandTopic.publish({data:(knownWorkflow?"publish_point:":"push:")+String(x/maxWidth)+','+String(y/maxHeight)})
+          setRvizMode(1)
+          console.log("done")
+          setFeedback("20;Align Piece")
+        }
       }
     };
     return ( 
@@ -88,13 +97,15 @@ export const Canvas = (props) => {
             stroke="#78A2cc"
             opacity={.8*canvasOpacity}
             strokeWidth={imageWidth/100.}
+            visible={pathComputed}
           />
           <Circle
               x={300}
               y={300}
               Radius={imageWidth/30.}
               fill="#eeeeee"
-              opacity={0.8*targetOpacity}
+              stroke="#eeeeee"
+              opacity={0.5*targetOpacity}
               draggable
               shadowColor="black"
               shadowBlur={10}

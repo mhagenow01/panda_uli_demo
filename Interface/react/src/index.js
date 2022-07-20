@@ -5,6 +5,9 @@ import 'antd/dist/antd.dark.css'
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
+// FullScreen.onFullScreen();
+
+
 ReactDOM.render(
   <React.StrictMode>
     <App />

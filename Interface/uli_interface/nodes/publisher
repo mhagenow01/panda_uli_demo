@@ -13,30 +13,40 @@ bridge = CvBridge()
 def sender():
     rospy.init_node('img_sender')
     print("reading")
+    suffix = "_flat"
     
     rospack = rospkg.RosPack()
 
-    path = rospack.get_path('uli_interface')+'/saved_msgs/depth.txt'
+    path = rospack.get_path('uli_interface')+'/saved_msgs/depth'+suffix+'.txt'
     msg = CompressedImage()
     with open(path, 'rb') as infile:
         msg.deserialize(infile.read())
     pub1 = rospy.Publisher("/k4a/depth_to_rgb/image_raw/compressed",CompressedImage, queue_size =1, latch = True)
     pub1.publish(msg)
 
-    path = rospack.get_path('uli_interface')+'/saved_msgs/rgb.txt'
+    path = rospack.get_path('uli_interface')+'/saved_msgs/rgb'+suffix+'.txt'
     msg = CompressedImage()
     with open(path, 'rb') as infile:
         msg.deserialize(infile.read())
     pub2 = rospy.Publisher("/k4a/rgb/image_raw/compressed",CompressedImage, queue_size =1, latch = True)
     pub2.publish(msg)
 
-    path = rospack.get_path('uli_interface')+'/saved_msgs/info.txt'
+    path = rospack.get_path('uli_interface')+'/saved_msgs/info'+suffix+'.txt'
     msg = CameraInfo()
     with open(path, 'rb') as infile:
         msg.deserialize(infile.read())
     pub3 = rospy.Publisher("/k4a/depth_to_rgb/camera_info",CameraInfo, queue_size =1, latch = True)
     pub3.publish(msg)
 
+    path = rospack.get_path('uli_interface')+'/saved_msgs/cloud'+suffix+'.txt'
+    msg = PointCloud2()
+    with open(path, 'rb') as infile:
+        msg.deserialize(infile.read())
+    msg.header.stamp = rospy.Time.now()
+    pub4 = rospy.Publisher("/k4a/points2",PointCloud2, queue_size =1, latch = True)
+    pub4.publish(msg)
+    print(msg.header)
+    print("published all")
     rospy.spin()
 
 if __name__ == '__main__':

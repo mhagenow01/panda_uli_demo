@@ -232,6 +232,19 @@ class BSplineSurface:
         return r, n_hat, r_u_norm, r_v_norm
 
 
+    def calculate_surface_percentage_plane(self,per_u,per_v):
+        # find linear interpolation between control pts
+        u_dir = self.controls_pts[-1,0]-self.controls_pts[0,0]
+        v_dir = self.controls_pts[0,-1]-self.controls_pts[0,0]
+        interp = per_u*u_dir + per_v*v_dir + self.controls_pts[0,0]
+
+        # # calculate corresponding u,v
+        u,v = self.getClosestParams(interp[0],interp[1],interp[2],per_u,per_v)
+
+        # # output surface_pt_details
+        return self.calculate_surface_point(u,v)
+
+
     def calculate_surface_point(self,u,v):
         # Calculate all of the basis functions for the given u,v
         # using recursive formulation

@@ -3,42 +3,50 @@
 import rospy
 import time
 from sensor_msgs.msg import Joy
-from std_msgs.msg import Float64,Float64MultiArray
+from std_msgs.msg import Float64,Float64MultiArray,String
 import sys
 import signal
 import numpy as np
 
 class JoyRepub(object):
     def __init__(self):
-        rospy.init_node('joy_repub')
         self._joy = None
+        self._mode = "registration"
         self._joy_pub = rospy.Publisher('/phone/joy', Joy, queue_size=1)
         self._input_pub = rospy.Publisher('/zdinput/input', Float64MultiArray, queue_size=1)
         self._button_pub = rospy.Publisher('/zdinput/button', Float64, queue_size=1)
         self._joy_sub = rospy.Subscriber('/ui/joy', Joy, self.on_joy)
+        self._mode_sub = rospy.Subscriber('/interaction_events', String, self.on_event)
         self._rate = rospy.Rate(10.0)
+
+        self._use_phone_corrections = rospy.get_param("/use_phone_corrections")
 
     def on_joy(self, msg):
         self._joy = msg
 
+    def on_event(self, msg):
+        if msg.data == "motion_start":
+            self._mode = "execute"
+        if msg.data == "motion_finished":
+            self._mode = "registration"
     def run(self):
         while not rospy.is_shutdown():
             if self._joy is not None:
-
                 ax = np.array(self._joy.axes)
                 buttons = np.array(self._joy.buttons)
-                if np.max(buttons)>0 or np.max(np.abs(ax))>0:
-                    #Add mode for zdinput
-                    self._joy_pub.publish(self._joy)
-                msg = Float64MultiArray()
-                msg.data.append(ax[0])
-                msg.data.append(-ax[1])
-                msg.data.append(ax[2])
-                msg.data.append(-ax[3])
-                msg.data.append(buttons[7]-buttons[6])
-                msg.data.append(buttons[5]-buttons[4])
-                self._input_pub.publish(msg)
-                self._button_pub.publish(buttons[1])
+                if self._mode == "execute" and self._use_phone_corrections:
+                    msg = Float64MultiArray()
+                    msg.data.append(ax[0])
+                    msg.data.append(-ax[1])
+                    msg.data.append(ax[2])
+                    msg.data.append(-ax[3])
+                    msg.data.append(buttons[7]-buttons[6])
+                    msg.data.append(buttons[5]-buttons[4])
+                    self._input_pub.publish(msg)
+                    self._button_pub.publish(buttons[1])
+                if self._mode == "registration":
+                    if np.max(buttons)>0 or np.max(np.abs(ax))>0:
+                        self._joy_pub.publish(self._joy)
 
             self._rate.sleep()
 
@@ -46,7 +54,7 @@ class JoyRepub(object):
         sys.exit()
 
 if __name__ == "__main__":
-    rospy.init_node('joy_repub')
+    rospy.init_node('joy_republisher')
     joy_repub = JoyRepub()
     signal.signal(signal.SIGINT, joy_repub.signal_handler)
     joy_repub.run()

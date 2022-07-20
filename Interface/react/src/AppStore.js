@@ -10,11 +10,14 @@ const immer = (config) => (set, get, api) =>
 const store = (set,get) => ({
     // The frame specifies the expert (color) frame
     messages: ['default message 2','default message 1'],
+    pathComputed: false,
+    reachComputed: false,
     robotStatus: "grey",
     paperStatus: 0.0,
     paperChange: "Change paper",
     timer: 0,
-    targetOpacity:1.,
+    targetOpacity:0.,
+    rvizMode:0,
     gamepads: [1,1],
     path: [{x:0,y:0}],
     good: [{x:0,y:0}],
@@ -29,12 +32,18 @@ const store = (set,get) => ({
     computed_traj: false,
     computing: false,
     configDetails: "",
+    executeState: "Execute",
     corners: [...Array(4)].map((_, i) => ({
       id: i.toString(),
       x: 100 + (i%4)* 100,
       y: 100,
       isDragging: false,
     })),
+    setRvizMode: (val) => set(state=>{
+      state.rvizMode = val
+      if(val ==1)
+        setTimeout(function() {useRosStore.getState().show3D()}.bind(this), 10)
+    }),
     decreaseTimer: () => set(state=>{
       if(state.timer > 0)
         state.timer -= 1
@@ -48,6 +57,9 @@ const store = (set,get) => ({
     }),
     setScanning: (val) => set(state=>{
       state.scanning= val
+    }),
+    setExecuteState: (val) => set(state=>{
+      state.executeState = val
     }),
     setPaperChange: (val) => set(state=>{
       state.paperChange = val
@@ -86,10 +98,14 @@ const store = (set,get) => ({
     }),
     setRobotStatus: (msg) => set(state=>{
       state.robotStatus = msg 
+      if(msg !== "green" && state.executeState === "Pause")
+        state.executeState = "Resume" 
     }),
     receivedRviz: (msg) => set(state=>{
-      if(msg==="scanningdone")
+      if(msg==="scanningdone"){
         state.scanning=false
+        state.targetOpacity=1.
+      }
       if(msg==="computetrajdone"){
         state.computing=false
         state.computed_traj=true
@@ -101,8 +117,10 @@ const store = (set,get) => ({
       
     }),
     setGamepads: (msg) => set(state=>{
+      // console.log(msg)
       // https://answers.ros.org/question/284741/seq-or-time-stamp-for-publishing-a-message/
       try {
+        
         var currentTime = new Date();
         var secs = Math.floor(currentTime.getTime()/1000);
         var nsecs = Math.round(1000000000*(currentTime.getTime()/1000-secs));
@@ -110,6 +128,7 @@ const store = (set,get) => ({
         msg.buttons.map((button) => {
           buttons.push(button.value)  
         })
+        ////state.paperStatus = (msg.axes[0]+1)/2.
         var joy_msg = new ROSLIB.Message({
           header : {
             seq : 0,
@@ -128,6 +147,7 @@ const store = (set,get) => ({
       catch (err){
         console.log(err)
       }
+      //state.gamepads = msg
     }),
     addMessage: (message) => set(state=>{
         state.messages = [message,...state.messages]
@@ -138,6 +158,7 @@ const store = (set,get) => ({
     }),
     get_path: () => set(state =>{
       useRosStore.getState().commandTopic.publish({data:"get_path"})
+      //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
     }),
     sendMessage: (msg) => set(state =>{
       useRosStore.getState().commandTopic.publish({data:msg})
@@ -145,6 +166,7 @@ const store = (set,get) => ({
     }),
     sendTrigger: (msg) => set(state =>{
       useRosStore.getState().rvizTopic.publish({data:msg})
+      //useRosStore.getState().commandTopic.publish({data:state.corners.map(item => {String(item.x)+','+String(item.y)}).join(';')})
     }),
     sendObject: (msg) => set(state =>{
       useRosStore.getState().objTopic.publish({data:msg})
@@ -165,6 +187,12 @@ const store = (set,get) => ({
     setImageHeight: (h) => set(state=>{
       state.imageHeight = h
     }),
+    setPathComputed: (val) => set(state=>{
+      state.pathComputed = val
+    }),
+    setReachComputed: (val) => set(state=>{
+      state.reachComputed = val
+    }),
     setPath: (coords) => set(state=>{
       state.path = []
       coords.map((coord) => {
@@ -174,6 +202,7 @@ const store = (set,get) => ({
           y: parseFloat(coord[1])*state.imageHeight
         });   
       })
+      state.pathComputed = true
     }),
     setGood: (coords) => set(state=>{
       state.good = []
@@ -195,11 +224,18 @@ const store = (set,get) => ({
           y: parseFloat(coord[1])*state.imageHeight
         });   
       })
+      state.reachComputed = true
     }),
     setCanvasOpacity: (val) => set(state=>{
         state.canvasOpacity=val}),
     setTargetOpacity: (val) => set(state=>{
-        state.targetOpacity=val})
+        state.targetOpacity=val}),
+    handleEvent: (val) => set(state=>{
+      if(val === "motion_finished"){
+        state.canvasOpacity = 1 
+        state.executeState = "Execute"
+      }
+    })
 });
 
 const useAppStore = create(immer(store));

@@ -1,10 +1,12 @@
 import React, {useCallback,memo} from 'react';
 import useParamStore from './ParamStore';
+import useAppStore from './AppStore';
 import { Grommet, List, Stack,Button, Text, Card, Grid, Box,CheckBox, Select, RangeInput } from 'grommet';
 
 export const ParameterModule = memo((props) => { 
   const {idx} = props;
   const parameterInfo = useParamStore(useCallback(state=>state.parameters[idx],[idx]));
+  const setPathComputed = useAppStore(state=>state.setPathComputed);
 
   // const parameterInfoChanged = useAppStore(useCallback(state=>{
   //   state.buttonDetails[idx]
@@ -28,7 +30,9 @@ export const ParameterModule = memo((props) => {
               value= {parameterInfo.value}
               min = {parameterInfo.min}
               max = {parameterInfo.max}
-              onChange={event => setParameter(idx,event.target.value)}
+              onChange={event => {
+                setParameter(idx,event.target.value)
+                setPathComputed(false)}}
               margin={"xsmall"}/>
             </Box>
             <Box justify={"center"} alignContent={"center"} width={"small"}>
@@ -42,7 +46,8 @@ export const ParameterModule = memo((props) => {
           options={parameterInfo.options}
           value= {parameterInfo.value}
           onChange={({ value,option }) => {
-            setParameter(idx,option)}}
+            setParameter(idx,option)
+            setPathComputed(false)}}
           margin={"none"}
           size="3vh"
           pad="medium"
