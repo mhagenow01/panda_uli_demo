@@ -42,7 +42,7 @@ def ang_btwn_quats(q1,q2, underconstrained=False):
         ang_diff = np.linalg.norm(((R_1.inv()) * R_2).as_rotvec())
     return ang_diff
 
-def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses=None):
+def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses=None, ensembleKDL=False):
     rospy.wait_for_service('/collision_free_ik/solve_ik')
 
     try:
@@ -80,36 +80,39 @@ def queryReachability(pos,quat,urdf,baselink,eelink, pos_tol, quat_tol, jointnam
 
         if (pos_error<pos_tol and quat_error<quat_tol):
             return True, np.array(resp.soln_joints.data)
-        else: 
-            # #####################################################################################
-            # # Can optionally run KDLIK if CFIK fails, but probably won't find poses often      #
-            # ######################################################################################
-            # # print("err: ",pos_error, quat_error)
-            rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
-            ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
-            jnames = []
-            for ii in range(0,len(jointnames)):
-                jnames.append(String(jointnames[ii]))
+        else:
 
-            urdf_file = String()
-            urdf_file.data = urdf
-            base = String()
-            base.data = baselink
-            ee = String()
-            ee.data = eelink
 
-            resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
-            soln_pos = resp.soln_pose.position
-            soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
-            soln_quat = resp.soln_pose.orientation
-            soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+            if ensembleKDL:
+                # #####################################################################################
+                # # Can optionally run KDLIK if CFIK fails, but probably won't find poses often      #
+                # ######################################################################################
+                # # print("err: ",pos_error, quat_error)
+                rospy.wait_for_service('/corrective_shared_autonomy/solve_ik')
+                ik_soln = rospy.ServiceProxy('/corrective_shared_autonomy/solve_ik', IK)
+                jnames = []
+                for ii in range(0,len(jointnames)):
+                    jnames.append(String(jointnames[ii]))
 
-            pos_error2 = np.linalg.norm(soln_pos_np-pos)
-            quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
-            if (pos_error2<pos_tol and quat_error2<quat_tol):
-                # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
-                print("KDL succeeded, but not our IK for pos:",des_pose)
-                return True, np.array(resp.soln_joints.data)
+                urdf_file = String()
+                urdf_file.data = urdf
+                base = String()
+                base.data = baselink
+                ee = String()
+                ee.data = eelink
+
+                resp = ik_soln(urdf_file,base,ee,des_pose,jnames)
+                soln_pos = resp.soln_pose.position
+                soln_pos_np = np.array([soln_pos.x, soln_pos.y, soln_pos.z])
+                soln_quat = resp.soln_pose.orientation
+                soln_quat_np = np.array([soln_quat.x, soln_quat.y, soln_quat.z, soln_quat.w])
+
+                pos_error2 = np.linalg.norm(soln_pos_np-pos)
+                quat_error2 = ang_btwn_quats(soln_quat_np, quat, underconstrained)
+                if (pos_error2<pos_tol and quat_error2<quat_tol):
+                    # print("KDL succeeded, but not our IK:",pos,pos_error,quat_error,pos_error2,quat_error2)
+                    print("KDL succeeded, but not our IK for pos:",des_pose)
+                    return True, np.array(resp.soln_joints.data)
             # else:
             #     # if pos[0]<0.8:
             #     # print("Reach failed: ",pos,pos_error,quat_error,pos_error2,quat_error2)
@@ -247,20 +250,12 @@ def checkReachabilityOfPoses(poses, pos_tol=0.002, quat_tol=0.05):
 def checkReachabilityOfPose(p,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses):
     pos = p[0:3]
     quat = p[3:7]
-    success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses)
+    success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, joint_poses, ensembleKDL=True)
     return success
 
 def checkDoneAndReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames, curr_mask, ii, jj, joint_poses):
     if curr_mask is None or curr_mask[ii][jj]!=2: # not already done
-        success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,joint_poses)
-        # pos_margin = 0.08
-        # success2, jangles = queryReachability(pos+np.array([pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # success3, jangles = queryReachability(pos+np.array([-pos_margin, 0, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # success4, jangles = queryReachability(pos+np.array([0, pos_margin, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # success5, jangles = queryReachability(pos + np.array([0, -pos_margin, 0]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # success6, jangles = queryReachability(pos + np.array([0, 0, pos_margin]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # success7, jangles = queryReachability(pos + np.array([0, 0, -pos_margin]),quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames)
-        # if success and success2 and success3 and success4 and success5 and success6 and success7:
+        success, jangles = queryReachability(pos,quat,urdf_file,baselink,eelink, pos_tol, quat_tol, jointnames,joint_poses, ensembleKDL=True)
         if success:
             return 1
         else:
@@ -707,6 +702,7 @@ class FragmentedExecutionManager():
         self.fragmentedBehavior = None
         self.resume = False # resume execution after paused
         self.moveinprogress = False
+        self.reachability_displayed = False
         
         time.sleep(0.5)
         rospy.spin()
@@ -728,8 +724,10 @@ class FragmentedExecutionManager():
     def modelMoved(self,data):
         # when the model is moved, clear reachability and make sure the "compute trajectory" button is renabled
         if not self.moveinprogress: # to avoid hanging if this is called a bunch of times (clear reachability takes a while)
-            self.moveinprogress = True 
-            self.clearReachability()
+            self.moveinprogress = True
+            if self.reachability_displayed:
+                self.clearReachability()
+                self.reachability_displayed = False
             self.rvizpub.publish(String("execdone"))
             self.moveinprogress = False
 
@@ -785,6 +783,7 @@ class FragmentedExecutionManager():
 
     def displayReachability(self,trajs,downsamp):
         self.clearReachability()
+        self.reachability_displayed = True
         markerarr = MarkerArray()
         mark_id = 0
 

@@ -267,6 +267,7 @@ class ROSAffordances:
             pt = self.getPtAlongLine(pt) # project onto point cloud
             
             if isinstance(pt,int) and pt ==-1: # failed to get close point
+                print("No point nearby. Quitting.")
                 return # don't do anything
             
             str_temp = String()
