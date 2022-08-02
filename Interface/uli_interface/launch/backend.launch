@@ -22,9 +22,11 @@
 
     </group>
 
+    <param name="use_phone_corrections" value="$(arg use_phone_corrections)"/>
+
+    <node pkg="uli_interface" type="joy_republisher" name="joy_republisher" output="screen"/>
+
     <group if="$(arg solo)">
-        <node pkg="uli_interface" type="joy_republisher" name="joy_republisher" output="screen"/>
-        <param name="use_phone_corrections" value="$(arg use_phone_corrections)"/>
         <node pkg="corrective_shared_autonomy" type="kdlik" name="kdlik" output="screen"/>
     </group>
 

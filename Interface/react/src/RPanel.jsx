@@ -118,7 +118,7 @@ export const RPanel = (props) => {
                         setExecuteState("Resume")
                       }
                       if(executeState==="Resume"){
-                        sendMessage("resume")
+                        useRosStore.getState().pauseTopic.publish({data:"resume"})    
                         setExecuteState("Pause")
                       }
 
