@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 import rospy
 from sensor_msgs.msg import PointCloud2, CameraInfo, CompressedImage
+from std_msgs.msg import String,Float64
 import numpy as np
 import sys
 import rospkg
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
-
+import sys
+import signal
 
 bridge = CvBridge()
+
+def signal_handler(signal, frame):
+    sys.exit()
 
 def sender():
     rospy.init_node('img_sender')
@@ -47,7 +52,15 @@ def sender():
     pub4.publish(msg)
     print(msg.header)
     print("published all")
-    rospy.spin()
+    pub5 = rospy.Publisher("/ui/robot_state",String, queue_size =1, latch = True)
+    pub6 = rospy.Publisher("/panda/sandpaper_health",Float64, queue_size =1, latch = True)
+
+    rate = rospy.Rate(1.)
+    signal.signal(signal.SIGINT, signal_handler)
+    while not rospy.is_shutdown():
+        pub5.publish("green")
+        pub6.publish(1.)    
+        rate.sleep()
 
 if __name__ == '__main__':
     sender()

@@ -15,6 +15,7 @@ class JoyRepub(object):
         self._joy_pub = rospy.Publisher('/phone/joy', Joy, queue_size=1)
         self._input_pub = rospy.Publisher('/zdinput/input', Float64MultiArray, queue_size=1)
         self._button_pub = rospy.Publisher('/zdinput/button', Float64, queue_size=1)
+        self._kinect_pub = rospy.Publisher('/mappingToggle', String, queue_size=1)
         self._joy_sub = rospy.Subscriber('/ui/joy', Joy, self.on_joy)
         self._mode_sub = rospy.Subscriber('/interaction_events', String, self.on_event)
         self._rate = rospy.Rate(10.0)
@@ -34,6 +35,8 @@ class JoyRepub(object):
             if self._joy is not None:
                 ax = np.array(self._joy.axes)
                 buttons = np.array(self._joy.buttons)
+                if buttons[3]:
+                    self._kinect_pub.publish("off")
                 if self._mode == "execute" and self._use_phone_corrections:
                     msg = Float64MultiArray()
                     msg.data.append(ax[0])
