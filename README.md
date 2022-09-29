@@ -25,6 +25,11 @@ pip3 install dtw-python
 pip3 install plotly
 DHDC (force dimension)
 
+### Compilation:
+1. Place panda_uli_demo repo into src folder of a catkin workspace
+2. Make the `compile` script executable: `chmod +x compile`
+3. `./compile`
+
 
 #### CITATIONS
 DTW module. When using in academic works please cite:
