@@ -131,7 +131,7 @@ def main():
 
     rosaff = ROSDemoAffordances(input_method=input_method)
     rosaff.toggleSVDforInitialArticulation(True)
-    rosaff.setCppFitting(True)
+    rosaff.setCppFitting(False)
     rosaff.setCppRefitting(False)
     rosaff.setFitting(True)
    

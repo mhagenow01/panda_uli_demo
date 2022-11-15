@@ -1,0 +1,421 @@
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> franka_core_msgs                                                  
+Starting >>> franka_panda_description                                          
+Starting >>> hybrid_controller                                                 
+[build 0.1 s] [0/9 complete] [3/4 jobs] [1 queued] [franka_core_msgs:loaden... [build 0.2 s] [0/9 complete] [4/4 jobs] [1 queued] [franka_core_msgs:loaden... [build 0.3 s] [0/9 complete] [4/4 jobs] [0 queued] [hybrid_controller:make ... [build 0.4 s] [0/9 complete] [4/4 jobs] [0 queued] [hybrid_controller:make ... Finished <<< franka_panda_description                [ 0.2 seconds ]           
+Finished <<< hybrid_controller                       [ 0.5 seconds ]           
+[build 0.6 s] [2/9 complete] [4/4 jobs] [1 queued] [franka_core_msgs:make (... [build 0.7 s] [2/9 complete] [4/4 jobs] [1 queued] [franka_core_msgs:make (... [build 0.8 s] [2/9 complete] [4/4 jobs] [1 queued] [franka_core_msgs:make (... [build 0.9 s] [2/9 complete] [1/4 jobs] [1 queued] [franka_core_msgs:make (... [build] Interrupted by user!                                                   
+[build] Summary: 2 of 9 packages succeeded.                                    
+[build] Ignored: 12 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: 7 packages were abandoned.                                  
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.9 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> hybrid_controller                                                 
+[build 0.1 s] [0/2 complete] [1/4 jobs] [0 queued] [hybrid_controller:check... [build 0.2 s] [0/2 complete] [4/4 jobs] [0 queued] [hybrid_controller:make ... [build 0.3 s] [0/2 complete] [1/4 jobs] [0 queued] [hybrid_controller:make ... Finished <<< hybrid_controller                [ 0.3 seconds ]                  
+Starting >>> panda_sim                                                         
+[build 0.4 s] [1/2 complete] [1/4 jobs] [0 queued] [panda_sim:loadenv - 0.1]   Finished <<< panda_sim                        [ 0.1 seconds ]                  
+[build] Summary: All 2 packages succeeded!                                     
+[build] Ignored: 19 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.5 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> controlled_valve                                                  
+[build 0.1 s] [0/1 complete] [1/4 jobs] [0 queued] [controlled_valve:check ... Finished <<< controlled_valve                [ 0.1 seconds ]                   
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.2 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> hybrid_controller                                                 
+[build 0.1 s] [0/2 complete] [1/4 jobs] [0 queued] [hybrid_controller:check... [build 0.2 s] [0/2 complete] [4/4 jobs] [0 queued] [hybrid_controller:make ... [build 0.3 s] [0/2 complete] [1/4 jobs] [0 queued] [hybrid_controller:make ... Finished <<< hybrid_controller                [ 0.3 seconds ]                  
+Starting >>> ft_sensor                                                         
+[build 0.4 s] [1/2 complete] [1/4 jobs] [0 queued] [ft_sensor:loadenv - 0.1]   Finished <<< ft_sensor                        [ 0.2 seconds ]                  
+[build] Summary: All 2 packages succeeded!                                     
+[build] Ignored: 19 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.5 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> kinect_ros                                                        
+[build 0.1 s] [0/1 complete] [1/4 jobs] [0 queued] [kinect_ros:check - 0.1]    Finished <<< kinect_ros                [ 0.1 seconds ]                         
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.2 seconds total.                                            
+Interrupted by user!
+-- The C compiler identification is GNU 9.4.0
+-- The CXX compiler identification is GNU 9.4.0
+-- Check for working C compiler: /usr/bin/cc
+-- Check for working C compiler: /usr/bin/cc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring incomplete, errors occurred!
+See also "/home/nitzan/Code/panda_ws/src/panda_uli_demo/Execution/affordance_corrections/nodes/affordance_corrections/affordance_helpers/cppfitting/build/CMakeFiles/CMakeOutput.log".
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+[build] Interrupted by user!                                                   
+Starting >>> core_robotics                                                     
+[build] Summary: 0 of 1 packages succeeded.                                    
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: 1 packages were abandoned.                                  
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.1 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> affordance_corrections                                            
+[build 0.2 s] [0/1 complete] [1/4 jobs] [0 queued] [affordance_corrections:... [build 0.3 s] [0/1 complete] [1/4 jobs] [0 queued] [affordance_corrections:... [build 0.4 s] [0/1 complete] [4/4 jobs] [0 queued] [affordance_corrections:... [build] Interrupted by user!                                                   
+[build] Summary: 0 of 1 packages succeeded.                                    
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: 1 packages were abandoned.                                  
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.4 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> corrective_shared_autonomy                                        
+[build 0.2 s] [0/1 complete] [1/4 jobs] [0 queued] [corrective_shared_auton... [build 0.3 s] [0/1 complete] [4/4 jobs] [0 queued] [corrective_shared_auton... [build 0.4 s] [0/1 complete] [4/4 jobs] [0 queued] [corrective_shared_auton... [build 0.5 s] [0/1 complete] [4/4 jobs] [0 queued] [corrective_shared_auton... [build 0.6 s] [0/1 complete] [1/4 jobs] [0 queued] [corrective_shared_auton... Finished <<< corrective_shared_autonomy                [ 0.5 seconds ]         
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.6 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> env_mapping                                                       
+[build 0.1 s] [0/1 complete] [1/4 jobs] [0 queued] [env_mapping:loadenv - 0.1] [build 0.2 s] [0/1 complete] [1/4 jobs] [0 queued] [env_mapping:make (100%)... Finished <<< env_mapping                [ 0.2 seconds ]                        
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.3 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> input_corrections                                                 
+[build 0.1 s] [0/1 complete] [1/4 jobs] [0 queued] [input_corrections:check... Finished <<< input_corrections                [ 0.2 seconds ]                  
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.2 seconds total.                                            
+---------------------------------------------------------------
+Profile:                     default
+Extending:          [cached] /opt/ros/noetic
+Workspace:                   /home/nitzan/Code/panda_ws
+---------------------------------------------------------------
+Build Space:        [exists] /home/nitzan/Code/panda_ws/build
+Devel Space:        [exists] /home/nitzan/Code/panda_ws/devel
+Install Space:      [unused] /home/nitzan/Code/panda_ws/install
+Log Space:          [exists] /home/nitzan/Code/panda_ws/logs
+Source Space:       [exists] /home/nitzan/Code/panda_ws/src
+DESTDIR:            [unused] None
+---------------------------------------------------------------
+Devel Space Layout:          linked
+Install Space Layout:        None
+---------------------------------------------------------------
+Additional CMake Args:       None
+Additional Make Args:        None
+Additional catkin Make Args: None
+Internal Make Job Server:    True
+Cache Job Environments:      False
+---------------------------------------------------------------
+Whitelisted Packages:        None
+Blacklisted Packages:        None
+---------------------------------------------------------------
+Workspace configuration appears valid.
+---------------------------------------------------------------
+[build] Found '21' packages in 0.0 seconds.                                    
+[build] Package table is up to date.                                           
+Starting >>> uli_config                                                        
+[build 0.1 s] [0/1 complete] [1/4 jobs] [0 queued] [uli_config:check - 0.1]    Finished <<< uli_config                [ 0.1 seconds ]                         
+[build] Summary: All 1 packages succeeded!                                     
+[build] Ignored: 20 packages were skipped or are blacklisted.                  
+[build] Warnings: None.                                                        
+[build] Abandoned: No packages were abandoned.                                 
+[build] Failed: No packages failed.                                            
+[build] Runtime: 0.2 seconds total.                                            

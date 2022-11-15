@@ -279,7 +279,7 @@ const useRosStore = create(store);
 //useRosStore.getState().setUrl('ws://192.168.0.114:9090'); //Home
 //useRosStore.getState().setUrl('ws://10.141.20.93:9090'); //UWnet
 //useRosStore.getState().setUrl('ws://192.168.3.4:9090'); // wifi
-useRosStore.getState().setUrl('ws://192.168.3.5:9090'); // lan
+useRosStore.getState().setUrl('ws://192.168.3.6:9090'); // lan
 //useRosStore.getState().setUrl('ws://192.168.0.2:9090');
 //useRosStore.getState().setUrl('ws://10.138.193.103:9090'); // eduroam
 
