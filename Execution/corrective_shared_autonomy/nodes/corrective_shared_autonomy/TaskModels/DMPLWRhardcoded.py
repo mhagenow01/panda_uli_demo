@@ -747,7 +747,7 @@ class DMPLWRhardcoded:
             
             # Confirm that the actual system has reached the approximate desired state
             pos_error = 0.04
-            quat_error = 0.175 # 10 deg
+            quat_error = 0.25 #0.175 # 10 deg
 
             # Quit if the robot isn't active anymore or if the behavior is paused
             if not self.rosExecution.robotActive() or self.rosExecution.isInterrupted():
