@@ -63,6 +63,11 @@ STEPS for Running run_models.py:
 18. pip install trimesh
 19. sudo apt install spacenavd
 20. sudo apt install ros-noetic-spacenav-node
+25. To use the C++ verison of the registration:
+    * Get eigen 4.3 (branch 4.3) here: https://gitlab.com/libeigen/eigen
+    * /home/nitzan/Code/panda_ws/src/panda_uli_demo/Execution/affordance_corrections/nodes/affordance_corrections/affordance_helpers/cppfitting/CMakeLists.txt
+    Needs to have: find_package(Eigen3 EXACT 3.4.0 REQUIRED PATHS /home/nitzan/Documents/lib_installs/eigen/)
+
 1. ONLY From the ./compile directory ONLY, run ./compile ----- BUT, all compiling of uli_interface is
     currently missing from the ./compile script
 
