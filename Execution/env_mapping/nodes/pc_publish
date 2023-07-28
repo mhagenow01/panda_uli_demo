@@ -10,7 +10,7 @@ def sender():
     print("reading")
     msg = PointCloud2()
     rospack = rospkg.RosPack()
-    path = rospack.get_path('env_mapping')+'/saved_clouds/reachabilility3.txt'
+    path = rospack.get_path('env_mapping')+'/saved_clouds/reachability3.txt'
     with open(path, 'rb') as infile:
         msg.deserialize(infile.read())
     msg.header.frame_id = 'map'

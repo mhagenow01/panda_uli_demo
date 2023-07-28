@@ -14,4 +14,7 @@ cd ..
 catkin build uli_config --no-notify
 
 # Build Interface
-# TBD
+catkin build uli_interface --no-notify
+cd Interface/react
+npm install
+cd ../..
