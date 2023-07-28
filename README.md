@@ -2,13 +2,17 @@
 This package includes all code related to the NASA ULI Year 3 Demonstration of collaborative sanding. This repo includes code as well as example simulations to experience the developed technologies. This code has been tested on ROS Noetic. 
 
 ## Required Packages and Installation
-For Azure Kinect:
+**For Azure Kinect:**
+```
 sudo apt install ros-noetic-camera-info-manager
 sudo apt install k4a-tools
+```
 
-For Franka ROS:
+**For Franka ROS:**
+```
 sudo apt install ros-noetic-gazebo-dev
 sudo apt install ros-noetic-gazebo-ros-control
+```
 
 can either be installed from src or through binaries:
 binaries: `sudo apt install ros-noetic-libfranka ros-noetic-franka-ros`
@@ -16,19 +20,23 @@ from source: `https://github.com/frankaemika/franka_ros`
 if you need a specific version to match with libfranka for the robot hardware, it is probably better to install from source
 Note: if installing from source, you can also remove franka_gazebo instead of installing these packages as it is not used by the project (and often causes compilation issues)
 
-For Franka ROS Interface:
+**For Franka ROS Interface:**
 Depending on your Eigen installation, you may need a symbolic link
 between eigen3 and Eigen: https://stackoverflow.com/questions/23284473/fatal-error-eigen-dense-no-such-file-or-directory
 
-For Actuation:
+**For Actuation:**
+```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+````
 
-For Execution:
+**For Execution**:
+```
 sudo apt install ros-noetic-pcl-conversions
 sudo apt install ros-noetic-pcl-ros
 pip3 install dtw-python
 pip3 install plotly
 DHDC (force dimension)
+```
 
 
 ## Compilation:
@@ -45,6 +53,8 @@ The system is designed to run across multiple computers using the ROS Master fra
 
 Notes related to external access:
 Example of UFW rules for setting up endpoint for phone to access react~
+
+```
 mike@mike-XPS-15-9570:~/Documents/demo/src/panda_uli_demo$ sudo ufw status
 
 Status: activeTo                         Action      From
@@ -58,6 +68,7 @@ Status: activeTo                         Action    �
 80                         ALLOW       192.168.3.3
 Anywhere                   ALLOW       192.168.3.3
 22/tcp (v6)                ALLOW       Anywhere (v6)
+```
 
 Need to run (for external access on the same network):
 - sudo ufw enable
