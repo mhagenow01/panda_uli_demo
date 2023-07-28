@@ -89,6 +89,8 @@ Hagenow, Michael, Emmanuel Senft, Robert Radwin, Michael Gleicher, Bilge Mutlu, 
 
 Doshi, Megh Vipul, Michael Hagenow, Robert Radwin, Michael Gleicher, Bilge Mutlu, and Michael Zinn. "Handheld Haptic Device with Coupled Bidirectional Input." arXiv preprint arXiv:2305.19381 (2023).
 
+Hagenow, Michael, Emmanuel Senft, Evan Laske, Kimberly Hambuchen, Terrence Fong, Robert Radwin, Michael Gleicher, Bilge Mutlu, and Michael Zinn. "Registering Articulated Objects With Human-in-the-loop Corrections." In 2022 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), pp. 2343-2350. IEEE, 2022.
+
 #### External
 DTW module. When using in academic works please cite:
   T. Giorgino. Computing and Visualizing Dynamic Time Warping Alignments in R: The dtw Package.
