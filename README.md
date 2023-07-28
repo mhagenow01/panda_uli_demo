@@ -1,6 +1,9 @@
 # Human-Robot Collaborative Sanding Using End-User Programming and Shared Autonomy
 This package includes all code related to the NASA ULI Year 3 Demonstration of collaborative sanding. This repo includes code as well as example simulations to experience the developed technologies. This code has been tested on ROS Noetic. 
 
+[![Examples of System and Workflows](http://img.youtube.com/vi/2Z__I4u5WaU/0.jpg)](http://www.youtube.com/watch?v=2Z__I4u5WaU "Human-in-the-loop Sanding System")
+
+
 ## Required Packages and Installation
 **For Azure Kinect:**
 ```
