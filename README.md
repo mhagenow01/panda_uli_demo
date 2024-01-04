@@ -1,10 +1,21 @@
 # Human-Robot Collaborative Sanding Using End-User Programming and Shared Autonomy
-This package includes all code related to the NASA ULI Year 3 Demonstration of collaborative sanding. This repo includes code as well as example simulations to experience the developed technologies. This code has been tested on ROS Noetic. 
+This package includes all code related to the 2024 HRI Systems Paper: *A System for Human-Robot Teaming through End-User
+Programming and Shared Autonomy*. If you end up using the code or method, please consider citing our HRI paper.
+
+## Building on the Provided Code
+This system was developed for a specific set of on-site demonstrations. As such, much of the code is hardware specific and packages were not necessarily designed for modular reuse with other systems. That being said, we do want to encourage other researchers to build on the ideas developed in this system. If you have any questions or are interested in reusing elements of the system, please contact [Mike Hagenow](mailto:hagenow@mit.edu)  or [Emmanuel Senft](mailto:esenft@idiap.ch). Some of the most interesting elements include:
+- [Fragmented Execution](https://github.com/mhagenow01/panda_uli_demo/blob/main/Execution/corrective_shared_autonomy/nodes/corrective_shared_autonomy/TaskModels/FragmentedExecution.py) - used to check reacbability of an encoded behavior and plan based on the subset of the task that is remaining.
+- [React Interface for Touchscreen programming](https://github.com/mhagenow01/panda_uli_demo/tree/main/Interface/react) - react application that uses AR/VR for robot programming. Uses ROS to send messages to the backend robot setup. The webserver is hosted on the robot machine and served to a web endpoint on a mobile phone.
+- [Hybrid Controller](https://github.com/mhagenow01/panda_uli_demo/blob/main/Actuation/hybrid_controller/nodes/hybrid_controller) - admittance controller for contact with the environment (based on measured forces from an ATI Axia FT sensor)
+- [CAD Files](https://drive.google.com/drive/folders/1xeusy0CqQZtPNDfgEdTCZORx9_Zy60sm?usp=sharing) - assets for custom robot additions, including the Kinect Azure mount (attached to FT sensor), and the sanding end-effector.
+
+
 
 [![Examples of System and Workflows](http://img.youtube.com/vi/2Z__I4u5WaU/0.jpg)](http://www.youtube.com/watch?v=2Z__I4u5WaU "Human-in-the-loop Sanding System")
 
 
 ## Required Packages and Installation
+This repo includes code and CAD files for the developed system. This code has been tested on ROS Noetic. 
 **For Azure Kinect:**
 ```
 sudo apt install ros-noetic-camera-info-manager
@@ -80,7 +91,7 @@ Need to run (for external access on the same network):
 
 ## CITATIONS
 
-#### Project Related
+#### Project Related Publications
 Senft, Emmanuel, Michael Hagenow, Kevin Welsh, Robert Radwin, Michael Zinn, Michael Gleicher, and Bilge Mutlu. "Task-level authoring for remote robot teleoperation." Frontiers in Robotics and AI 8 (2021): 707149.
 
 Hagenow, Michael, Emmanuel Senft, Robert Radwin, Michael Gleicher, Bilge Mutlu, and Michael Zinn. "Corrective shared autonomy for addressing task variability." IEEE robotics and automation letters 6, no. 2 (2021): 3720-3727.
