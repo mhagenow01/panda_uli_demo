@@ -4,7 +4,7 @@ Programming and Shared Autonomy*. If you end up using the code or method, please
 
 ## Building on the Provided Code
 This system was developed for a specific set of on-site demonstrations. As such, much of the code is hardware specific and packages were not necessarily designed for modular reuse with other systems. That being said, we do want to encourage other researchers to build on the ideas developed in this system. If you have any questions or are interested in reusing elements of the system, please contact [Mike Hagenow](mailto:hagenow@mit.edu)  or [Emmanuel Senft](mailto:esenft@idiap.ch). Some of the most interesting elements include:
-- [Fragmented Execution](https://github.com/mhagenow01/panda_uli_demo/blob/main/Execution/corrective_shared_autonomy/nodes/corrective_shared_autonomy/TaskModels/FragmentedExecution.py) - used to check reacbability of an encoded behavior and plan based on the subset of the task that is remaining.
+- [Fragmented Execution](https://github.com/mhagenow01/panda_uli_demo/blob/main/Execution/corrective_shared_autonomy/nodes/corrective_shared_autonomy/TaskModels/FragmentedExecution.py) - used to check reachability of an encoded behavior and plan based on the subset of the task that is remaining.
 - [React Interface for Touchscreen programming](https://github.com/mhagenow01/panda_uli_demo/tree/main/Interface/react) - react application that uses AR/VR for robot programming. Uses ROS to send messages to the backend robot setup. The webserver is hosted on the robot machine and served to a web endpoint on a mobile phone.
 - [Hybrid Controller](https://github.com/mhagenow01/panda_uli_demo/blob/main/Actuation/hybrid_controller/nodes/hybrid_controller) - admittance controller for contact with the environment (based on measured forces from an ATI Axia FT sensor)
 - [CAD Files](https://drive.google.com/drive/folders/1xeusy0CqQZtPNDfgEdTCZORx9_Zy60sm?usp=sharing) - assets for custom robot additions, including the Kinect Azure mount (attached to FT sensor), and the sanding end-effector.
@@ -32,6 +32,7 @@ can either be installed from src or through binaries:
 binaries: `sudo apt install ros-noetic-libfranka ros-noetic-franka-ros`
 from source: `https://github.com/frankaemika/franka_ros`
 if you need a specific version to match with libfranka for the robot hardware, it is probably better to install from source
+
 Note: if installing from source, you can also remove franka_gazebo instead of installing these packages as it is not used by the project (and often causes compilation issues)
 
 **For Franka ROS Interface:**
